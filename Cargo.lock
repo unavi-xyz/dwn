@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "foo-bar"
+name = "dwn"
 version = "0.0.0"
