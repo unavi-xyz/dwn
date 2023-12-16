@@ -22,7 +22,7 @@
 
         build_inputs = with pkgs; [ ];
 
-        native_build_inputs = with pkgs; [ cargo-auditable pkg-config ];
+        native_build_inputs = with pkgs; [ cargo-auditable openssl pkg-config ];
 
         code = pkgs.callPackage ./. {
           inherit pkgs system build_inputs native_build_inputs;
