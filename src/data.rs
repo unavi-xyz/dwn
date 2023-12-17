@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Body {
     pub messages: Vec<Message>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
     #[serde(rename = "recordId")]
     pub record_id: String,
@@ -13,7 +13,7 @@ pub struct Message {
     pub descriptor: Descriptor,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Descriptor {
     pub interface: String,
     pub method: String,
