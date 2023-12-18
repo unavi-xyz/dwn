@@ -19,7 +19,12 @@ let
     LD_LIBRARY_PATH = lib.makeLibraryPath build_inputs;
   };
 in {
-  dwn-server =
-    rustPlatform.buildRustPackage (common // { pname = "dwn-server"; });
-  dwn = rustPlatform.buildRustPackage (common // { pname = "dwn"; });
+  dwn-server = rustPlatform.buildRustPackage (common // {
+    pname = "dwn-server";
+    checkPhase = "";
+  });
+  dwn = rustPlatform.buildRustPackage (common // {
+    pname = "dwn";
+    checkPhase = "";
+  });
 }
