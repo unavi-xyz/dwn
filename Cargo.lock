@@ -365,8 +365,10 @@ dependencies = [
 name = "dwn"
 version = "0.0.2"
 dependencies = [
+ "base64",
  "cid 0.11.0",
  "iana-media-types",
+ "libipld-cbor",
  "libipld-core",
  "libipld-pb",
  "multihash-codetable",
@@ -770,6 +772,17 @@ name = "libc"
 version = "0.2.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "302d7ab3130588088d277783b1e2d2e10c9e9e4a16dd9050e6ec93fb3e7048f4"
+
+[[package]]
+name = "libipld-cbor"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77d98c9d1747aa5eef1cf099cd648c3fd2d235249f5fed07522aaebc348e423b"
+dependencies = [
+ "byteorder",
+ "libipld-core",
+ "thiserror",
+]
 
 [[package]]
 name = "libipld-core"

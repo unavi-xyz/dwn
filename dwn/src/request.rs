@@ -1,9 +1,9 @@
-use std::fmt::Display;
-
+use base64::Engine;
 pub use iana_media_types as media_types;
-// use libipld_core::{codec::Codec, ipld::Ipld};
-// use libipld_pb::DagPbCodec;
+use libipld_cbor::DagCborCodec;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::fmt::Display;
 
 use crate::util::cid_from_bytes;
 
@@ -22,24 +22,44 @@ pub struct Message {
 }
 
 pub struct MessageBuilder {
-    pub data: Option<String>,
+    pub data: Option<Data>,
     pub descriptor: DescriptorBuilder,
 }
 
 impl MessageBuilder {
     pub fn build(&self) -> Result<Message, Box<dyn std::error::Error>> {
+        let data = self.data.as_ref().map(|d| d.to_base64url());
+        let descriptor = self.descriptor.build(self.data.as_ref())?;
+        let record_id = self.generate_record_id()?;
+
         Ok(Message {
-            record_id: self.generate_record_id()?,
-            data: self.data.clone(), // TODO: bas64 encode data
-            descriptor: self.descriptor.build()?,
+            data,
+            descriptor,
+            record_id,
         })
     }
 
     pub fn generate_record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let descriptor = self.descriptor.build()?;
+        let descriptor = self.descriptor.build(self.data.as_ref())?;
         let generator = RecordIdGenerator::try_from(&descriptor)?;
         let record_id = generator.generate_cid()?;
         Ok(record_id)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum Data {
+    Json(Value),
+}
+
+impl Data {
+    pub fn to_base64url(&self) -> String {
+        match self {
+            Data::Json(value) => {
+                base64::engine::general_purpose::URL_SAFE.encode(value.to_string())
+            }
+        }
     }
 }
 
@@ -53,7 +73,7 @@ impl RecordIdGenerator {
     /// Generates the CID of this struct after DAG-CBOR serialization.
     pub fn generate_cid(&self) -> Result<String, Box<dyn std::error::Error>> {
         let bytes = serde_ipld_dagcbor::to_vec(self)?;
-        let cid = cid_from_bytes(&bytes);
+        let cid = cid_from_bytes(DagCborCodec.into(), &bytes);
         Ok(cid.to_string())
     }
 }
@@ -63,7 +83,7 @@ impl TryFrom<&Descriptor> for RecordIdGenerator {
 
     fn try_from(descriptor: &Descriptor) -> Result<Self, Self::Error> {
         let serialized = serde_ipld_dagcbor::to_vec(descriptor)?;
-        let descriptor_cid = cid_from_bytes(&serialized).to_string();
+        let descriptor_cid = cid_from_bytes(DagCborCodec.into(), &serialized).to_string();
         Ok(RecordIdGenerator { descriptor_cid })
     }
 }
@@ -75,7 +95,7 @@ pub struct Descriptor {
     #[serde(rename = "dataCid", skip_serializing_if = "Option::is_none")]
     pub data_cid: Option<String>,
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
-    pub data_format: Option<String>,
+    pub data_format: Option<DataFormat>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -92,21 +112,16 @@ pub enum Interface {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Method {
+    Commit,
+    Configure,
+    Delete,
     FeatureDetectionRead,
-
-    RecordsRead,
-    RecordsQuery,
-    RecordsWrite,
-    RecordsCommit,
-    RecordsDelete,
-
-    ProtocolsConfigure,
-    ProtocolsQuery,
-
-    PermissionsRequest,
-    PermissionsGrant,
-    PermissionsRevoke,
-    PermissionsQuery,
+    Grant,
+    Query,
+    Read,
+    Request,
+    Revoke,
+    Write,
 }
 
 impl Display for Method {
@@ -115,12 +130,16 @@ impl Display for Method {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
 pub enum DataFormat {
     /// JSON Web Token formatted Verifiable Credential
+    #[serde(rename = "application/vc+jwt")]
     VcJWT,
     /// JSON-LD formatted Verifiable Credential
+    #[serde(rename = "application/vc+ldp")]
     VcLDP,
-    IanaMediaType(media_types::MediaType),
+    MediaType(media_types::MediaType),
 }
 
 impl Display for DataFormat {
@@ -131,11 +150,7 @@ impl Display for DataFormat {
 
 impl From<&DataFormat> for String {
     fn from(data_format: &DataFormat) -> Self {
-        match data_format {
-            DataFormat::VcJWT => "application/vc+jwt".to_string(),
-            DataFormat::VcLDP => "application/vc+ldp".to_string(),
-            DataFormat::IanaMediaType(media_type) => media_type.to_string(),
-        }
+        serde_json::to_string(data_format).unwrap()
     }
 }
 
@@ -146,14 +161,16 @@ pub struct DescriptorBuilder {
 }
 
 impl DescriptorBuilder {
-    pub fn build(&self) -> Result<Descriptor, Box<dyn std::error::Error>> {
-        let data_format = self.data_format.as_ref().map(|f| f.to_string());
+    pub fn build(&self, data: Option<&Data>) -> Result<Descriptor, Box<dyn std::error::Error>> {
+        let data_cid = data.map(|d| {
+            "".to_string() // TODO: Generate CID
+        });
 
         Ok(Descriptor {
             interface: self.interface.clone(),
             method: self.method.clone(),
-            data_cid: None, // TODO: Generate data_cid
-            data_format,
+            data_cid,
+            data_format: self.data_format.clone(),
         })
     }
 }

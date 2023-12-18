@@ -1,6 +1,9 @@
 use dwn::{
     features::FeatureDetection,
-    request::{DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody},
+    request::{
+        media_types::{Application, MediaType},
+        DataFormat, DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody,
+    },
     response::ResponseBody,
 };
 use dwn_server::StartOptions;
@@ -139,7 +142,9 @@ async fn requires_data_descriptors() {
     let mut msg = empty_message();
     msg.data = Some("test data".to_string());
     msg.descriptor.data_cid = Some("test data cid".to_string());
-    msg.descriptor.data_format = Some("test data format".to_string());
+    msg.descriptor.data_format = Some(DataFormat::MediaType(MediaType::Application(
+        Application::Json,
+    )));
 
     let mut without_cid = msg.clone();
     without_cid.descriptor.data_cid = None;

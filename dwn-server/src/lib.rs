@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
 };
 use dwn::{
-    features::FeatureDetection,
+    features::{FeatureDetection, Record},
     request::{Message, Method, RecordIdGenerator, RequestBody},
     response::{MessageResult, ResponseBody, Status},
 };
@@ -75,8 +75,8 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
 fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::error::Error>> {
     span!(tracing::Level::INFO, "message", ?message);
 
+    // Validate record_id
     {
-        // Validate record_id
         let generator = RecordIdGenerator::try_from(&message.descriptor)?;
         let cid = generator.generate_cid()?;
 
@@ -95,13 +95,8 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
             }
         };
 
-        match &message.descriptor.data_format {
-            Some(_) => {
-                // TODO: Validate data_format
-            }
-            None => {
-                return Err("Message has data but dataFormat is None".into());
-            }
+        if message.descriptor.data_format.is_none() {
+            return Err("Message has data but dataFormat is None".into());
         };
     }
 
@@ -113,8 +108,9 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
             let mut features = FeatureDetection::default();
 
             features.interfaces.records = Some(BTreeMap::from_iter(vec![
-                (Method::RecordsRead.to_string(), true),
-                (Method::RecordsQuery.to_string(), true),
+                (Record::RecordsCommit.to_string(), true),
+                (Record::RecordsQuery.to_string(), true),
+                (Record::RecordsWrite.to_string(), true),
             ]));
 
             let value = serde_json::to_value(features)?;

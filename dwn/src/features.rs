@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
@@ -39,4 +39,42 @@ pub struct Interfaces {
 pub struct Messaging {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub batching: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Protocol {
+    ProtocolsConfigure,
+    ProtocolsQuery,
+}
+
+impl Display for Protocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        serde_json::to_string(self).unwrap().fmt(f)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Record {
+    RecordsCommit,
+    RecordsDelete,
+    RecordsQuery,
+    RecordsWrite,
+}
+
+impl Display for Record {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        serde_json::to_string(self).unwrap().fmt(f)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Permission {
+    PermissionsGrant,
+    PermissionsRevoke,
+}
+
+impl Display for Permission {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        serde_json::to_string(self).unwrap().fmt(f)
+    }
 }
