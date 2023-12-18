@@ -6,7 +6,10 @@ use axum::{
     routing::post,
     Json, Router,
 };
-use dwn::data::{Message, RecordIdGenerator};
+use dwn::{
+    request::{Message, RecordIdGenerator, RequestBody},
+    response::{MessageResult, ResponseBody, Status},
+};
 use tracing::{error, info, span, warn};
 
 pub struct StartOptions {
@@ -40,22 +43,29 @@ pub async fn start(StartOptions { port }: StartOptions) {
     }
 }
 
-// https://identity.foundation/decentralized-web-node/spec/#request-level-status-coding
-const DID_NOT_FOUND: (StatusCode, &str) = (StatusCode::NOT_FOUND, "DID not found");
-const SERVER_ERROR: (StatusCode, &str) = (
-    StatusCode::INTERNAL_SERVER_ERROR,
-    "The request could not be processed correctly",
-);
+async fn post_handler(body: Json<RequestBody>) -> Response {
+    let replies = body
+        .0
+        .messages
+        .iter()
+        .map(|message| match process_message(message) {
+            Ok(_) => StatusCode::OK,
+            Err(e) => {
+                warn!("{}", e);
+                StatusCode::BAD_REQUEST
+            }
+        })
+        .map(|code| MessageResult {
+            status: Status::new(code.as_u16(), None),
+            entries: None,
+        })
+        .collect::<Vec<_>>();
 
-async fn post_handler(body: Json<dwn::data::RequestBody>) -> Response {
-    for message in body.0.messages.iter() {
-        if let Err(e) = process_message(message) {
-            warn!("{}", e);
-            return SERVER_ERROR.into_response();
-        }
-    }
-
-    StatusCode::OK.into_response()
+    Json(ResponseBody {
+        status: Some(Status::new(StatusCode::OK.as_u16(), None)),
+        replies: Some(replies),
+    })
+    .into_response()
 }
 
 fn process_message(message: &Message) -> Result<(), Box<dyn std::error::Error>> {
