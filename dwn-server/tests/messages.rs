@@ -1,4 +1,4 @@
-use dwn::data::{Descriptor, Message};
+use dwn::data::{Descriptor, Message, RequestBody};
 use reqwest::StatusCode;
 
 const SERVER_ADDR: &str = "http://localhost:3000";
@@ -29,41 +29,60 @@ async fn send_post(data: dwn::data::RequestBody) -> StatusCode {
     res.status()
 }
 
+fn empty_message() -> Message {
+    let mut msg = Message {
+        record_id: String::new(),
+        data: None,
+        descriptor: Descriptor {
+            method: "application/json".to_string(),
+            interface: "test interface".to_string(),
+            data_cid: None,
+            data_format: None,
+        },
+    };
+
+    msg.generate_record_id()
+        .expect("Failed to generate record_id");
+
+    msg
+}
+
 #[tokio::test]
 async fn recieve_post() {
     spawn_server();
 
-    let data = dwn::data::RequestBody {
-        messages: vec![Message {
-            record_id: String::new(),
-            data: None,
-            descriptor: Descriptor {
-                method: "application/json".to_string(),
-                interface: "test_interface".to_string(),
-                data_cid: None,
-                data_format: None,
-            },
-        }],
+    let body = RequestBody {
+        messages: vec![empty_message()],
     };
 
-    assert_eq!(send_post(data).await, StatusCode::OK);
+    assert_eq!(send_post(body).await, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn requires_valid_record_id() {
+    spawn_server();
+
+    let mut msg = empty_message();
+    msg.record_id = "invalid record id".to_string();
+
+    let body = RequestBody {
+        messages: vec![msg],
+    };
+
+    assert_eq!(send_post(body).await, StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[tokio::test]
 async fn requires_data_descriptors() {
     spawn_server();
 
-    let body = dwn::data::RequestBody {
-        messages: vec![Message {
-            record_id: String::new(),
-            data: Some("test_data".to_string()),
-            descriptor: Descriptor {
-                method: "application/json".to_string(),
-                interface: "test_interface".to_string(),
-                data_cid: Some("test_data_cid".to_string()),
-                data_format: Some("test_data_format".to_string()),
-            },
-        }],
+    let mut msg = empty_message();
+    msg.data = Some("test data".to_string());
+    msg.descriptor.data_cid = Some("test data cid".to_string());
+    msg.descriptor.data_format = Some("test data format".to_string());
+
+    let body = RequestBody {
+        messages: vec![msg],
     };
 
     let mut without_cid = body.clone();
@@ -76,7 +95,16 @@ async fn requires_data_descriptors() {
     without_both.messages[0].descriptor.data_cid = None;
     without_both.messages[0].descriptor.data_format = None;
 
-    assert_eq!(send_post(without_cid).await, StatusCode::BAD_REQUEST);
-    assert_eq!(send_post(without_format).await, StatusCode::BAD_REQUEST);
-    assert_eq!(send_post(without_both).await, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        send_post(without_cid).await,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
+    assert_eq!(
+        send_post(without_format).await,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
+    assert_eq!(
+        send_post(without_both).await,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
 }

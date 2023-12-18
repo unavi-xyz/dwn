@@ -1,13 +1,8 @@
-use cid::Cid;
-use multihash_codetable::{Code, MultihashDigest};
+// use libipld_core::{codec::Codec, ipld::Ipld};
+// use libipld_pb::DagPbCodec;
 use serde::{Deserialize, Serialize};
 
-const RAW: u64 = 0x55;
-
-fn cid_from_bytes(bytes: &[u8]) -> Cid {
-    let hash = Code::Sha2_256.digest(bytes);
-    Cid::new_v1(RAW, hash)
-}
+use crate::util::cid_from_bytes;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RequestBody {
@@ -23,34 +18,62 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn generate_record_id(&mut self) {
-        let generator = CidGenerator::from(&self.descriptor);
-
-        let bytes = match serde_ipld_dagcbor::to_vec(&generator) {
-            Ok(bytes) => bytes,
-            Err(err) => panic!("Failed to serialize generator: {}", err),
+    pub fn new(
+        data: Option<String>,
+        descriptor: Descriptor,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut message = Message {
+            record_id: String::new(),
+            data,
+            descriptor,
         };
 
-        self.record_id = cid_from_bytes(&bytes).to_string();
+        message.generate_record_id()?;
+
+        Ok(message)
+    }
+
+    pub fn generate_record_id(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let generator = RecordIdGenerator::try_from(&self.descriptor)?;
+        self.record_id = generator.generate_cid()?;
+        Ok(())
+    }
+
+    pub fn generate_data_cid(&mut self) {
+        self.descriptor.data_cid = match &self.data {
+            Some(_) => {
+                todo!();
+                // let pb = Ipld::from();
+                // let bytes = DagPbCodec.encode(&pb).unwrap();
+                // Some(cid_from_bytes(&bytes).to_string())
+            }
+            None => None,
+        };
     }
 }
 
 #[derive(Serialize)]
-pub struct CidGenerator {
+pub struct RecordIdGenerator {
     #[serde(rename = "descriptorCid")]
     pub descriptor_cid: String,
 }
 
-impl From<&Descriptor> for CidGenerator {
-    fn from(descriptor: &Descriptor) -> Self {
-        let serialized = match serde_ipld_dagcbor::to_vec(descriptor) {
-            Ok(bytes) => bytes,
-            Err(err) => panic!("Failed to serialize descriptor: {}", err),
-        };
+impl RecordIdGenerator {
+    /// Generates the CID of this struct after DAG-CBOR serialization.
+    pub fn generate_cid(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let bytes = serde_ipld_dagcbor::to_vec(self)?;
+        let cid = cid_from_bytes(&bytes);
+        Ok(cid.to_string())
+    }
+}
 
+impl TryFrom<&Descriptor> for RecordIdGenerator {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(descriptor: &Descriptor) -> Result<Self, Self::Error> {
+        let serialized = serde_ipld_dagcbor::to_vec(descriptor)?;
         let descriptor_cid = cid_from_bytes(&serialized).to_string();
-
-        CidGenerator { descriptor_cid }
+        Ok(RecordIdGenerator { descriptor_cid })
     }
 }
 
