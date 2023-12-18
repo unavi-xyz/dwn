@@ -1,3 +1,4 @@
+pub use iana_media_types as media_types;
 // use libipld_core::{codec::Codec, ipld::Ipld};
 // use libipld_pb::DagPbCodec;
 use serde::{Deserialize, Serialize};
@@ -18,38 +19,25 @@ pub struct Message {
     pub descriptor: Descriptor,
 }
 
-impl Message {
-    pub fn new(
-        data: Option<String>,
-        descriptor: Descriptor,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut message = Message {
-            record_id: String::new(),
-            data,
-            descriptor,
-        };
+pub struct MessageBuilder {
+    pub data: Option<String>,
+    pub descriptor: DescriptorBuilder,
+}
 
-        message.generate_record_id()?;
-
-        Ok(message)
+impl MessageBuilder {
+    pub fn build(&self) -> Result<Message, Box<dyn std::error::Error>> {
+        Ok(Message {
+            record_id: self.generate_record_id()?,
+            data: self.data.clone(), // TODO: bas64 encode data
+            descriptor: self.descriptor.build()?,
+        })
     }
 
-    pub fn generate_record_id(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let generator = RecordIdGenerator::try_from(&self.descriptor)?;
-        self.record_id = generator.generate_cid()?;
-        Ok(())
-    }
-
-    pub fn generate_data_cid(&mut self) {
-        self.descriptor.data_cid = match &self.data {
-            Some(_) => {
-                todo!();
-                // let pb = Ipld::from();
-                // let bytes = DagPbCodec.encode(&pb).unwrap();
-                // Some(cid_from_bytes(&bytes).to_string())
-            }
-            None => None,
-        };
+    pub fn generate_record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let descriptor = self.descriptor.build()?;
+        let generator = RecordIdGenerator::try_from(&descriptor)?;
+        let record_id = generator.generate_cid()?;
+        Ok(record_id)
     }
 }
 
@@ -86,4 +74,23 @@ pub struct Descriptor {
     pub data_cid: Option<String>,
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
     pub data_format: Option<String>,
+}
+
+pub struct DescriptorBuilder {
+    pub interface: String,
+    pub method: String,
+    pub data_format: Option<media_types::MediaType>,
+}
+
+impl DescriptorBuilder {
+    pub fn build(&self) -> Result<Descriptor, Box<dyn std::error::Error>> {
+        let data_format = self.data_format.as_ref().map(|f| f.to_string());
+
+        Ok(Descriptor {
+            interface: self.interface.clone(),
+            method: self.method.clone(),
+            data_cid: None, // TODO: Generate data_cid
+            data_format,
+        })
+    }
 }

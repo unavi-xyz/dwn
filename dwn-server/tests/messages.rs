@@ -1,4 +1,4 @@
-use dwn::data::{Descriptor, Message, RequestBody};
+use dwn::data::{DescriptorBuilder, Message, MessageBuilder, RequestBody};
 use reqwest::StatusCode;
 
 const SERVER_ADDR: &str = "http://localhost:3000";
@@ -9,7 +9,7 @@ fn spawn_server() {
     });
 
     // Wait for server to start
-    std::thread::sleep(std::time::Duration::from_secs(1));
+    std::thread::sleep(std::time::Duration::from_secs(2));
 }
 
 async fn send_post(data: dwn::data::RequestBody) -> StatusCode {
@@ -30,21 +30,16 @@ async fn send_post(data: dwn::data::RequestBody) -> StatusCode {
 }
 
 fn empty_message() -> Message {
-    let mut msg = Message {
-        record_id: String::new(),
+    let builder = MessageBuilder {
         data: None,
-        descriptor: Descriptor {
-            method: "application/json".to_string(),
+        descriptor: DescriptorBuilder {
+            method: "test method".to_string(),
             interface: "test interface".to_string(),
-            data_cid: None,
             data_format: None,
         },
     };
 
-    msg.generate_record_id()
-        .expect("Failed to generate record_id");
-
-    msg
+    builder.build().expect("Failed to build message")
 }
 
 #[tokio::test]
