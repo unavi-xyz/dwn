@@ -70,12 +70,49 @@ impl TryFrom<&Descriptor> for RecordIdGenerator {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Descriptor {
-    pub interface: String,
-    pub method: String,
+    pub interface: Interface,
+    pub method: Method,
     #[serde(rename = "dataCid", skip_serializing_if = "Option::is_none")]
     pub data_cid: Option<String>,
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
     pub data_format: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Interface {
+    /// For feature detection, the spec only lists a method, no interface.
+    /// But the spec also says that an interface MUST exist in the descriptor.
+    /// So we use this interface for feature detection, even though it doesn't exist in the spec.
+    /// https://identity.foundation/decentralized-web-node/spec/#read
+    FeatureDetection,
+    Records,
+    Protocols,
+    Permissions,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Method {
+    FeatureDetectionRead,
+
+    RecordsRead,
+    RecordsQuery,
+    RecordsWrite,
+    RecordsCommit,
+    RecordsDelete,
+
+    ProtocolsConfigure,
+    ProtocolsQuery,
+
+    PermissionsRequest,
+    PermissionsGrant,
+    PermissionsRevoke,
+    PermissionsQuery,
+}
+
+impl Display for Method {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        serde_json::to_string(self).unwrap().fmt(f)
+    }
 }
 
 pub enum DataFormat {
@@ -103,8 +140,8 @@ impl From<&DataFormat> for String {
 }
 
 pub struct DescriptorBuilder {
-    pub interface: String,
-    pub method: String,
+    pub interface: Interface,
+    pub method: Method,
     pub data_format: Option<DataFormat>,
 }
 

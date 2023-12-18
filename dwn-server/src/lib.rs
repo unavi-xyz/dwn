@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{collections::BTreeMap, net::SocketAddr};
 
 use axum::{
     http::StatusCode,
@@ -7,7 +7,8 @@ use axum::{
     Json, Router,
 };
 use dwn::{
-    request::{Message, RecordIdGenerator, RequestBody},
+    features::FeatureDetection,
+    request::{Message, Method, RecordIdGenerator, RequestBody},
     response::{MessageResult, ResponseBody, Status},
 };
 use tracing::{error, info, span, warn};
@@ -48,16 +49,19 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
         .0
         .messages
         .iter()
-        .map(|message| match process_message(message) {
-            Ok(_) => StatusCode::OK,
+        .map(process_message)
+        .map(|result| match result {
+            Ok(message_result) => message_result,
             Err(e) => {
-                warn!("{}", e);
-                StatusCode::BAD_REQUEST
+                warn!("Failed to process message: {}", e);
+                MessageResult {
+                    status: Status::new(
+                        StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                        Some("The request could not be processed correctly"),
+                    ),
+                    entries: None,
+                }
             }
-        })
-        .map(|code| MessageResult {
-            status: Status::new(code.as_u16(), None),
-            entries: None,
         })
         .collect::<Vec<_>>();
 
@@ -68,7 +72,7 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
     .into_response()
 }
 
-fn process_message(message: &Message) -> Result<(), Box<dyn std::error::Error>> {
+fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::error::Error>> {
     span!(tracing::Level::INFO, "message", ?message);
 
     {
@@ -104,5 +108,19 @@ fn process_message(message: &Message) -> Result<(), Box<dyn std::error::Error>> 
     // Process message
     info!("Received message: {:?}", message);
 
-    Ok(())
+    match message.descriptor.method {
+        Method::FeatureDetectionRead => {
+            let mut features = FeatureDetection::default();
+
+            features.interfaces.records = Some(BTreeMap::from_iter(vec![
+                (Method::RecordsRead.to_string(), true),
+                (Method::RecordsQuery.to_string(), true),
+            ]));
+
+            let value = serde_json::to_value(features)?;
+
+            Ok(MessageResult::new(vec![value]))
+        }
+        _ => Err("Method not supported".into()),
+    }
 }

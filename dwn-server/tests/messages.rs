@@ -1,5 +1,6 @@
 use dwn::{
-    request::{DescriptorBuilder, Message, MessageBuilder, RequestBody},
+    features::FeatureDetection,
+    request::{DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody},
     response::ResponseBody,
 };
 use dwn_server::StartOptions;
@@ -34,8 +35,8 @@ fn empty_message() -> Message {
     let builder = MessageBuilder {
         data: None,
         descriptor: DescriptorBuilder {
-            method: "test method".to_string(),
-            interface: "test interface".to_string(),
+            method: Method::FeatureDetectionRead,
+            interface: Interface::FeatureDetection,
             data_format: None,
         },
     };
@@ -54,6 +55,43 @@ async fn recieve_post() {
     let res = send_post(body, port).await;
 
     assert_eq!(res.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn feature_detection() {
+    let port = spawn_server();
+
+    let body = RequestBody {
+        messages: vec![empty_message()],
+    };
+
+    let res = send_post(body, port)
+        .await
+        .json::<ResponseBody>()
+        .await
+        .expect("Failed to parse response body");
+
+    let replies = match res.replies {
+        Some(replies) => replies,
+        None => panic!("No replies in response body"),
+    };
+
+    assert_eq!(replies.len(), 1);
+
+    let reply = &replies[0];
+
+    assert_eq!(reply.status.code, StatusCode::OK);
+
+    let entries = match reply.entries.as_ref() {
+        Some(entries) => entries,
+        None => panic!("No entries in reply"),
+    };
+
+    assert_eq!(entries.len(), 1);
+
+    let entry = entries[0].clone();
+
+    serde_json::from_value::<FeatureDetection>(entry).expect("Failed to parse feature detection");
 }
 
 async fn expect_status(body: RequestBody, port: u16, status: StatusCode) {
@@ -90,7 +128,7 @@ async fn requires_valid_record_id() {
             messages: vec![msg],
         };
 
-        expect_status(body, port, StatusCode::BAD_REQUEST).await;
+        expect_status(body, port, StatusCode::INTERNAL_SERVER_ERROR).await;
     }
 }
 
@@ -116,5 +154,5 @@ async fn requires_data_descriptors() {
         messages: vec![without_cid, without_format, without_both],
     };
 
-    expect_status(body, port, StatusCode::BAD_REQUEST).await;
+    expect_status(body, port, StatusCode::INTERNAL_SERVER_ERROR).await;
 }
