@@ -9,11 +9,20 @@ use axum::{
 use dwn::data::{Message, RecordIdGenerator};
 use tracing::{error, info, span, warn};
 
+pub struct StartOptions {
+    pub port: u16,
+}
+
+impl Default for StartOptions {
+    fn default() -> Self {
+        Self { port: 3000 }
+    }
+}
+
 /// Start the server.
-pub async fn start() {
+pub async fn start(StartOptions { port }: StartOptions) {
     let app = Router::new().route("/", post(post_handler));
 
-    let port = 3000;
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     let listener = match tokio::net::TcpListener::bind(addr).await {
