@@ -162,7 +162,7 @@ pub struct DescriptorBuilder {
 
 impl DescriptorBuilder {
     pub fn build(&self, data: Option<&Data>) -> Result<Descriptor, Box<dyn std::error::Error>> {
-        let data_cid = data.map(|d| {
+        let data_cid = data.map(|_d| {
             "".to_string() // TODO: Generate CID
         });
 
