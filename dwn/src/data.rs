@@ -13,6 +13,7 @@ pub struct RequestBody {
 pub struct Message {
     #[serde(rename = "recordId")]
     pub record_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<String>,
     pub descriptor: Descriptor,
 }
@@ -81,8 +82,8 @@ impl TryFrom<&Descriptor> for RecordIdGenerator {
 pub struct Descriptor {
     pub interface: String,
     pub method: String,
-    #[serde(rename = "dataCid")]
+    #[serde(rename = "dataCid", skip_serializing_if = "Option::is_none")]
     pub data_cid: Option<String>,
-    #[serde(rename = "dataFormat")]
+    #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
     pub data_format: Option<String>,
 }
