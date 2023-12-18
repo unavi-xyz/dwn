@@ -18,4 +18,8 @@ let
 
     LD_LIBRARY_PATH = lib.makeLibraryPath build_inputs;
   };
-in { bin = rustPlatform.buildRustPackage (common // { pname = "dwn"; }); }
+in {
+  dwn-server =
+    rustPlatform.buildRustPackage (common // { pname = "dwn-server"; });
+  dwn = rustPlatform.buildRustPackage (common // { pname = "dwn"; });
+}

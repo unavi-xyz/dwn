@@ -167,9 +167,17 @@ checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 name = "dwn"
 version = "0.0.1"
 dependencies = [
- "axum",
- "reqwest",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "dwn-server"
+version = "0.0.1"
+dependencies = [
+ "axum",
+ "dwn",
+ "reqwest",
  "serde_json",
  "tokio",
  "tracing",

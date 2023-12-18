@@ -5,11 +5,11 @@ const SERVER_ADDR: &str = "http://localhost:3000";
 
 fn spawn_server() {
     tokio::spawn(async move {
-        dwn::server().await;
+        dwn_server::start().await;
     });
 
     // Wait for server to start
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_secs(1));
 }
 
 async fn send_post(data: dwn::data::Body) -> StatusCode {

@@ -3,9 +3,8 @@ use std::net::SocketAddr;
 use axum::{http::StatusCode, routing::post, Json, Router};
 use tracing::{error, info, span, warn};
 
-pub mod data;
-
-pub async fn server() {
+/// Start the server.
+pub async fn start() {
     let app = Router::new().route("/", post(post_handler));
 
     let port = 3000;
@@ -26,7 +25,7 @@ pub async fn server() {
     }
 }
 
-async fn post_handler(body: Json<data::Body>) -> StatusCode {
+async fn post_handler(body: Json<dwn::data::Body>) -> StatusCode {
     for message in body.0.messages.iter() {
         span!(tracing::Level::INFO, "message", ?message);
 

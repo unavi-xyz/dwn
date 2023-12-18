@@ -31,7 +31,7 @@
         packages = code // {
           all = pkgs.symlinkJoin {
             name = "all";
-            paths = with code; [ bin ];
+            paths = with code; [ dwn-server dwn ];
           };
 
           default = packages.all;

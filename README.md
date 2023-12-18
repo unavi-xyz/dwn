@@ -5,4 +5,4 @@
 ![Crates.io](https://img.shields.io/crates/l/dwn)
 [![Documentation](https://docs.rs/dwn/badge.svg)](https://docs.rs/dwn)
 
-Rust implementation of a [Decentralized Web Node](https://identity.foundation/decentralized-web-node/spec/).
+Rust implementation of the [Decentralized Web Node](https://identity.foundation/decentralized-web-node/spec/) specification.
