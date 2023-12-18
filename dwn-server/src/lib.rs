@@ -25,7 +25,7 @@ pub async fn start() {
     }
 }
 
-async fn post_handler(body: Json<dwn::data::Body>) -> StatusCode {
+async fn post_handler(body: Json<dwn::data::RequestBody>) -> StatusCode {
     for message in body.0.messages.iter() {
         span!(tracing::Level::INFO, "message", ?message);
 

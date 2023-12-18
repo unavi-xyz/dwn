@@ -12,7 +12,7 @@ fn spawn_server() {
     std::thread::sleep(std::time::Duration::from_secs(1));
 }
 
-async fn send_post(data: dwn::data::Body) -> StatusCode {
+async fn send_post(data: dwn::data::RequestBody) -> StatusCode {
     let client = reqwest::Client::new();
 
     let res = match client
@@ -33,7 +33,7 @@ async fn send_post(data: dwn::data::Body) -> StatusCode {
 async fn recieve_post() {
     spawn_server();
 
-    let data = dwn::data::Body {
+    let data = dwn::data::RequestBody {
         messages: vec![Message {
             record_id: "test_record_id".to_string(),
             data: None,
@@ -53,7 +53,7 @@ async fn recieve_post() {
 async fn requires_data_descriptors() {
     spawn_server();
 
-    let data = dwn::data::Body {
+    let body = dwn::data::RequestBody {
         messages: vec![Message {
             record_id: "test_record_id".to_string(),
             data: Some("test_data".to_string()),
@@ -66,13 +66,13 @@ async fn requires_data_descriptors() {
         }],
     };
 
-    let mut without_cid = data.clone();
+    let mut without_cid = body.clone();
     without_cid.messages[0].descriptor.data_cid = None;
 
-    let mut without_format = data.clone();
+    let mut without_format = body.clone();
     without_format.messages[0].descriptor.data_format = None;
 
-    let mut without_both = data.clone();
+    let mut without_both = body.clone();
     without_both.messages[0].descriptor.data_cid = None;
     without_both.messages[0].descriptor.data_format = None;
 

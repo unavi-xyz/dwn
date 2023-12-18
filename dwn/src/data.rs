@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Body {
+pub struct RequestBody {
     pub messages: Vec<Message>,
 }
 
