@@ -7,5 +7,8 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+cid = "0.11.0"
+multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] }
 serde = { version = "1.0.193", features = ["derive"] }
+serde_ipld_dagcbor = "0.4.2"
 serde_json = "1.0.108"

@@ -35,7 +35,7 @@ async fn recieve_post() {
 
     let data = dwn::data::RequestBody {
         messages: vec![Message {
-            record_id: "test_record_id".to_string(),
+            record_id: String::new(),
             data: None,
             descriptor: Descriptor {
                 method: "application/json".to_string(),
@@ -55,7 +55,7 @@ async fn requires_data_descriptors() {
 
     let body = dwn::data::RequestBody {
         messages: vec![Message {
-            record_id: "test_record_id".to_string(),
+            record_id: String::new(),
             data: Some("test_data".to_string()),
             descriptor: Descriptor {
                 method: "application/json".to_string(),
