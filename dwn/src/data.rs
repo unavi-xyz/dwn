@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 pub use iana_media_types as media_types;
 // use libipld_core::{codec::Codec, ipld::Ipld};
 // use libipld_pb::DagPbCodec;
@@ -76,10 +78,34 @@ pub struct Descriptor {
     pub data_format: Option<String>,
 }
 
+pub enum DataFormat {
+    /// JSON Web Token formatted Verifiable Credential
+    VcJWT,
+    /// JSON-LD formatted Verifiable Credential
+    VcLDP,
+    IanaMediaType(media_types::MediaType),
+}
+
+impl Display for DataFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        String::from(self).fmt(f)
+    }
+}
+
+impl From<&DataFormat> for String {
+    fn from(data_format: &DataFormat) -> Self {
+        match data_format {
+            DataFormat::VcJWT => "application/vc+jwt".to_string(),
+            DataFormat::VcLDP => "application/vc+ldp".to_string(),
+            DataFormat::IanaMediaType(media_type) => media_type.to_string(),
+        }
+    }
+}
+
 pub struct DescriptorBuilder {
     pub interface: String,
     pub method: String,
-    pub data_format: Option<media_types::MediaType>,
+    pub data_format: Option<DataFormat>,
 }
 
 impl DescriptorBuilder {
