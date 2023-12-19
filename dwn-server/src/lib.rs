@@ -7,11 +7,11 @@ use axum::{
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use dwn::{
-    data::{Data, JsonData},
     features::{FeatureDetection, Records},
     request::{
+        data::{Data, JsonData},
         media_types::{Application, MediaType},
-        Message, Method, RecordIdGenerator, RequestBody,
+        Interface, Message, Method, RecordIdGenerator, RequestBody,
     },
     response::{MessageResult, ResponseBody, Status},
 };
@@ -129,20 +129,30 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
     // Process message
     info!("Received message: {:?}", message);
 
-    match message.descriptor.method {
-        Method::FeatureDetectionRead => {
-            let mut features = FeatureDetection::default();
+    if message.descriptor.method == Method::FeatureDetectionRead {
+        let mut features = FeatureDetection::default();
 
-            features.interfaces.records = Some(BTreeMap::from_iter(vec![
-                (Records::RecordsCommit.to_string(), true),
-                (Records::RecordsQuery.to_string(), true),
-                (Records::RecordsWrite.to_string(), true),
-            ]));
+        features.interfaces.records = Some(BTreeMap::from_iter(vec![
+            (Records::RecordsCommit.to_string(), true),
+            (Records::RecordsQuery.to_string(), true),
+            (Records::RecordsWrite.to_string(), true),
+        ]));
 
-            let value = serde_json::to_value(features)?;
+        let value = serde_json::to_value(features)?;
 
-            Ok(MessageResult::new(vec![value]))
-        }
-        _ => Err("Method not supported".into()),
+        return Ok(MessageResult::new(vec![value]));
+    };
+
+    match message.descriptor.interface {
+        Interface::Records => match message.descriptor.method {
+            Method::Write => {
+                info!("Writing record");
+
+                Ok(MessageResult::default())
+            }
+
+            _ => Err("Method not supported".into()),
+        },
+        _ => Err("Interface not supported".into()),
     }
 }

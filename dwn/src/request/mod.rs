@@ -1,10 +1,13 @@
-pub use iana_media_types as media_types;
+use crate::util::cid_from_bytes;
+use data::Data;
 use libipld_cbor::DagCborCodec;
 use media_types::MediaType;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-use crate::{data::Data, util::cid_from_bytes};
+pub mod data;
+
+pub use iana_media_types as media_types;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RequestBody {
@@ -107,7 +110,7 @@ pub enum Interface {
     Permissions,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Method {
     Commit,
     Configure,

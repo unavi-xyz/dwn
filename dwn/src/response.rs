@@ -32,11 +32,20 @@ pub struct MessageResult {
     pub entries: Option<Vec<Value>>,
 }
 
+impl Default for MessageResult {
+    fn default() -> Self {
+        Self {
+            status: Status::new(200, Some("OK")),
+            entries: None,
+        }
+    }
+}
+
 impl MessageResult {
     pub fn new(entries: Vec<Value>) -> Self {
         Self {
-            status: Status::new(200, Some("OK")),
             entries: Some(entries),
+            ..Default::default()
         }
     }
 }

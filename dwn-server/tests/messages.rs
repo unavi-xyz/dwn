@@ -1,7 +1,8 @@
 use dwn::{
-    data::JsonData,
     features::FeatureDetection,
-    request::{DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody},
+    request::{
+        data::JsonData, DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody,
+    },
     response::ResponseBody,
 };
 use dwn_server::StartOptions;
@@ -173,4 +174,17 @@ async fn requires_data_descriptors() {
     };
 
     expect_status(body, port, StatusCode::INTERNAL_SERVER_ERROR).await;
+}
+
+#[tokio::test]
+async fn records_write() {
+    let port = spawn_server();
+
+    let msg = MessageBuilder::<JsonData>::new(
+        Interface::Records,
+        Method::Write,
+        JsonData(json!({
+            "foo": "bar",
+        })),
+    );
 }
