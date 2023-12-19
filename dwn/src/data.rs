@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use iana_media_types::{Application, MediaType};
+use libipld_cbor::DagCborCodec;
 use libipld_core::{codec::Codec, ipld::Ipld};
 use libipld_json::DagJsonCodec;
 use libipld_pb::DagPbCodec;
@@ -18,11 +19,7 @@ pub trait Data {
     /// Returns the data as a DAG-PB encoded byte array.
     fn to_pb(&self) -> Vec<u8> {
         let ipld = self.to_ipld();
-
         let data = ipld_to_pb(ipld);
-
-        tracing::info!("DAG-PB: {:?}", data);
-
         DagPbCodec.encode(&data).expect("Failed to encode IPLD")
     }
     /// Returns the CID of the DAG-PB encoded data.
@@ -35,7 +32,7 @@ pub trait Data {
     fn data_format(&self) -> MediaType;
 }
 
-/// Converts to a DAG-PB compatible IPLD object
+/// Converts to a DAG-PB compatible IPLD object.
 fn ipld_to_pb(ipld: Ipld) -> Ipld {
     let mut links = Vec::<Ipld>::new();
 
@@ -72,7 +69,7 @@ fn ipld_to_pb(ipld: Ipld) -> Ipld {
 
             Vec::new()
         }
-        _ => DagJsonCodec.encode(&ipld).unwrap(),
+        _ => DagCborCodec.encode(&ipld).unwrap(),
     };
 
     let mut pb_node = BTreeMap::<String, Ipld>::new();
