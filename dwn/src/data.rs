@@ -131,7 +131,7 @@ mod tests {
         let ipld = data.decode(&data.to_bytes());
         let encoded = data.encode(&ipld);
         let encoded_string = String::from_utf8(encoded).expect("Failed to convert to string");
-        assert_eq!(encoded_string, r#"{"foo":"bar"}"#);
+        assert_eq!(encoded_string, data.0.to_string());
 
         let cid = data.data_cid();
         assert_eq!(
