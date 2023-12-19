@@ -40,17 +40,6 @@ fn ipld_to_pb(ipld: Ipld) -> Ipld {
     let mut links = Vec::<Ipld>::new();
 
     let data: Vec<u8> = match ipld {
-        Ipld::Null => Vec::new(),
-        Ipld::String(str) => str.into(),
-        Ipld::Bytes(bytes) => bytes,
-        Ipld::Integer(int) => int.to_be_bytes().to_vec(),
-        Ipld::Bool(boolean) => {
-            if boolean {
-                vec![1]
-            } else {
-                vec![0]
-            }
-        }
         Ipld::Map(map) => {
             for (key, value) in map {
                 let mut pb_link = BTreeMap::<String, Ipld>::new();
@@ -83,7 +72,7 @@ fn ipld_to_pb(ipld: Ipld) -> Ipld {
 
             Vec::new()
         }
-        Ipld::Float(float) => float.to_be_bytes().to_vec(),
+        _ => DagJsonCodec.encode(&ipld).unwrap(),
     };
 
     let mut pb_node = BTreeMap::<String, Ipld>::new();
