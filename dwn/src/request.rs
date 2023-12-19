@@ -148,7 +148,7 @@ impl DescriptorBuilder {
     ) -> Result<Descriptor, Box<dyn std::error::Error>> {
         let data_cid = data.map(|d| {
             // TODO: Generate CID
-            let pb = d.to_ipld();
+            let _pb = d.to_ipld();
             "TODO".to_string()
         });
 
