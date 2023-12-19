@@ -33,7 +33,7 @@ pub trait Data {
 }
 
 /// Converts an IPLD object to be DAG-PB compatible.
-/// DAG-PB is for opaque binary data, so we use CBOR to convert the IPLD object to bytes.
+/// DAG-PB is for opaque binary data, so we use CBOR to encode the IPLD object as bytes.
 fn ipld_to_pb(ipld: Ipld) -> Ipld {
     let mut links = Vec::<Ipld>::new();
 
