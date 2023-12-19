@@ -1,4 +1,5 @@
 use dwn::{
+    data::JsonData,
     features::FeatureDetection,
     request::{
         media_types::{Application, MediaType},
@@ -35,12 +36,11 @@ async fn send_post(data: RequestBody, port: u16) -> Response {
 }
 
 fn empty_message() -> Message {
-    let builder = MessageBuilder {
+    let builder = MessageBuilder::<JsonData> {
         data: None,
         descriptor: DescriptorBuilder {
             method: Method::FeatureDetectionRead,
             interface: Interface::FeatureDetection,
-            data_format: None,
         },
     };
 

@@ -370,6 +370,7 @@ dependencies = [
  "iana-media-types",
  "libipld-cbor",
  "libipld-core",
+ "libipld-json",
  "libipld-pb",
  "multihash-codetable",
  "serde",
@@ -799,6 +800,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "libipld-json"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25856def940047b07b25c33d4e66d248597049ab0202085215dc4dca0487731c"
+dependencies = [
+ "libipld-core",
+ "multihash 0.18.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "libipld-pb"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -887,10 +900,16 @@ version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfd8a792c1694c6da4f68db0a9d707c72bd260994da179e6030a5dcee00bb815"
 dependencies = [
+ "blake2b_simd",
+ "blake2s_simd",
+ "blake3",
  "core2",
+ "digest",
  "multihash-derive 0.8.0",
  "serde",
  "serde-big-array",
+ "sha2",
+ "sha3",
  "unsigned-varint 0.7.2",
 ]
 

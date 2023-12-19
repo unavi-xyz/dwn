@@ -1,11 +1,9 @@
-use base64::Engine;
 pub use iana_media_types as media_types;
 use libipld_cbor::DagCborCodec;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fmt::Display;
 
-use crate::util::cid_from_bytes;
+use crate::{data::Data, util::cid_from_bytes};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RequestBody {
@@ -21,12 +19,12 @@ pub struct Message {
     pub descriptor: Descriptor,
 }
 
-pub struct MessageBuilder {
-    pub data: Option<Data>,
+pub struct MessageBuilder<T: Data> {
+    pub data: Option<T>,
     pub descriptor: DescriptorBuilder,
 }
 
-impl MessageBuilder {
+impl<T: Data> MessageBuilder<T> {
     pub fn build(&self) -> Result<Message, Box<dyn std::error::Error>> {
         let data = self.data.as_ref().map(|d| d.to_base64url());
         let descriptor = self.descriptor.build(self.data.as_ref())?;
@@ -44,22 +42,6 @@ impl MessageBuilder {
         let generator = RecordIdGenerator::try_from(&descriptor)?;
         let record_id = generator.generate_cid()?;
         Ok(record_id)
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum Data {
-    Json(Value),
-}
-
-impl Data {
-    pub fn to_base64url(&self) -> String {
-        match self {
-            Data::Json(value) => {
-                base64::engine::general_purpose::URL_SAFE.encode(value.to_string())
-            }
-        }
     }
 }
 
@@ -130,7 +112,7 @@ impl Display for Method {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum DataFormat {
     /// JSON Web Token formatted Verifiable Credential
@@ -157,20 +139,26 @@ impl From<&DataFormat> for String {
 pub struct DescriptorBuilder {
     pub interface: Interface,
     pub method: Method,
-    pub data_format: Option<DataFormat>,
 }
 
 impl DescriptorBuilder {
-    pub fn build(&self, data: Option<&Data>) -> Result<Descriptor, Box<dyn std::error::Error>> {
-        let data_cid = data.map(|_d| {
-            "".to_string() // TODO: Generate CID
+    pub fn build<T: Data>(
+        &self,
+        data: Option<&T>,
+    ) -> Result<Descriptor, Box<dyn std::error::Error>> {
+        let data_cid = data.map(|d| {
+            // TODO: Generate CID
+            let pb = d.to_ipld();
+            "TODO".to_string()
         });
+
+        let data_format = data.map(|d| d.data_format());
 
         Ok(Descriptor {
             interface: self.interface.clone(),
             method: self.method.clone(),
             data_cid,
-            data_format: self.data_format.clone(),
+            data_format,
         })
     }
 }

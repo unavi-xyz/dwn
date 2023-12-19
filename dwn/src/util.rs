@@ -1,5 +1,4 @@
 use cid::Cid;
-
 use multihash_codetable::{Code, MultihashDigest};
 
 pub fn cid_from_bytes(codec: u64, bytes: &[u8]) -> Cid {
