@@ -67,8 +67,6 @@ pub trait Data {
                 None
             }
             Ipld::Map(map) => {
-                let mut pb_map = BTreeMap::<String, Ipld>::new();
-
                 for (key, value) in map {
                     let mut pb_link = BTreeMap::<String, Ipld>::new();
 
@@ -76,8 +74,9 @@ pub trait Data {
                     let bytes = DagPbCodec.encode(&value).expect("Failed to encode IPLD");
                     let cid = cid_from_bytes(DagPbCodec.into(), &bytes);
                     pb_link.insert("Hash".to_string(), cid.into());
+                    pb_link.insert("Name".to_string(), key.into());
 
-                    pb_map.insert(key, pb_link.into());
+                    links.push(pb_link.into());
                 }
 
                 None
@@ -122,18 +121,22 @@ mod tests {
     use super::{Data, JsonData};
 
     #[test]
-    fn test_json_data() {
+    fn basic_json() {
         let data = JsonData(serde_json::json!({
             "foo": "bar",
         }));
-
         assert_eq!(data.to_base64url(), "eyJmb28iOiJiYXIifQ");
         assert_eq!(data.data_format().to_string(), "application/json");
 
         let ipld = data.decode(&data.to_bytes());
         let encoded = data.encode(&ipld);
         let encoded_string = String::from_utf8(encoded).expect("Failed to convert to string");
-
         assert_eq!(encoded_string, r#"{"foo":"bar"}"#);
+
+        let cid = data.data_cid();
+        assert_eq!(
+            cid,
+            "baguqeeramtldk52dh5v5sazm6qr7xv5flgmuzlg5k2o2zr4yvscjunpnm2gq"
+        )
     }
 }
