@@ -147,6 +147,14 @@ async fn requires_data_descriptors() {
     .build()
     .expect("Failed to build message");
 
+    // Ensure base message is valid
+    {
+        let body = RequestBody {
+            messages: vec![msg.clone()],
+        };
+        expect_status(body, port, StatusCode::OK).await;
+    }
+
     let mut without_cid = msg.clone();
     without_cid.descriptor.data_cid = None;
     without_cid.record_id = without_cid.generate_record_id().unwrap();
