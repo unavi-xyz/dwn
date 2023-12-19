@@ -1,5 +1,7 @@
-use cid::Cid;
-use multihash_codetable::{Code, MultihashDigest};
+use libipld_core::{
+    cid::Cid,
+    multihash::{Code, MultihashDigest},
+};
 
 pub fn cid_from_bytes(codec: u64, bytes: &[u8]) -> Cid {
     let hash = Code::Sha2_256.digest(bytes);

@@ -1,5 +1,6 @@
 pub use iana_media_types as media_types;
 use libipld_cbor::DagCborCodec;
+use media_types::MediaType;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -19,29 +20,43 @@ pub struct Message {
     pub descriptor: Descriptor,
 }
 
+impl Message {
+    pub fn new(data: Option<String>, descriptor: Descriptor) -> Self {
+        let mut msg = Message {
+            data,
+            descriptor,
+            record_id: "".to_string(),
+        };
+
+        msg.record_id = msg.generate_record_id().unwrap();
+
+        msg
+    }
+
+    pub fn generate_record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let generator = RecordIdGenerator::try_from(&self.descriptor)?;
+        let record_id = generator.generate_cid()?;
+        Ok(record_id)
+    }
+}
+
 pub struct MessageBuilder<T: Data> {
     pub data: Option<T>,
     pub descriptor: DescriptorBuilder,
 }
 
 impl<T: Data> MessageBuilder<T> {
+    pub fn new(interface: Interface, method: Method, data: T) -> MessageBuilder<T> {
+        MessageBuilder {
+            data: Some(data),
+            descriptor: DescriptorBuilder { interface, method },
+        }
+    }
+
     pub fn build(&self) -> Result<Message, Box<dyn std::error::Error>> {
         let data = self.data.as_ref().map(|d| d.to_base64url());
         let descriptor = self.descriptor.build(self.data.as_ref())?;
-        let record_id = self.generate_record_id()?;
-
-        Ok(Message {
-            data,
-            descriptor,
-            record_id,
-        })
-    }
-
-    pub fn generate_record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let descriptor = self.descriptor.build(self.data.as_ref())?;
-        let generator = RecordIdGenerator::try_from(&descriptor)?;
-        let record_id = generator.generate_cid()?;
-        Ok(record_id)
+        Ok(Message::new(data, descriptor))
     }
 }
 
@@ -77,7 +92,7 @@ pub struct Descriptor {
     #[serde(rename = "dataCid", skip_serializing_if = "Option::is_none")]
     pub data_cid: Option<String>,
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
-    pub data_format: Option<DataFormat>,
+    pub data_format: Option<MediaType>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -112,30 +127,6 @@ impl Display for Method {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(untagged)]
-pub enum DataFormat {
-    /// JSON Web Token formatted Verifiable Credential
-    #[serde(rename = "application/vc+jwt")]
-    VcJWT,
-    /// JSON-LD formatted Verifiable Credential
-    #[serde(rename = "application/vc+ldp")]
-    VcLDP,
-    MediaType(media_types::MediaType),
-}
-
-impl Display for DataFormat {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        String::from(self).fmt(f)
-    }
-}
-
-impl From<&DataFormat> for String {
-    fn from(data_format: &DataFormat) -> Self {
-        serde_json::to_string(data_format).unwrap()
-    }
-}
-
 pub struct DescriptorBuilder {
     pub interface: Interface,
     pub method: Method,
@@ -146,12 +137,7 @@ impl DescriptorBuilder {
         &self,
         data: Option<&T>,
     ) -> Result<Descriptor, Box<dyn std::error::Error>> {
-        let data_cid = data.map(|d| {
-            // TODO: Generate CID
-            let _pb = d.to_ipld();
-            "TODO".to_string()
-        });
-
+        let data_cid = data.map(|d| d.data_cid());
         let data_format = data.map(|d| d.data_format());
 
         Ok(Descriptor {

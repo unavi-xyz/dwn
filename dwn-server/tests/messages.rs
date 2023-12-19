@@ -1,14 +1,12 @@
 use dwn::{
     data::JsonData,
     features::FeatureDetection,
-    request::{
-        media_types::{Application, MediaType},
-        DataFormat, DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody,
-    },
+    request::{DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody},
     response::ResponseBody,
 };
 use dwn_server::StartOptions;
 use reqwest::{Response, StatusCode};
+use serde_json::json;
 
 fn spawn_server() -> u16 {
     let port = port_check::free_local_port().expect("Failed to find free port");
@@ -45,6 +43,18 @@ fn empty_message() -> Message {
     };
 
     builder.build().expect("Failed to build message")
+}
+
+async fn expect_status(body: RequestBody, port: u16, status: StatusCode) {
+    let res = send_post(body, port)
+        .await
+        .json::<ResponseBody>()
+        .await
+        .expect("Failed to parse response body");
+
+    for reply in res.replies.unwrap().iter() {
+        assert_eq!(reply.status.code, status);
+    }
 }
 
 #[tokio::test]
@@ -97,18 +107,6 @@ async fn feature_detection() {
     serde_json::from_value::<FeatureDetection>(entry).expect("Failed to parse feature detection");
 }
 
-async fn expect_status(body: RequestBody, port: u16, status: StatusCode) {
-    let res = send_post(body, port)
-        .await
-        .json::<ResponseBody>()
-        .await
-        .expect("Failed to parse response body");
-
-    for reply in res.replies.unwrap().iter() {
-        assert_eq!(reply.status.code, status);
-    }
-}
-
 #[tokio::test]
 async fn requires_valid_record_id() {
     let port = spawn_server();
@@ -139,21 +137,28 @@ async fn requires_valid_record_id() {
 async fn requires_data_descriptors() {
     let port = spawn_server();
 
-    let mut msg = empty_message();
-    msg.data = Some("test data".to_string());
-    msg.descriptor.data_cid = Some("test data cid".to_string());
-    msg.descriptor.data_format = Some(DataFormat::MediaType(MediaType::Application(
-        Application::Json,
-    )));
+    let msg = MessageBuilder::<JsonData>::new(
+        Interface::FeatureDetection,
+        Method::FeatureDetectionRead,
+        JsonData(json!({
+            "foo": "bar",
+        })),
+    )
+    .build()
+    .expect("Failed to build message");
 
     let mut without_cid = msg.clone();
     without_cid.descriptor.data_cid = None;
+    without_cid.record_id = without_cid.generate_record_id().unwrap();
 
     let mut without_format = msg.clone();
     without_format.descriptor.data_format = None;
+    without_format.record_id = without_format.generate_record_id().unwrap();
 
     let mut without_both = msg.clone();
     without_both.descriptor.data_cid = None;
+    without_both.descriptor.data_format = None;
+    without_both.record_id = without_both.generate_record_id().unwrap();
 
     let body = RequestBody {
         messages: vec![without_cid, without_format, without_both],

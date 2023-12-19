@@ -54,14 +54,14 @@ impl Display for Protocol {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum Record {
+pub enum Records {
     RecordsCommit,
     RecordsDelete,
     RecordsQuery,
     RecordsWrite,
 }
 
-impl Display for Record {
+impl Display for Records {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         serde_json::to_string(self).unwrap().fmt(f)
     }

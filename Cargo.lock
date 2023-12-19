@@ -238,22 +238,10 @@ checksum = "fd94671561e36e4e7de75f753f577edafb0e7c05d6e4547229fdf7938fbcd2c3"
 dependencies = [
  "core2",
  "multibase",
- "multihash 0.18.1",
+ "multihash",
  "serde",
  "serde_bytes",
- "unsigned-varint 0.7.2",
-]
-
-[[package]]
-name = "cid"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "472ac98592f38dfd48f188d5713a328422ed22fa39eb52b8bca495370134762a"
-dependencies = [
- "core2",
- "multibase",
- "multihash 0.19.1",
- "unsigned-varint 0.8.0",
+ "unsigned-varint",
 ]
 
 [[package]]
@@ -366,16 +354,15 @@ name = "dwn"
 version = "0.0.2"
 dependencies = [
  "base64",
- "cid 0.11.0",
  "iana-media-types",
  "libipld-cbor",
  "libipld-core",
  "libipld-json",
  "libipld-pb",
- "multihash-codetable",
  "serde",
  "serde_ipld_dagcbor",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -383,6 +370,7 @@ name = "dwn-server"
 version = "0.0.2"
 dependencies = [
  "axum",
+ "base64",
  "dwn",
  "port_check",
  "reqwest",
@@ -792,10 +780,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5acd707e8d8b092e967b2af978ed84709eaded82b75effe6cb6f6cc797ef8158"
 dependencies = [
  "anyhow",
- "cid 0.10.1",
+ "cid",
  "core2",
  "multibase",
- "multihash 0.18.1",
+ "multihash",
  "thiserror",
 ]
 
@@ -806,7 +794,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25856def940047b07b25c33d4e66d248597049ab0202085215dc4dca0487731c"
 dependencies = [
  "libipld-core",
- "multihash 0.18.1",
+ "multihash",
  "serde",
  "serde_json",
 ]
@@ -905,41 +893,12 @@ dependencies = [
  "blake3",
  "core2",
  "digest",
- "multihash-derive 0.8.0",
+ "multihash-derive",
  "serde",
  "serde-big-array",
  "sha2",
  "sha3",
- "unsigned-varint 0.7.2",
-]
-
-[[package]]
-name = "multihash"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "076d548d76a0e2a0d4ab471d0b1c36c577786dfc4471242035d97a12a735c492"
-dependencies = [
- "core2",
- "unsigned-varint 0.7.2",
-]
-
-[[package]]
-name = "multihash-codetable"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6d815ecb3c8238d00647f8630ede7060a642c9f704761cd6082cb4028af6935"
-dependencies = [
- "blake2b_simd",
- "blake2s_simd",
- "blake3",
- "core2",
- "digest",
- "multihash-derive 0.9.0",
- "ripemd",
- "sha1",
- "sha2",
- "sha3",
- "strobe-rs",
+ "unsigned-varint",
 ]
 
 [[package]]
@@ -947,31 +906,6 @@ name = "multihash-derive"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc076939022111618a5026d3be019fd8b366e76314538ff9a1b59ffbcbf98bcd"
-dependencies = [
- "proc-macro-crate",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "synstructure",
-]
-
-[[package]]
-name = "multihash-derive"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "890e72cb7396cb99ed98c1246a97b243cc16394470d94e0bc8b0c2c11d84290e"
-dependencies = [
- "core2",
- "multihash 0.19.1",
- "multihash-derive-impl",
-]
-
-[[package]]
-name = "multihash-derive-impl"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d38685e08adb338659871ecfc6ee47ba9b22dcc8abcf6975d379cc49145c3040"
 dependencies = [
  "proc-macro-crate",
  "proc-macro-error",
@@ -1266,15 +1200,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ripemd"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd124222d17ad93a644ed9d011a40f4fb64aa54275c08cc216524a9ea82fb09f"
-dependencies = [
- "digest",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1403,7 +1328,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e880e0b1f9c7a8db874642c1217f7e19b29e325f24ab9f0fcb11818adec7f01"
 dependencies = [
  "cbor4ii",
- "cid 0.10.1",
+ "cid",
  "scopeguard",
  "serde",
 ]
@@ -1439,17 +1364,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "sha1"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
-dependencies = [
- "cfg-if",
- "cpufeatures",
- "digest",
 ]
 
 [[package]]
@@ -1525,25 +1439,6 @@ dependencies = [
  "libc",
  "windows-sys 0.48.0",
 ]
-
-[[package]]
-name = "strobe-rs"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fabb238a1cccccfa4c4fb703670c0d157e1256c1ba695abf1b93bd2bb14bab2d"
-dependencies = [
- "bitflags 1.3.2",
- "byteorder",
- "keccak",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "subtle"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "syn"
@@ -1868,12 +1763,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6889a77d49f1f013504cec6bf97a2c730394adedaeb1deb5ea08949a50541105"
 
 [[package]]
-name = "unsigned-varint"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb066959b24b5196ae73cb057f45598450d2c5f71460e98c49b738086eff9c06"
-
-[[package]]
 name = "url"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2164,24 +2053,4 @@ checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "zeroize"
-version = "1.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "525b4ec142c6b68a2d10f01f7bbf6755599ca3f81ea53b8431b7dd348f5fdb2d"
-dependencies = [
- "zeroize_derive",
-]
-
-[[package]]
-name = "zeroize_derive"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.41",
 ]

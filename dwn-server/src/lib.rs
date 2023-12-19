@@ -1,16 +1,21 @@
-use std::{collections::BTreeMap, net::SocketAddr};
-
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::post,
     Json, Router,
 };
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use dwn::{
-    features::{FeatureDetection, Record},
-    request::{Message, Method, RecordIdGenerator, RequestBody},
+    data::{Data, JsonData},
+    features::{FeatureDetection, Records},
+    request::{
+        media_types::{Application, MediaType},
+        Message, Method, RecordIdGenerator, RequestBody,
+    },
     response::{MessageResult, ResponseBody, Status},
 };
+use std::{collections::BTreeMap, net::SocketAddr};
 use tracing::{error, info, span, warn};
 
 pub struct StartOptions {
@@ -86,18 +91,39 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
     }
 
     if message.data.is_some() {
-        match &message.descriptor.data_cid {
-            Some(_) => {
-                // TODO: Validate data_cid
+        let data_format = match &message.descriptor.data_format {
+            Some(data_format) => data_format,
+            None => {
+                return Err("Message has data but dataFormat is None".into());
             }
+        };
+
+        let data_cid = match &message.descriptor.data_cid {
+            Some(data_cid) => data_cid,
             None => {
                 return Err("Message has data but dataCid is None".into());
             }
         };
 
-        if message.descriptor.data_format.is_none() {
-            return Err("Message has data but dataFormat is None".into());
+        // Validate data_cid
+        // Message data -(base64)-> raw data -> ipld -> ipld-pb -> cid
+        let raw_data = URL_SAFE_NO_PAD
+            .decode(message.data.as_ref().unwrap())
+            .expect("Failed to decode base64url");
+
+        let calculated_data_cid = match data_format {
+            MediaType::Application(Application::Json) => {
+                let data = JsonData(serde_json::from_slice(&raw_data)?);
+                data.data_cid()
+            }
+            _ => {
+                return Err("Data format not supported".into());
+            }
         };
+
+        if calculated_data_cid != *data_cid {
+            return Err("Data CID not valid".into());
+        }
     }
 
     // Process message
@@ -108,9 +134,9 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
             let mut features = FeatureDetection::default();
 
             features.interfaces.records = Some(BTreeMap::from_iter(vec![
-                (Record::RecordsCommit.to_string(), true),
-                (Record::RecordsQuery.to_string(), true),
-                (Record::RecordsWrite.to_string(), true),
+                (Records::RecordsCommit.to_string(), true),
+                (Records::RecordsQuery.to_string(), true),
+                (Records::RecordsWrite.to_string(), true),
             ]));
 
             let value = serde_json::to_value(features)?;

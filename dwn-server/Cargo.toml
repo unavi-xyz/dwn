@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 axum = "0.7.2"
+base64 = "0.21.5"
 dwn = { version = "0.0.2", path = "../dwn" }
 serde_json = "1.0.108"
 tokio = { version = "1.35.0", features = ["full", "tracing"] }
@@ -17,4 +18,3 @@ tracing-subscriber = "0.3.18"
 [dev-dependencies]
 port_check = "0.1.5"
 reqwest = { version = "0.11.22", features = ["json"] }
-serde_json = "1.0.108"
