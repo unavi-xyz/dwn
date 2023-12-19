@@ -11,7 +11,8 @@ use dwn::{
     request::{
         data::{Data, JsonData},
         media_types::{Application, MediaType},
-        Interface, Message, Method, RecordIdGenerator, RequestBody,
+        message::{Interface, Message, Method, RecordIdGenerator},
+        RequestBody,
     },
     response::{MessageResult, ResponseBody, Status},
 };

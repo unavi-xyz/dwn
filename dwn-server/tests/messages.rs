@@ -1,7 +1,9 @@
 use dwn::{
     features::FeatureDetection,
     request::{
-        data::JsonData, DescriptorBuilder, Interface, Message, MessageBuilder, Method, RequestBody,
+        data::JsonData,
+        message::{DescriptorBuilder, Interface, Message, MessageBuilder, Method},
+        RequestBody,
     },
     response::ResponseBody,
 };
