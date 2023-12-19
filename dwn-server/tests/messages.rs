@@ -178,9 +178,9 @@ async fn requires_data_descriptors() {
 
 #[tokio::test]
 async fn records_write() {
-    let port = spawn_server();
+    let _port = spawn_server();
 
-    let msg = MessageBuilder::<JsonData>::new(
+    let _msg = MessageBuilder::<JsonData>::new(
         Interface::Records,
         Method::Write,
         JsonData(json!({
