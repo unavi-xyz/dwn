@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
+  "dwn",
   "dwn-server",
-  "dwn"
+  "dwn-server/tests/utils"
 ]
 
 [workspace.package]

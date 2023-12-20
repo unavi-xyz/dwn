@@ -4,20 +4,15 @@ use axum::{
     routing::post,
     Json, Router,
 };
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine;
 use dwn::{
-    features::{FeatureDetection, Records},
-    request::{
-        data::{Data, JsonData},
-        media_types::{Application, MediaType},
-        message::{Interface, Message, Method, RecordIdGenerator},
-        RequestBody,
-    },
+    request::{Message, RequestBody},
     response::{MessageResult, ResponseBody, Status},
 };
-use std::{collections::BTreeMap, net::SocketAddr};
+use std::net::SocketAddr;
 use tracing::{error, info, span, warn};
+
+#[cfg(test)]
+pub mod test_utils;
 
 pub struct StartOptions {
     pub port: u16,
@@ -82,78 +77,24 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
     span!(tracing::Level::INFO, "message", ?message);
 
     // Validate record_id
-    {
-        let generator = RecordIdGenerator::try_from(&message.descriptor)?;
-        let cid = generator.generate_cid()?;
+    // {
+    //     let generator = RecordIdGenerator::try_from(&message.descriptor)?;
+    //     let cid = generator.generate_cid()?;
+    //
+    //     if cid != message.record_id {
+    //         return Err("Record ID not valid".into());
+    //     }
+    // }
 
-        if cid != message.record_id {
-            return Err("Record ID not valid".into());
+    match message {
+        Message::RecordsWrite(message) => {
+            info!("Processing RecordsWrite message {:?}", message);
+
+            Ok(MessageResult {
+                status: Status::new(StatusCode::OK.as_u16(), None),
+                entries: None,
+            })
         }
-    }
-
-    if message.data.is_some() {
-        let data_format = match &message.descriptor.data_format {
-            Some(data_format) => data_format,
-            None => {
-                return Err("Message has data but dataFormat is None".into());
-            }
-        };
-
-        let data_cid = match &message.descriptor.data_cid {
-            Some(data_cid) => data_cid,
-            None => {
-                return Err("Message has data but dataCid is None".into());
-            }
-        };
-
-        // Validate data_cid
-        // Message data -(base64)-> raw data -> ipld -> ipld-pb -> cid
-        let raw_data = URL_SAFE_NO_PAD
-            .decode(message.data.as_ref().unwrap())
-            .expect("Failed to decode base64url");
-
-        let calculated_data_cid = match data_format {
-            MediaType::Application(Application::Json) => {
-                let data = JsonData(serde_json::from_slice(&raw_data)?);
-                data.data_cid()
-            }
-            _ => {
-                return Err("Data format not supported".into());
-            }
-        };
-
-        if calculated_data_cid != *data_cid {
-            return Err("Data CID not valid".into());
-        }
-    }
-
-    // Process message
-    info!("Received message: {:?}", message);
-
-    if message.descriptor.method == Method::FeatureDetectionRead {
-        let mut features = FeatureDetection::default();
-
-        features.interfaces.records = Some(BTreeMap::from_iter(vec![
-            (Records::RecordsCommit.to_string(), true),
-            (Records::RecordsQuery.to_string(), true),
-            (Records::RecordsWrite.to_string(), true),
-        ]));
-
-        let value = serde_json::to_value(features)?;
-
-        return Ok(MessageResult::new(vec![value]));
-    };
-
-    match message.descriptor.interface {
-        Interface::Records => match message.descriptor.method {
-            Method::Write => {
-                info!("Writing record");
-
-                Ok(MessageResult::default())
-            }
-
-            _ => Err("Method not supported".into()),
-        },
-        _ => Err("Interface not supported".into()),
+        _ => Err("Unsupported message type".into()),
     }
 }
