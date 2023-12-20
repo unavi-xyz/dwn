@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_with::skip_serializing_none;
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ResponseBody {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<Status>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub replies: Option<Vec<MessageResult>>,
+    pub status: Option<Status>,
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Status {
     pub code: u16,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
 }
 
@@ -25,11 +25,11 @@ impl Status {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MessageResult {
-    pub status: Status,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub entries: Option<Vec<Value>>,
+    pub status: Status,
 }
 
 impl Default for MessageResult {
@@ -37,15 +37,6 @@ impl Default for MessageResult {
         Self {
             status: Status::new(200, Some("OK")),
             entries: None,
-        }
-    }
-}
-
-impl MessageResult {
-    pub fn new(entries: Vec<Value>) -> Self {
-        Self {
-            entries: Some(entries),
-            ..Default::default()
         }
     }
 }

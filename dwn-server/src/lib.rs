@@ -53,11 +53,11 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
             Err(e) => {
                 warn!("Failed to process message: {}", e);
                 MessageResult {
+                    entries: None,
                     status: Status::new(
                         StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
                         Some("The request could not be processed correctly"),
                     ),
-                    entries: None,
                 }
             }
         })
