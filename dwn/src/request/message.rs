@@ -65,3 +65,8 @@ pub trait Descriptor: Serialize + Sized {
         RecordIdGenerator::new(self)?.generate()
     }
 }
+
+pub trait Message {
+    /// Validates the message, returning an error if the message is invalid.
+    fn validate(&self) -> Result<(), Box<dyn std::error::Error>>;
+}

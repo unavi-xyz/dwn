@@ -73,15 +73,7 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
 fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::error::Error>> {
     span!(tracing::Level::INFO, "message", ?message);
 
-    // Validate record_id
-    // {
-    //     let generator = RecordIdGenerator::try_from(&message.descriptor)?;
-    //     let cid = generator.generate_cid()?;
-    //
-    //     if cid != message.record_id {
-    //         return Err("Record ID not valid".into());
-    //     }
-    // }
+    message.inner().validate()?;
 
     match message {
         Message::RecordsWrite(message) => {

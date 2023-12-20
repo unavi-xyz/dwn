@@ -22,6 +22,18 @@ pub enum Message {
     RecordsDelete(records::RecordsDelete),
 }
 
+impl Message {
+    pub fn inner(&self) -> &dyn message::Message {
+        match self {
+            Message::RecordsRead(message) => message,
+            Message::RecordsQuery(message) => message,
+            Message::RecordsWrite(message) => message,
+            Message::RecordsCommit(message) => message,
+            Message::RecordsDelete(message) => message,
+        }
+    }
+}
+
 impl From<records::RecordsRead> for Message {
     fn from(message: records::RecordsRead) -> Self {
         Message::RecordsRead(message)
@@ -96,12 +108,12 @@ mod tests {
 
     #[test]
     fn message_serialization() {
-        let messages = vec![
-            Message::RecordsRead(records::RecordsRead::default()),
-            Message::RecordsQuery(records::RecordsQuery::default()),
-            Message::RecordsWrite(records::RecordsWrite::default()),
-            Message::RecordsCommit(records::RecordsCommit::default()),
-            Message::RecordsDelete(records::RecordsDelete::default()),
+        let messages: Vec<Message> = vec![
+            records::RecordsRead::default().into(),
+            records::RecordsQuery::default().into(),
+            records::RecordsWrite::default().into(),
+            records::RecordsCommit::default().into(),
+            records::RecordsDelete::default().into(),
         ];
 
         for message in messages {

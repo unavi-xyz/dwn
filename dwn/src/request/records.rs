@@ -3,11 +3,17 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
-use super::message::{CommitStrategy, Descriptor, Encryption, Interface, Method};
+use super::message::{CommitStrategy, Descriptor, Encryption, Interface, Message, Method};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct RecordsRead {
-    descriptor: RecordsReadDescriptor,
+    pub descriptor: RecordsReadDescriptor,
+}
+
+impl Message for RecordsRead {
+    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -35,7 +41,13 @@ impl Default for RecordsReadDescriptor {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct RecordsQuery {
-    descriptor: RecordsQueryDescriptor,
+    pub descriptor: RecordsQueryDescriptor,
+}
+
+impl Message for RecordsQuery {
+    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
 #[skip_serializing_none]
@@ -110,6 +122,16 @@ pub struct RecordsWrite {
     pub descriptor: RecordsWriteDescriptor,
 }
 
+impl Message for RecordsWrite {
+    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let record_id = self.descriptor.record_id().unwrap();
+        if record_id != self.record_id {
+            return Err("Record ID not valid".into());
+        }
+        Ok(())
+    }
+}
+
 impl Default for RecordsWrite {
     fn default() -> Self {
         let descriptor = RecordsWriteDescriptor::default();
@@ -174,6 +196,16 @@ pub struct RecordsCommit {
     pub descriptor: RecordsCommitDescriptor,
 }
 
+impl Message for RecordsCommit {
+    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let record_id = self.descriptor.record_id().unwrap();
+        if record_id != self.record_id {
+            return Err("Record ID not valid".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsCommitDescriptor {
     interface: Interface,
@@ -203,6 +235,12 @@ impl Default for RecordsCommitDescriptor {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct RecordsDelete {
     pub descriptor: RecordsDeleteDescriptor,
+}
+
+impl Message for RecordsDelete {
+    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
