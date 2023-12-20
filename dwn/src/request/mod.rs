@@ -22,6 +22,36 @@ pub enum Message {
     RecordsDelete(records::RecordsDelete),
 }
 
+impl From<records::RecordsRead> for Message {
+    fn from(message: records::RecordsRead) -> Self {
+        Message::RecordsRead(message)
+    }
+}
+
+impl From<records::RecordsQuery> for Message {
+    fn from(message: records::RecordsQuery) -> Self {
+        Message::RecordsQuery(message)
+    }
+}
+
+impl From<records::RecordsWrite> for Message {
+    fn from(message: records::RecordsWrite) -> Self {
+        Message::RecordsWrite(message)
+    }
+}
+
+impl From<records::RecordsCommit> for Message {
+    fn from(message: records::RecordsCommit) -> Self {
+        Message::RecordsCommit(message)
+    }
+}
+
+impl From<records::RecordsDelete> for Message {
+    fn from(message: records::RecordsDelete) -> Self {
+        Message::RecordsDelete(message)
+    }
+}
+
 impl<'de> Deserialize<'de> for Message {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

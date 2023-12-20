@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
-use super::message::{CommitStrategy, Encryption, Interface, Method};
+use super::message::{CommitStrategy, Descriptor, Encryption, Interface, Method};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct RecordsRead {
@@ -19,6 +19,8 @@ pub struct RecordsReadDescriptor {
     #[serde(rename = "recordId")]
     pub record_id: String,
 }
+
+impl Descriptor for RecordsReadDescriptor {}
 
 impl Default for RecordsReadDescriptor {
     fn default() -> Self {
@@ -45,6 +47,8 @@ pub struct RecordsQueryDescriptor {
     pub message_timestamp: OffsetDateTime,
     pub filter: Option<RecordsQueryFilter>,
 }
+
+impl Descriptor for RecordsQueryDescriptor {}
 
 impl Default for RecordsQueryDescriptor {
     fn default() -> Self {
@@ -99,11 +103,22 @@ pub enum FilterDateSort {
     PublishedDescending,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsWrite {
     #[serde(rename = "recordId")]
     pub record_id: String,
     pub descriptor: RecordsWriteDescriptor,
+}
+
+impl Default for RecordsWrite {
+    fn default() -> Self {
+        let descriptor = RecordsWriteDescriptor::default();
+
+        RecordsWrite {
+            record_id: descriptor.record_id().unwrap(),
+            descriptor,
+        }
+    }
 }
 
 #[skip_serializing_none]
@@ -126,6 +141,8 @@ pub struct RecordsWriteDescriptor {
     #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
     pub date_published: Option<OffsetDateTime>,
 }
+
+impl Descriptor for RecordsWriteDescriptor {}
 
 impl Default for RecordsWriteDescriptor {
     fn default() -> Self {
@@ -169,6 +186,8 @@ pub struct RecordsCommitDescriptor {
     pub date_created: OffsetDateTime,
 }
 
+impl Descriptor for RecordsCommitDescriptor {}
+
 impl Default for RecordsCommitDescriptor {
     fn default() -> Self {
         RecordsCommitDescriptor {
@@ -195,6 +214,8 @@ pub struct RecordsDeleteDescriptor {
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
 }
+
+impl Descriptor for RecordsDeleteDescriptor {}
 
 impl Default for RecordsDeleteDescriptor {
     fn default() -> Self {

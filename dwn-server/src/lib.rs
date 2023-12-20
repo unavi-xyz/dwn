@@ -11,9 +11,6 @@ use dwn::{
 use std::net::SocketAddr;
 use tracing::{error, info, span, warn};
 
-#[cfg(test)]
-pub mod test_utils;
-
 pub struct StartOptions {
     pub port: u16,
 }

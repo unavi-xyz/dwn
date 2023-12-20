@@ -1,4 +1,4 @@
-use dwn::request::RequestBody;
+use dwn::request::{records::RecordsWrite, RequestBody};
 use dwn_test_utils::{expect_status, send_post, spawn_server};
 use reqwest::StatusCode;
 
@@ -22,22 +22,23 @@ async fn requires_valid_record_id() {
     // Valid record ID
     {
         let body = RequestBody {
-            messages: Vec::new(),
+            messages: vec![RecordsWrite::default().into()],
         };
 
         expect_status(body, port, StatusCode::OK).await;
     }
 
     // Invalid record ID
-    // {
-    //     let mut msg =
-    //
-    //         msg.record_id = "invalid record id".to_string();
-    //
-    //     let body = RequestBody {
-    //         messages: vec![msg],
-    //     };
-    //
-    //     expect_status(body, port, StatusCode::INTERNAL_SERVER_ERROR).await;
-    // }
+    {
+        let msg = RecordsWrite {
+            record_id: "invalid".into(),
+            ..RecordsWrite::default()
+        };
+
+        let body = RequestBody {
+            messages: vec![msg.into()],
+        };
+
+        expect_status(body, port, StatusCode::INTERNAL_SERVER_ERROR).await;
+    }
 }

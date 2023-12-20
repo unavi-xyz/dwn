@@ -23,33 +23,6 @@ pub enum Method {
     Write,
 }
 
-#[derive(Serialize)]
-pub struct RecordIdGenerator {
-    #[serde(rename = "descriptorCid")]
-    pub descriptor_cid: String,
-}
-
-impl RecordIdGenerator {
-    pub fn cid<T: Serialize>(descriptor: &T) -> Result<String, Box<dyn std::error::Error>> {
-        let generator = RecordIdGenerator::new(descriptor)?;
-        generator.generate_cid()
-    }
-
-    /// Creates a new RecordIdGenerator from the given descriptor.
-    pub fn new<T: Serialize>(descriptor: &T) -> Result<Self, Box<dyn std::error::Error>> {
-        let serialized = serde_ipld_dagcbor::to_vec(descriptor)?;
-        let descriptor_cid = cid_from_bytes(DagCborCodec.into(), &serialized).to_string();
-        Ok(RecordIdGenerator { descriptor_cid })
-    }
-
-    /// Generates the CID of this struct after DAG-CBOR serialization.
-    pub fn generate_cid(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let bytes = serde_ipld_dagcbor::to_vec(self)?;
-        let cid = cid_from_bytes(DagCborCodec.into(), &bytes);
-        Ok(cid.to_string())
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum CommitStrategy {
     #[serde(rename = "json-patch")]
@@ -64,4 +37,31 @@ pub enum Encryption {
     AesGcm,
     #[serde(rename = "XSalsa20-Poly1305")]
     XSalsa20Poly1305,
+}
+
+#[derive(Serialize)]
+struct RecordIdGenerator {
+    #[serde(rename = "descriptorCid")]
+    pub descriptor_cid: String,
+}
+
+impl RecordIdGenerator {
+    pub fn new<T: Serialize>(descriptor: &T) -> Result<Self, Box<dyn std::error::Error>> {
+        let serialized = serde_ipld_dagcbor::to_vec(descriptor)?;
+        let descriptor_cid = cid_from_bytes(DagCborCodec.into(), &serialized).to_string();
+        Ok(RecordIdGenerator { descriptor_cid })
+    }
+
+    pub fn generate(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let bytes = serde_ipld_dagcbor::to_vec(self)?;
+        let cid = cid_from_bytes(DagCborCodec.into(), &bytes);
+        Ok(cid.to_string())
+    }
+}
+
+pub trait Descriptor: Serialize + Sized {
+    /// Generate a record ID for this descriptor.
+    fn record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+        RecordIdGenerator::new(self)?.generate()
+    }
 }
