@@ -2,7 +2,10 @@ use sqlx::mysql::MySqlPoolOptions;
 
 #[tokio::test]
 async fn insert_record() {
-    dotenv::dotenv().ok();
+    let existing = std::env::var("DATABASE_URL").is_ok();
+    if !existing {
+        dotenv::dotenv().ok();
+    }
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
