@@ -2,7 +2,9 @@ use sqlx::mysql::MySqlPoolOptions;
 
 #[sqlx::test]
 async fn insert_record() {
-    dotenv::dotenv().ok();
+    if std::env::var("DATABASE_URL").is_err() {
+        dotenv::dotenv().ok();
+    }
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
     let pool = MySqlPoolOptions::new().connect(&db_url).await.unwrap();
