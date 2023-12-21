@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
 };
 use dwn::{
-    request::{Message, RequestBody},
+    request::{message::Descriptor, Message, RequestBody},
     response::{MessageResult, ResponseBody, Status},
 };
 use std::net::SocketAddr;
@@ -73,11 +73,17 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
 fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::error::Error>> {
     span!(tracing::Level::INFO, "message", ?message);
 
-    message.inner().validate()?;
-
     match message {
         Message::RecordsWrite(message) => {
-            info!("Processing RecordsWrite message {:?}", message);
+            let entry_id = message.descriptor.record_id().unwrap();
+
+            // "IF Initial Entry exists for a record, store the entry as the Initial Entry for the record
+            //  IF no Initial Entry exists and cease any further processing."
+            // https://identity.foundation/decentralized-web-node/spec/#initial-record-entry
+            //
+            // THIS MAKES NO SENSE TO ME. HOW DO YOU CREATE THE INITIAL ENTRY???
+            // I'm just going to assume the spec is wrong and got the logic backwards.
+            if entry_id == message.record_id {}
 
             Ok(MessageResult {
                 status: Status::new(StatusCode::OK.as_u16(), None),
