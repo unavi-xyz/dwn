@@ -1,11 +1,8 @@
 use sqlx::{MySql, Pool};
 
+#[cfg(not(feature = "disable-sqlx-testing"))]
 #[sqlx::test]
 async fn insert_record(pool: Pool<MySql>) {
-    if std::env::var("DISABLE_SQLX_TESTS").is_ok() {
-        return;
-    }
-
     sqlx::query!("INSERT INTO Record (id, name) VALUES (1, 'test')")
         .execute(&pool)
         .await
