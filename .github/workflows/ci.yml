@@ -11,12 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SQLX_OFFLINE: true
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - uses: Swatinem/rust-cache@v2
       - run: nix flake check --all-systems
+      - run: nix develop -c cargo sqlx prepare
+      - run: nix develop -c cargo sqlx prepare -- --tests
       - run: nix develop -c cargo doc --workspace --all-features --no-deps --document-private-items
       - run: nix develop -c cargo test --workspace --all-features
 
