@@ -5,10 +5,10 @@ A `run.sh` shell script is provided for ease of use.
 
 ## Flags
 
-| Flag     | Default | Description |
-| -------- | ------- | ----------- |
-| `--env`  | `.env`  | Pass in a file to load environment variables from. |
-| `--drop` |         | Drop all tables in the database before running migrations. |
+| Flag     | Default  | Description |
+| -------- | -------- | ----------- |
+| `--env`  | `.env`   | Pass in a file to load environment variables from. |
+| `--drop` | disabled | Drop all tables in the database before running migrations. |
 
 ## Usage
 
