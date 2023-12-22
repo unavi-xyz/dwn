@@ -1,18 +1,24 @@
 //! Utility functions used in tests.
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use dwn::{request::RequestBody, response::ResponseBody};
 use reqwest::{Response, StatusCode};
+use tokio::time::sleep;
 
 /// Starts a DWN server on a random open port and returns the port.
-pub fn spawn_server() -> u16 {
+pub async fn spawn_server() -> u16 {
     let port = port_check::free_local_port().expect("Failed to find free port");
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
 
     tokio::spawn(async move {
         dwn_server::start(dwn_server::StartOptions { port }).await;
     });
 
-    // Wait for server to start
-    std::thread::sleep(std::time::Duration::from_secs(2));
+    // Poll the port until it's open.
+    while !port_check::is_port_reachable(addr) {
+        sleep(std::time::Duration::from_millis(100)).await;
+    }
 
     port
 }

@@ -83,7 +83,9 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
             //
             // THIS MAKES NO SENSE TO ME. HOW DO YOU CREATE THE INITIAL ENTRY???
             // I'm just going to assume the spec is wrong and got the logic backwards.
-            entry_id == message.record_id;
+            if entry_id == message.record_id {
+                info!("Creating initial entry for record {}", message.record_id);
+            }
 
             Ok(MessageResult {
                 status: Status::new(StatusCode::OK.as_u16(), None),

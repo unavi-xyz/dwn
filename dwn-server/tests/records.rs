@@ -4,7 +4,7 @@ use reqwest::StatusCode;
 
 #[tokio::test]
 async fn records_write() {
-    let port = spawn_server();
+    let port = spawn_server().await;
 
     let body = RequestBody {
         messages: vec![RecordsWrite::default().into()],

@@ -4,7 +4,7 @@ use reqwest::StatusCode;
 
 #[tokio::test]
 async fn recieve_post() {
-    let port = spawn_server();
+    let port = spawn_server().await;
 
     let body = RequestBody {
         messages: Vec::new(),
