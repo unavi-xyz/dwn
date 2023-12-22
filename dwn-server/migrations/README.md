@@ -24,7 +24,7 @@ This will clear the local database and run all migrations.
 
 ### Remote Database
 
-If using a remote database, you can create a new file such as `.env.local` and store your `DATABASE_URL` within it.
+If using a remote database, you can create a new file such as `.env.local` and store your database variables within it.
 The following command can then be used to connect to it and run migrations:
 
 ```bash
