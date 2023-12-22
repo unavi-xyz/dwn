@@ -75,9 +75,6 @@
               wait $MYSQL_PID
             }
             trap finish EXIT
-
-            # Initialize the database
-            sh ./dwn-server/migrations/run.sh
           '';
         };
       });
