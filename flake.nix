@@ -77,7 +77,7 @@
             trap finish EXIT
 
             # Initialize the database
-            sh ./sql/run.sh
+            sh ./migrations/run.sh
           '';
         };
       });
