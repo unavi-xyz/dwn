@@ -77,7 +77,7 @@
             trap finish EXIT
 
             # Initialize the database
-            sh ./migrations/run.sh
+            sh ./dwn-server/migrations/run.sh
           '';
         };
       });

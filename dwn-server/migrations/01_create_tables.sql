@@ -1,5 +1,5 @@
 CREATE TABLE Record (
-    ID int,
+    Id int,
     Name varchar(255),
     Time varchar(255)
 );

@@ -1,23 +1,16 @@
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::{MySql, Pool};
 
 #[sqlx::test]
-async fn insert_record() {
-    if std::env::var("DATABASE_URL").is_err() {
-        dotenv::dotenv().ok();
-    }
-
-    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
-    let pool = MySqlPoolOptions::new().connect(&db_url).await.unwrap();
-
+async fn insert_record(pool: Pool<MySql>) {
     sqlx::query!("INSERT INTO Record (id, name) VALUES (1, 'test')")
         .execute(&pool)
         .await
-        .unwrap();
+        .expect("Failed to insert record");
 
     let record = sqlx::query!("SELECT * FROM Record WHERE id = 1")
         .fetch_one(&pool)
         .await
-        .unwrap();
+        .expect("Failed to fetch record");
 
-    assert_eq!(record.ID, Some(1));
+    assert_eq!(record.Id, Some(1));
 }
