@@ -14,8 +14,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - uses: Swatinem/rust-cache@v2
-      - run: cargo sqlx prepare --workspace
-      - run: cargo sqlx prepare --workspace -- --tests
+      - run: nix develop -c cargo sqlx prepare --workspace
+      - run: nix develop -c cargo sqlx prepare --workspace -- --tests
       - uses: EndBug/add-and-commit@v9
         with:
           message: "chore: sqlx prepare"
