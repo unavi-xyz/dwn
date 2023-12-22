@@ -1,7 +1,7 @@
 use sqlx::{MySql, Pool};
 
-#[cfg(not(feature = "disable-sqlx-testing"))]
 #[sqlx::test]
+#[cfg(not(feature = "disable-sqlx-testing"))]
 async fn insert_record(pool: Pool<MySql>) {
     sqlx::query!("INSERT INTO Record (id, name) VALUES (1, 'test')")
         .execute(&pool)
