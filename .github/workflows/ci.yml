@@ -9,11 +9,13 @@ on:
 jobs:
   sqlx-prepare:
     runs-on: ubuntu-latest
+    env: DATABASE_URL
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - uses: Swatinem/rust-cache@v2
+      - run: rm .env
       - run: nix develop -c cargo sqlx prepare --workspace
       - run: nix develop -c cargo sqlx prepare --workspace -- --tests
       - uses: EndBug/add-and-commit@v9
