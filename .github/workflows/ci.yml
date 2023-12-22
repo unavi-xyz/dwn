@@ -10,6 +10,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DISABLE_SQLX_TESTS: true # Cannot get it working :(
     steps:
       - uses: actions/checkout@v4
