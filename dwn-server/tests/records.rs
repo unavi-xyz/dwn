@@ -1,4 +1,4 @@
-use dwn::request::{records::RecordsWrite, RequestBody};
+use dwn::request::{message::Message, records::RecordsWrite, RequestBody};
 use dwn_test_utils::{expect_status, spawn_server};
 use reqwest::StatusCode;
 
@@ -7,7 +7,7 @@ async fn records_write() {
     let port = spawn_server().await;
 
     let body = RequestBody {
-        messages: vec![RecordsWrite::default().into()],
+        messages: vec![Message::new(RecordsWrite::default())],
     };
 
     expect_status(body, port, StatusCode::OK).await;

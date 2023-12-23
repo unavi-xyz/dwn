@@ -3,21 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
-use super::message::{CommitStrategy, Descriptor, Encryption, Interface, Message, Method};
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-pub struct RecordsRead {
-    pub descriptor: RecordsReadDescriptor,
-}
-
-impl Message for RecordsRead {
-    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-}
+use super::message::{CommitStrategy, Encryption, Interface, Method};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsReadDescriptor {
+pub struct RecordsRead {
     interface: Interface,
     method: Method,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
@@ -26,11 +15,9 @@ pub struct RecordsReadDescriptor {
     pub record_id: String,
 }
 
-impl Descriptor for RecordsReadDescriptor {}
-
-impl Default for RecordsReadDescriptor {
+impl Default for RecordsRead {
     fn default() -> Self {
-        RecordsReadDescriptor {
+        RecordsRead {
             interface: Interface::Records,
             method: Method::Read,
             message_timestamp: OffsetDateTime::now_utc(),
@@ -39,20 +26,9 @@ impl Default for RecordsReadDescriptor {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-pub struct RecordsQuery {
-    pub descriptor: RecordsQueryDescriptor,
-}
-
-impl Message for RecordsQuery {
-    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-}
-
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsQueryDescriptor {
+pub struct RecordsQuery {
     interface: Interface,
     method: Method,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
@@ -60,11 +36,9 @@ pub struct RecordsQueryDescriptor {
     pub filter: Option<RecordsQueryFilter>,
 }
 
-impl Descriptor for RecordsQueryDescriptor {}
-
-impl Default for RecordsQueryDescriptor {
+impl Default for RecordsQuery {
     fn default() -> Self {
-        RecordsQueryDescriptor {
+        RecordsQuery {
             interface: Interface::Records,
             method: Method::Query,
             message_timestamp: OffsetDateTime::now_utc(),
@@ -115,37 +89,9 @@ pub enum FilterDateSort {
     PublishedDescending,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsWrite {
-    #[serde(rename = "recordId")]
-    pub record_id: String,
-    pub descriptor: RecordsWriteDescriptor,
-}
-
-impl Message for RecordsWrite {
-    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let record_id = self.descriptor.record_id().unwrap();
-        if record_id != self.record_id {
-            return Err("Record ID not valid".into());
-        }
-        Ok(())
-    }
-}
-
-impl Default for RecordsWrite {
-    fn default() -> Self {
-        let descriptor = RecordsWriteDescriptor::default();
-
-        RecordsWrite {
-            record_id: descriptor.record_id().unwrap(),
-            descriptor,
-        }
-    }
-}
-
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsWriteDescriptor {
+pub struct RecordsWrite {
     interface: Interface,
     method: Method,
     #[serde(rename = "parentId")]
@@ -164,13 +110,11 @@ pub struct RecordsWriteDescriptor {
     pub date_published: Option<OffsetDateTime>,
 }
 
-impl Descriptor for RecordsWriteDescriptor {}
-
-impl Default for RecordsWriteDescriptor {
+impl Default for RecordsWrite {
     fn default() -> Self {
         let time = OffsetDateTime::now_utc();
 
-        RecordsWriteDescriptor {
+        RecordsWrite {
             interface: Interface::Records,
             method: Method::Write,
             parent_id: None,
@@ -186,28 +130,8 @@ impl Default for RecordsWriteDescriptor {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-pub struct RecordsCommit {
-    #[serde(rename = "recordId")]
-    pub record_id: String,
-    #[serde(rename = "contextId")]
-    pub context_id: Option<String>,
-    pub descriptor: RecordsCommitDescriptor,
-}
-
-impl Message for RecordsCommit {
-    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let record_id = self.descriptor.record_id().unwrap();
-        if record_id != self.record_id {
-            return Err("Record ID not valid".into());
-        }
-        Ok(())
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsCommitDescriptor {
+pub struct RecordsCommit {
     interface: Interface,
     method: Method,
     #[serde(rename = "parentId")]
@@ -218,11 +142,9 @@ pub struct RecordsCommitDescriptor {
     pub date_created: OffsetDateTime,
 }
 
-impl Descriptor for RecordsCommitDescriptor {}
-
-impl Default for RecordsCommitDescriptor {
+impl Default for RecordsCommit {
     fn default() -> Self {
-        RecordsCommitDescriptor {
+        RecordsCommit {
             interface: Interface::Records,
             method: Method::Commit,
             parent_id: "".to_string(),
@@ -232,19 +154,8 @@ impl Default for RecordsCommitDescriptor {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-pub struct RecordsDelete {
-    pub descriptor: RecordsDeleteDescriptor,
-}
-
-impl Message for RecordsDelete {
-    fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsDeleteDescriptor {
+pub struct RecordsDelete {
     interface: Interface,
     method: Method,
     #[serde(rename = "recordId")]
@@ -253,11 +164,9 @@ pub struct RecordsDeleteDescriptor {
     pub message_timestamp: OffsetDateTime,
 }
 
-impl Descriptor for RecordsDeleteDescriptor {}
-
-impl Default for RecordsDeleteDescriptor {
+impl Default for RecordsDelete {
     fn default() -> Self {
-        RecordsDeleteDescriptor {
+        RecordsDelete {
             interface: Interface::Records,
             method: Method::Delete,
             record_id: "".to_string(),

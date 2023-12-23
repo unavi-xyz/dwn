@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
 };
 use dwn::{
-    request::{message::Descriptor, Message, RequestBody},
+    request::{descriptor::Descriptor, message::Message, RequestBody},
     response::{MessageResult, ResponseBody, Status},
 };
 use std::net::SocketAddr;
@@ -73,9 +73,11 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
 fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::error::Error>> {
     span!(tracing::Level::INFO, "message", ?message);
 
-    match message {
-        Message::RecordsWrite(message) => {
-            let entry_id = message.descriptor.record_id().unwrap();
+    match message.descriptor {
+        Descriptor::RecordsWrite(_) => {
+            // TODO: Require authorization
+
+            let entry_id = message.generate_record_id()?;
 
             // "IF Initial Entry exists for a record, store the entry as the Initial Entry for the record
             //  IF no Initial Entry exists and cease any further processing."
@@ -85,6 +87,7 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
             // I'm just going to assume the spec is wrong and got the logic backwards.
             if entry_id == message.record_id {
                 info!("Creating initial entry for record {}", message.record_id);
+                // TODO: Create initial entry in database
             }
 
             Ok(MessageResult {

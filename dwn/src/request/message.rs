@@ -3,6 +3,34 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::cid_from_bytes;
 
+use super::descriptor::Descriptor;
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct Message {
+    #[serde(rename = "recordId")]
+    pub record_id: String,
+    pub descriptor: Descriptor,
+}
+
+impl Message {
+    pub fn new<T: Serialize + Into<Descriptor>>(descriptor: T) -> Self {
+        let mut msg = Message {
+            record_id: "".to_string(),
+            descriptor: descriptor.into(),
+        };
+
+        msg.record_id = msg.generate_record_id().unwrap();
+
+        msg
+    }
+
+    /// Returns the generated record ID for the message.
+    pub fn generate_record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let generator = RecordIdGenerator::new(&self.descriptor)?;
+        generator.generate()
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Interface {
     Permissions,
@@ -57,16 +85,4 @@ impl RecordIdGenerator {
         let cid = cid_from_bytes(DagCborCodec.into(), &bytes);
         Ok(cid.to_string())
     }
-}
-
-pub trait Descriptor: Serialize + Sized {
-    /// Generate a record ID for this descriptor.
-    fn record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
-        RecordIdGenerator::new(self)?.generate()
-    }
-}
-
-pub trait Message {
-    /// Validates the message, returning an error if the message is invalid.
-    fn validate(&self) -> Result<(), Box<dyn std::error::Error>>;
 }
