@@ -1,4 +1,4 @@
-use dwn::request::{message::Message, records::RecordsWrite, RequestBody};
+use dwn::request::{descriptor::records::RecordsWrite, message::Message, RequestBody};
 use dwn_test_utils::{expect_status, spawn_server};
 use reqwest::StatusCode;
 

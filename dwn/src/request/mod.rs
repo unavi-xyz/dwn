@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 pub mod data;
 pub mod descriptor;
 pub mod message;
-pub mod records;
 
 pub use iana_media_types as media_types;
 

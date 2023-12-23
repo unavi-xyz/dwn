@@ -31,22 +31,6 @@ impl Message {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum CommitStrategy {
-    #[serde(rename = "json-patch")]
-    JsonPatch,
-    #[serde(rename = "json-merge")]
-    JsonMerge,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum Encryption {
-    #[serde(rename = "AES-GCM")]
-    AesGcm,
-    #[serde(rename = "XSalsa20-Poly1305")]
-    XSalsa20Poly1305,
-}
-
 #[derive(Serialize)]
 struct RecordIdGenerator {
     #[serde(rename = "descriptorCid")]
