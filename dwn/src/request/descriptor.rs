@@ -3,6 +3,26 @@ use serde_json::Value;
 
 use super::records;
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub enum Interface {
+    Permissions,
+    Protocols,
+    Records,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub enum Method {
+    Commit,
+    Configure,
+    Delete,
+    Grant,
+    Query,
+    Read,
+    Request,
+    Revoke,
+    Write,
+}
+
 #[derive(Clone, Debug, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum Descriptor {

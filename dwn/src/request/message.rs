@@ -32,26 +32,6 @@ impl Message {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum Interface {
-    Permissions,
-    Protocols,
-    Records,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum Method {
-    Commit,
-    Configure,
-    Delete,
-    Grant,
-    Query,
-    Read,
-    Request,
-    Revoke,
-    Write,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum CommitStrategy {
     #[serde(rename = "json-patch")]
     JsonPatch,

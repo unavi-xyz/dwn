@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
-use super::message::{CommitStrategy, Encryption, Interface, Method};
+use super::{
+    descriptor::{Interface, Method},
+    message::{CommitStrategy, Encryption},
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsRead {
