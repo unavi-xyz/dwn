@@ -27,8 +27,10 @@ pub async fn spawn_server() -> u16 {
 pub async fn send_post(data: RequestBody, port: u16) -> Response {
     let client = reqwest::Client::new();
 
+    let url = format!("http://localhost:{}", port);
+
     client
-        .post(format!("http://localhost:{}", port))
+        .post(&url)
         .header("Content-Type", "application/json")
         .body(serde_json::to_string(&data).expect("Failed to serialize data"))
         .send()

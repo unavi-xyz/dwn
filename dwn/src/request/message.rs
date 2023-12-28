@@ -1,6 +1,7 @@
+use anyhow::Result;
 use didkit::{
-    ssi::{jwk::Algorithm, jws::Header},
-    JWK,
+    ssi::{did::Resource, jwk::Algorithm, jws::Header},
+    ResolutionInputMetadata, VerificationRelationship, DIDURL, DID_METHODS, JWK,
 };
 use libipld_cbor::DagCborCodec;
 use serde::{Deserialize, Serialize};
@@ -33,7 +34,7 @@ impl Message {
     }
 
     /// Returns the generated record ID for the message.
-    pub fn generate_record_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn generate_record_id(&self) -> Result<String> {
         let generator = RecordIdGenerator::new(&self.descriptor)?;
         generator.generate()
     }
@@ -46,13 +47,13 @@ struct RecordIdGenerator {
 }
 
 impl RecordIdGenerator {
-    pub fn new<T: Serialize>(descriptor: &T) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new<T: Serialize>(descriptor: &T) -> Result<Self> {
         let serialized = serde_ipld_dagcbor::to_vec(descriptor)?;
         let descriptor_cid = cid_from_bytes(DagCborCodec.into(), &serialized).to_string();
         Ok(RecordIdGenerator { descriptor_cid })
     }
 
-    pub fn generate(&self) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn generate(&self) -> Result<String> {
         let bytes = serde_ipld_dagcbor::to_vec(self)?;
         let cid = cid_from_bytes(DagCborCodec.into(), &bytes);
         Ok(cid.to_string())
@@ -63,27 +64,91 @@ impl RecordIdGenerator {
 pub struct Authorization(String);
 
 impl Authorization {
-    pub fn encode(
+    pub async fn encode(
         algorithm: Algorithm,
         payload: &AuthPayload,
         key: &JWK,
-        did: String,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+        key_url: &DIDURL,
+    ) -> Result<Self> {
         let payload = serde_json::to_string(payload)?;
         let header = Header {
             algorithm,
-            key_id: Some(did),
+            key_id: Some(key_url.to_string()),
             ..Default::default()
         };
         let jws = didkit::ssi::jws::encode_sign_custom_header(payload.as_str(), key, &header)?;
         Ok(Authorization(jws))
     }
 
-    pub fn decode(&self, key: &JWK) -> Result<(Header, AuthPayload), Box<dyn std::error::Error>> {
-        let (header, payload) = didkit::ssi::jws::decode_verify(&self.0, key)?;
-        let payload = serde_json::from_slice(payload.as_slice())?;
+    /// Decodes the JWS and verifies the signature.
+    pub async fn decode(&self) -> Result<(Header, AuthPayload)> {
+        let (header, _) = didkit::ssi::jws::decode_unverified(&self.0)?;
+
+        let key_id = match header.key_id {
+            Some(key_id) => key_id,
+            None => return Err(anyhow::anyhow!("header is missing key_id")),
+        };
+        let key_url = DIDURL::try_from(key_id)?;
+        let key = url_to_key(&key_url).await?;
+
+        let (header, payload) = didkit::ssi::jws::decode_verify(&self.0, &key)?;
+        let payload = serde_json::from_slice::<AuthPayload>(payload.as_slice())?;
+
         Ok((header, payload))
     }
+}
+
+/// Resolves a DIDURL to a JWK.
+async fn url_to_key(url: &DIDURL) -> Result<JWK> {
+    let url_string = url.to_string();
+
+    let method = match DID_METHODS.get_method(&url_string) {
+        Ok(method) => method,
+        Err(e) => {
+            return Err(anyhow::anyhow!("did method not found: {}", e));
+        }
+    };
+
+    let (_, document, _) = method
+        .to_resolver()
+        .resolve(&url.did, &ResolutionInputMetadata::default())
+        .await;
+
+    let document = match document {
+        Some(document) => document,
+        None => return Err(anyhow::anyhow!("document not found")),
+    };
+
+    let auth_ids =
+        match document.get_verification_method_ids(VerificationRelationship::Authentication) {
+            Ok(auth_ids) => auth_ids,
+            Err(e) => {
+                return Err(anyhow::anyhow!(
+                    "failed to get authentication methods: {}",
+                    e
+                ));
+            }
+        };
+
+    if !auth_ids.contains(&url_string) {
+        return Err(anyhow::anyhow!(
+            "key_id not found in authentication methods"
+        ));
+    }
+
+    let resource = document.select_object(url)?;
+
+    let key = match resource {
+        Resource::VerificationMethod(vm) => vm.public_key_jwk,
+        _ => return Err(anyhow::anyhow!("resource is not a verification method")),
+    };
+
+    let key = match key {
+        Some(key) => key,
+        None => return Err(anyhow::anyhow!("public key not found")),
+    };
+
+    Ok(key)
 }
 
 #[skip_serializing_none]

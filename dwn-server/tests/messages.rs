@@ -1,8 +1,10 @@
 use dwn::request::RequestBody;
 use dwn_test_utils::{send_post, spawn_server};
 use reqwest::StatusCode;
+use tracing_test::traced_test;
 
 #[tokio::test]
+#[traced_test]
 async fn recieve_post() {
     let port = spawn_server().await;
 

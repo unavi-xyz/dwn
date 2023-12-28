@@ -13,5 +13,9 @@ repository = "https://github.com/unavi-xyz/dwn"
 license = "GPL-3.0-or-later"
 keywords = ["decentralized web node", "did"]
 
+[workspace.dependencies]
+didkit = { version = "0.6.0", default-features = false, features = ["ed25519", "ring"] }
+tokio = { version = "1.35.0", features = ["macros", "test-util", "tracing"] }
+
 [profile.release]
 lto = true

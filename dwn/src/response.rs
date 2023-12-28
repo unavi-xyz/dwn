@@ -32,10 +32,24 @@ pub struct MessageResult {
     pub status: Status,
 }
 
-impl Default for MessageResult {
-    fn default() -> Self {
+impl MessageResult {
+    pub fn ok() -> Self {
         Self {
             status: Status::new(200, Some("OK")),
+            entries: None,
+        }
+    }
+
+    pub fn unauthorized() -> Self {
+        Self {
+            status: Status::new(401, Some("Unauthorized")),
+            entries: None,
+        }
+    }
+
+    pub fn error(message: String) -> Self {
+        Self {
+            status: Status::new(500, Some(&message)),
             entries: None,
         }
     }

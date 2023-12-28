@@ -1,3 +1,4 @@
+use anyhow::Result;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -43,25 +44,22 @@ pub async fn start(StartOptions { port }: StartOptions) {
 }
 
 async fn post_handler(body: Json<RequestBody>) -> Response {
-    let replies = body
-        .0
-        .messages
-        .iter()
-        .map(process_message)
-        .map(|result| match result {
-            Ok(message_result) => message_result,
+    let iter = body.0.messages.iter().map(|message| async move {
+        let result = process_message(message).await;
+        match result {
+            Ok(result) => result,
             Err(e) => {
-                warn!("Failed to process message: {}", e);
-                MessageResult {
-                    entries: None,
-                    status: Status::new(
-                        StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-                        Some("The request could not be processed correctly"),
-                    ),
-                }
+                warn!("Error processing message: {}", e);
+                MessageResult::error(e.to_string())
             }
-        })
-        .collect::<Vec<_>>();
+        }
+    });
+
+    let mut replies = Vec::new();
+
+    for result in iter {
+        replies.push(result.await);
+    }
 
     Json(ResponseBody {
         status: Some(Status::new(StatusCode::OK.as_u16(), None)),
@@ -70,12 +68,17 @@ async fn post_handler(body: Json<RequestBody>) -> Response {
     .into_response()
 }
 
-fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::error::Error>> {
+async fn process_message(message: &Message) -> Result<MessageResult> {
     span!(tracing::Level::INFO, "message", ?message);
 
     match message.descriptor {
         Descriptor::RecordsWrite(_) => {
-            // TODO: Require authorization
+            match &message.authorization {
+                Some(auth) => {
+                    let (header, payload) = auth.decode().await?;
+                }
+                None => return Ok(MessageResult::unauthorized()),
+            };
 
             let entry_id = message.generate_record_id()?;
 
@@ -90,11 +93,8 @@ fn process_message(message: &Message) -> Result<MessageResult, Box<dyn std::erro
                 // TODO: Create initial entry in database
             }
 
-            Ok(MessageResult {
-                status: Status::new(StatusCode::OK.as_u16(), None),
-                entries: None,
-            })
+            Ok(MessageResult::ok())
         }
-        _ => Err("Unsupported message type".into()),
+        _ => Ok(MessageResult::error("Unsupported descriptor".to_string())),
     }
 }

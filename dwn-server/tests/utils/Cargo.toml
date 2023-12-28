@@ -12,4 +12,4 @@ dwn-server = { path = "../../" }
 port_check = "0.1.5"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde_json = "1.0.108"
-tokio = { version = "1.35.0", features = ["full", "tracing"] }
+tokio.workspace = true

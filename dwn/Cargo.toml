@@ -7,9 +7,10 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow = "1.0.77"
 base64 = "0.21.5"
 did-method-key = "0.2.2"
-didkit = { version = "0.6.0", default-features = false, features = ["ed25519", "ring"] }
+didkit.workspace = true
 iana-media-types = "0.1.2"
 libipld-cbor = "0.16.0"
 libipld-core = "0.16.0"
@@ -24,4 +25,5 @@ time = { version = "0.3.31", features = ["serde-well-known"] }
 tracing = "0.1.40"
 
 [dev-dependencies]
+tokio.workspace = true
 tracing-subscriber = "0.3.18"
