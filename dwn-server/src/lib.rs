@@ -75,7 +75,7 @@ async fn process_message(message: &Message) -> Result<MessageResult> {
         Descriptor::RecordsWrite(_) => {
             match &message.authorization {
                 Some(auth) => {
-                    let (header, payload) = auth.decode().await?;
+                    let (_header, _payload) = auth.decode().await?;
                 }
                 None => return Ok(MessageResult::unauthorized()),
             };
