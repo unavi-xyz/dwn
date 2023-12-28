@@ -1,5 +1,9 @@
+use libipld_cbor::DagCborCodec;
+use libipld_core::cid::Cid;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+
+use crate::util::cid_from_bytes;
 
 pub mod records;
 
@@ -47,6 +51,14 @@ pub enum Descriptor {
     RecordsWrite(records::RecordsWrite),
     RecordsCommit(records::RecordsCommit),
     RecordsDelete(records::RecordsDelete),
+}
+
+impl Descriptor {
+    /// Returns the CID of the descriptor after DAG-CBOR serialization.
+    pub fn cid(&self) -> Cid {
+        let bytes = serde_ipld_dagcbor::to_vec(self).unwrap();
+        cid_from_bytes(DagCborCodec.into(), &bytes)
+    }
 }
 
 impl From<records::RecordsRead> for Descriptor {
