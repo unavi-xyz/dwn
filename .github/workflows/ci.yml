@@ -10,7 +10,10 @@ jobs:
   migrate-db:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_PASS: ${{ secrets.DB_PASS }}
+      DB_USER: ${{ secrets.DB_USER }}
     steps:
       - uses: actions/checkout@v4
       - run: rm .env
