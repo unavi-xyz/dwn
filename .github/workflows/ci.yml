@@ -75,7 +75,7 @@ jobs:
         with:
           name: sqlx
           path: .sqlx
-      - run: nix develop -c cargo clippy --fix --no-deps
+      - run: nix develop -c cargo clippy --fix --no-deps --allow-dirty
       - uses: EndBug/add-and-commit@v9
         with:
           message: "chore: lint"
