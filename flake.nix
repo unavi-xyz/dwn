@@ -41,7 +41,8 @@
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs;
-            [ cargo-watch mariadb rust-analyzer rustBin ] ++ build_inputs;
+            [ cargo-watch mariadb rust-analyzer rustBin sqlx-cli ]
+            ++ build_inputs;
           nativeBuildInputs = native_build_inputs;
 
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath build_inputs;
