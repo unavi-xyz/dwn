@@ -43,13 +43,7 @@ run_mysql() {
     fi
 }
 
-# Parse the command line arguments
-parse_args "$@"
-
-# Load .env
-export $(cat "$ENV_FILE" | xargs)
-
-if [ "$DROP_DB" = true ]; then
+drop_tables() {
     # Get all tables
     echo "SHOW TABLES;" > "$SCRIPT_DIR/tables.sql"
     run_mysql "$DB_USER" "$DB_PASS" "$DB_HOST" "$DB_NAME" "$SCRIPT_DIR/tables.sql" > "$SCRIPT_DIR/tables.txt"
@@ -58,7 +52,7 @@ if [ "$DROP_DB" = true ]; then
     # Remove the first line
     sed -i '1d' "$SCRIPT_DIR/tables.txt"
 
-    # Drop all tables
+    # Drop each table
     while read -r table; do
         echo "Dropping $table..."
         echo "DROP TABLE $table;" > "$SCRIPT_DIR/drop.sql"
@@ -67,6 +61,16 @@ if [ "$DROP_DB" = true ]; then
     done < "$SCRIPT_DIR/tables.txt"
 
     rm "$SCRIPT_DIR/tables.txt"
+}
+
+# Parse the command line arguments
+parse_args "$@"
+
+# Load .env
+export $(cat "$ENV_FILE" | xargs)
+
+if [ "$DROP_DB" = true ]; then
+    drop_tables
 fi
 
 # Create the database if it doesn't exist
