@@ -5,8 +5,7 @@ DB_NAME=dwn
 DROP_DB=false
 ENV_FILE=.env
 
-# Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR="./dwn-server/migrations"
 
 # Function to parse arguments
 parse_args() {
