@@ -1,0 +1,36 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT * FROM Record WHERE id = 'test'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
+          "char_set": 255,
+          "max_size": 1020
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "data",
+        "type_info": {
+          "type": "Blob",
+          "flags": "NOT_NULL | BLOB | NO_DEFAULT_VALUE",
+          "char_set": 255,
+          "max_size": 262140
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8c5726161d407b5277d83e8ea46311324e15866135f0bd9b5b9c7333057b7389"
+}
