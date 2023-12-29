@@ -10,3 +10,9 @@ pub use iana_media_types as media_types;
 pub struct RequestBody {
     pub messages: Vec<message::Message>,
 }
+
+impl RequestBody {
+    pub fn new(messages: Vec<message::Message>) -> Self {
+        Self { messages }
+    }
+}

@@ -12,10 +12,7 @@ async fn records_write() {
 
     // Require authorization
     {
-        let body = RequestBody {
-            messages: vec![msg.clone()],
-        };
-
+        let body = RequestBody::new(vec![msg.clone()]);
         expect_status(body, port, StatusCode::UNAUTHORIZED).await;
     }
 
@@ -24,10 +21,7 @@ async fn records_write() {
 
     // Valid message
     {
-        let body = RequestBody {
-            messages: vec![msg],
-        };
-
+        let body = RequestBody::new(vec![msg]);
         expect_status(body, port, StatusCode::OK).await;
     }
 }
