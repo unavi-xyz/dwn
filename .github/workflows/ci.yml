@@ -7,7 +7,28 @@ on:
   pull_request:
 
 jobs:
+  sqlx-prepare:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: Swatinem/rust-cache@v2
+      - run: nix develop -c cargo sqlx prepare --workspace
+      - run: nix develop -c cargo sqlx prepare --workspace -- --tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sqlx
+          path: .sqlx
+      - uses: EndBug/add-and-commit@v9
+        with:
+          message: "chore: sqlx prepare"
+          default_author: github_actions
+
   check:
+    needs: sqlx-prepare
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -17,11 +38,16 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: sqlx
+          path: .sqlx
       - run: nix flake check --all-systems
       - run: nix develop -c cargo doc --workspace --all-features --no-deps --document-private-items
       - run: nix develop -c cargo test --workspace --all-features
 
   lint:
+    needs: sqlx-prepare
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -31,6 +57,10 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: sqlx
+          path: .sqlx
       - run: nix develop -c cargo clippy --fix --no-deps
       - uses: EndBug/add-and-commit@v9
         with:
