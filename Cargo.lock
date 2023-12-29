@@ -1580,6 +1580,7 @@ dependencies = [
 name = "dwn-test-utils"
 version = "0.0.2"
 dependencies = [
+ "didkit",
  "dwn",
  "dwn-server",
  "port_check",

@@ -2,7 +2,14 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use dwn::{request::RequestBody, response::ResponseBody};
+use didkit::{ssi::jwk::Algorithm, Source, DIDURL, DID_METHODS, JWK};
+use dwn::{
+    request::{
+        message::{AuthPayload, Authorization, Message},
+        RequestBody,
+    },
+    response::ResponseBody,
+};
 use reqwest::{Response, StatusCode};
 use tokio::time::sleep;
 
@@ -49,4 +56,28 @@ pub async fn expect_status(body: RequestBody, port: u16, status: StatusCode) {
     for reply in res.replies.unwrap().iter() {
         assert_eq!(reply.status.code, status);
     }
+}
+
+/// Generates authorization for a message.
+pub async fn gen_auth(msg: &Message) -> Authorization {
+    let key = JWK::generate_ed25519().expect("failed to generate key");
+
+    let did = DID_METHODS
+        .get_method("did:key")
+        .expect("did:key method not found")
+        .generate(&Source::Key(&key))
+        .expect("failed to generate did");
+    let mut key_url = DIDURL::try_from(did.clone()).expect("failed to parse did url");
+    let did_hash = did.split(':').nth(2).expect("failed to get did body");
+    key_url.fragment = Some(did_hash.to_string());
+
+    let payload = AuthPayload {
+        descriptor_cid: msg.descriptor.cid().to_string(),
+        attestation_cid: None,
+        permissions_grant_cid: None,
+    };
+
+    Authorization::encode(Algorithm::EdDSA, &payload, &key, &key_url)
+        .await
+        .expect("failed to encode authorization")
 }
