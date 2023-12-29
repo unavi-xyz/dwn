@@ -1,6 +1,4 @@
-//! Utility functions used in tests.
-
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{net::SocketAddr, sync::Arc};
 
 use didkit::{ssi::jwk::Algorithm, Source, DIDURL, DID_METHODS, JWK};
 use dwn::{
@@ -12,14 +10,32 @@ use dwn::{
 };
 use reqwest::{Response, StatusCode};
 use tokio::time::sleep;
+use tracing::{error, info};
 
 /// Starts a DWN server on a random open port and returns the port.
 pub async fn spawn_server() -> u16 {
+    dotenvy::dotenv().ok();
+
     let port = port_check::free_local_port().expect("Failed to find free port");
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let pool = dwn_server::create_pool(&database_url)
+        .await
+        .expect("Failed to create pool");
 
     tokio::spawn(async move {
-        dwn_server::start(dwn_server::StartOptions { port }).await;
+        let app = dwn_server::router(Arc::new(dwn_server::AppState { pool }));
+
+        let listener = tokio::net::TcpListener::bind(addr)
+            .await
+            .expect("Failed to bind port");
+
+        info!("Listening on port {}", addr.port());
+
+        if let Err(e) = axum::serve(listener, app).await {
+            error!("Server error: {}", e);
+        }
     });
 
     // Poll the port until it's open.

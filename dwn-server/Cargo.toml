@@ -14,7 +14,9 @@ anyhow = "1.0.77"
 axum = "0.7.2"
 base64 = "0.21.5"
 didkit.workspace = true
+dotenvy = "0.15.7"
 dwn = { version = "0.0.2", path = "../dwn" }
+serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-rustls"] }
 tokio.workspace = true

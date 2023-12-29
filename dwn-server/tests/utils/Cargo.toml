@@ -7,10 +7,13 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+axum = "0.7.2"
 didkit.workspace = true
+dotenvy = "0.15.7"
 dwn = { path = "../../../dwn" }
 dwn-server = { path = "../../" }
 port_check = "0.1.5"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde_json = "1.0.108"
 tokio.workspace = true
+tracing = "0.1.40"
