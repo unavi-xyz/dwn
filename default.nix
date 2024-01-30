@@ -18,13 +18,15 @@ let
 
     LD_LIBRARY_PATH = lib.makeLibraryPath build_inputs;
   };
+
+  SQLX_OFFLINE = true;
 in {
   dwn-server = rustPlatform.buildRustPackage (common // {
     pname = "dwn-server";
-    checkPhase = "";
+    buildAndTestSubdir = "dwn-server";
   });
   dwn = rustPlatform.buildRustPackage (common // {
     pname = "dwn";
-    checkPhase = "";
+    buildAndTestSubdir = "dwn";
   });
 }
