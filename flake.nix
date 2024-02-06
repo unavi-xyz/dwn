@@ -86,6 +86,7 @@
           prepare = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "prepare" ''
               ${rustToolchain}/bin/cargo sqlx prepare --workspace
+              ${rustToolchain}/bin/cargo sqlx prepare --workspace -- --tests
             '';
           };
 
@@ -133,7 +134,15 @@
                 --socket=$MYSQL_UNIX_PORT 2> $MYSQL_HOME/mysql.log &
               MYSQL_PID=$!
 
+              # Wait for the server to start
+              while ! ${pkgs.mariadb}/bin/mysqladmin -u root --socket=$MYSQL_UNIX_PORT ping &>/dev/null; do
+                sleep 1
+              done
+
               echo "MariaDB server started with PID $MYSQL_PID"
+
+              # Create the database
+              ${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_PORT create dwn || true
 
               finish()
               {

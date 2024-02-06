@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO Record (id, data) VALUES ('test', 'test')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "6a80220de839766d12809b36499fd23a2696728d97df2b274db091ad95d2080a"
+}
