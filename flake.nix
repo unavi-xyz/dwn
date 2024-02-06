@@ -47,13 +47,15 @@
 
           nativeBuildInputs = with pkgs; [ cargo-auditable pkg-config ];
 
-          SQLX_OFFLINE = "true";
+          SQLX_OFFLINE = true;
         };
 
         commonShell = {
           checks = self.checks.${localSystem};
           packages = with pkgs; [ cargo-watch mariadb rust-analyzer sqlx-cli ];
+
           DATABASE_URL = "mysql://root@localhost:3306/dwn";
+          SQLX_OFFLINE = true;
         };
 
         cargoArtifacts =
