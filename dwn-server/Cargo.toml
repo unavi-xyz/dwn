@@ -6,9 +6,6 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 
-[features]
-disable-sqlx-testing = []
-
 [dependencies]
 anyhow = "1.0.77"
 axum = "0.7.2"

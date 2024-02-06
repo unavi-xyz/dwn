@@ -1,81 +1,151 @@
 {
   inputs = {
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs = {
-        flake-utils.follows = "flake-utils";
         nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
       };
     };
   };
 
-  outputs = { self, flake-utils, nixpkgs, rust-overlay, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, crane, flake-utils, rust-overlay, ... }:
+    flake-utils.lib.eachDefaultSystem (localSystem:
       let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs { inherit system overlays; };
-
-        rustBin = pkgs.rust-bin.stable.latest.default;
-
-        build_inputs = with pkgs; [ ];
-
-        native_build_inputs = with pkgs; [ cargo-auditable openssl pkg-config ];
-
-        code = pkgs.callPackage ./. {
-          inherit pkgs system build_inputs native_build_inputs;
+        pkgs = import nixpkgs {
+          inherit localSystem;
+          overlays = [ (import rust-overlay) ];
         };
-      in rec {
-        packages = code // {
-          all = pkgs.symlinkJoin {
-            name = "all";
-            paths = with code; [ dwn-server dwn ];
+
+        inherit (pkgs) lib;
+
+        rustToolchain = pkgs.pkgsBuildHost.rust-bin.stable.latest.default;
+
+        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+
+        commonArgs = {
+          src = lib.cleanSourceWith {
+            src = ./.;
+            filter = path: type:
+              (lib.hasSuffix ".sql" path) || (lib.hasInfix "/.sqlx/" path)
+              || (craneLib.filterCargoSources path type);
           };
 
-          default = packages.all;
-          override = packages.all;
-          overrideDerivation = packages.all;
+          strictDeps = true;
+
+          buildInputs = with pkgs;
+            [ openssl ] ++ lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.darwin.apple_sdk.frameworks.Security
+              pkgs.libiconv
+            ];
+
+          nativeBuildInputs = with pkgs; [ cargo-auditable pkg-config ];
+
+          SQLX_OFFLINE = true;
         };
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs;
-            [ cargo-watch mariadb rust-analyzer rustBin sqlx-cli ]
-            ++ build_inputs;
-          nativeBuildInputs = native_build_inputs;
+        commonShell = {
+          checks = self.checks.${localSystem};
+          packages = with pkgs; [ cargo-watch mariadb rust-analyzer sqlx-cli ];
+        };
 
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath build_inputs;
+        cargoArtifacts =
+          craneLib.buildDepsOnly (commonArgs // { pname = "deps"; });
 
-          shellHook = ''
-            MYSQL_BASEDIR=${pkgs.mariadb}
-            MYSQL_HOME=$PWD/mysql
-            MYSQL_DATADIR=$MYSQL_HOME/data
-            export MYSQL_UNIX_PORT=$MYSQL_HOME/mysql.sock
-            MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
-            alias mysql='mysql -u root'
+        cargoClippy = craneLib.cargoClippy (commonArgs // {
+          inherit cargoArtifacts;
+          pname = "clippy";
+        });
 
-            if [ ! -d "$MYSQL_HOME" ]; then
-              # Make sure to use normal authentication method otherwise we can only
-              # connect with unix account. But users do not actually exists in nix.
-              mysql_install_db --auth-root-authentication-method=normal \
-                --datadir=$MYSQL_DATADIR --basedir=$MYSQL_BASEDIR \
-                --pid-file=$MYSQL_PID_FILE
-            fi
+        cargoDoc = craneLib.cargoDoc (commonArgs // {
+          inherit cargoArtifacts;
+          pname = "doc";
+        });
 
-            # Starts the daemon
-            mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
-              --socket=$MYSQL_UNIX_PORT 2> $MYSQL_HOME/mysql.log &
-            MYSQL_PID=$!
+        dwn-server = craneLib.buildPackage (commonArgs // {
+          inherit cargoArtifacts;
+          pname = "dwn-server";
+        });
+      in {
+        checks = { inherit dwn-server cargoClippy cargoDoc; };
 
-            finish()
-            {
-              mysqladmin -u root --socket=$MYSQL_UNIX_PORT shutdown
-              kill $MYSQL_PID
-              wait $MYSQL_PID
-            }
-            trap finish EXIT
-          '';
+        apps = rec {
+          migrate = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "migrate" ''
+              ${pkgs.sqlx-cli}/bin/sqlx database create
+              ${pkgs.sqlx-cli}/bin/sqlx migrate run
+            '';
+          };
+
+          prepare = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "prepare" ''
+              ${rustToolchain}/bin/cargo sqlx prepare --workspace
+            '';
+          };
+
+          server = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "server" ''
+              ${self.packages.${localSystem}.server}/bin/dwn-server
+            '';
+          };
+
+          default = server;
+        };
+
+        packages = rec {
+          server = dwn-server;
+
+          default = pkgs.symlinkJoin {
+            name = "all";
+            paths = [ server ];
+          };
+        };
+
+        devShells = {
+          default = craneLib.devShell commonShell;
+
+          db = craneLib.devShell (commonShell // {
+            DATABASE_URL = "mysql://root@localhost:3306/dwn";
+
+            shellHook = ''
+              MYSQL_BASEDIR=${pkgs.mariadb}
+              MYSQL_HOME=$PWD/mysql
+              MYSQL_DATADIR=$MYSQL_HOME/data
+              MYSQL_UNIX_PORT=$MYSQL_HOME/mysql.sock
+              MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
+
+              if [ ! -d "$MYSQL_HOME" ]; then
+                # Make sure to use normal authentication method otherwise we can only
+                # connect with unix account. But users do not actually exists in nix.
+                mysql_install_db --auth-root-authentication-method=normal \
+                  --datadir=$MYSQL_DATADIR --basedir=$MYSQL_BASEDIR \
+                  --pid-file=$MYSQL_PID_FILE
+              fi
+
+              # Starts the daemon
+              ${pkgs.mariadb}/bin/mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
+                --socket=$MYSQL_UNIX_PORT 2> $MYSQL_HOME/mysql.log &
+              MYSQL_PID=$!
+
+              echo "MariaDB server started with PID $MYSQL_PID"
+
+              finish()
+              {
+                echo "Shutting down MariaDB server"
+                ${pkgs.mariadb}/bin/mysqladmin -u root --socket=$MYSQL_UNIX_PORT shutdown
+                pkill $MYSQL_PID
+                wait $MYSQL_PID
+              }
+
+              trap finish EXIT
+            '';
+          });
         };
       });
 }

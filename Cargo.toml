@@ -19,3 +19,6 @@ tokio = { version = "1.35.0", features = ["macros", "test-util", "tracing"] }
 
 [profile.release]
 lto = true
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
