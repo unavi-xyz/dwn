@@ -53,6 +53,7 @@
         commonShell = {
           checks = self.checks.${localSystem};
           packages = with pkgs; [ cargo-watch mariadb rust-analyzer sqlx-cli ];
+          DATABASE_URL = "mysql://root@localhost:3306/dwn";
         };
 
         cargoArtifacts =
@@ -112,8 +113,6 @@
           default = craneLib.devShell commonShell;
 
           db = craneLib.devShell (commonShell // {
-            DATABASE_URL = "mysql://root@localhost:3306/dwn";
-
             shellHook = ''
               MYSQL_BASEDIR=${pkgs.mariadb}
               MYSQL_HOME=$PWD/mysql
