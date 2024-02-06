@@ -47,7 +47,7 @@
 
           nativeBuildInputs = with pkgs; [ cargo-auditable pkg-config ];
 
-          SQLX_OFFLINE = true;
+          SQLX_OFFLINE = "true";
         };
 
         commonShell = {
@@ -86,8 +86,8 @@
 
           prepare = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "prepare" ''
-              ${rustToolchain}/bin/cargo sqlx prepare --workspace
-              ${rustToolchain}/bin/cargo sqlx prepare --workspace -- --tests
+              ${rustToolchain}/bin/cargo sqlx prepare --workspace -- --all-targets --all-features
+              ${rustToolchain}/bin/cargo sqlx prepare --workspace -- --all-targets --all-features --tests
             '';
           };
 
