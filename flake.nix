@@ -45,7 +45,11 @@
               pkgs.libiconv
             ];
 
-          nativeBuildInputs = with pkgs; [ cargo-auditable pkg-config ];
+          nativeBuildInputs = with pkgs; [
+            cargo-auditable
+            nodePackages.prettier
+            pkg-config
+          ];
 
           DATABASE_URL = "mysql://root@localhost:3306/dwn";
           SQLX_OFFLINE = true;
