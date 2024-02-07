@@ -7,20 +7,21 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = "1.0.77"
-axum = "0.7.2"
-base64 = "0.21.5"
+anyhow.workspace = true
+axum.workspace = true
+base64.workspace = true
+did-method-key.workspace = true
 didkit.workspace = true
 dotenvy = "0.15.7"
 dwn = { version = "0.0.2", path = "../dwn" }
-serde = { version = "1.0.193", features = ["derive"] }
-serde_json = "1.0.108"
+serde.workspace = true
+serde_json.workspace = true
 sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-rustls"] }
 tokio.workspace = true
-tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
-tracing-test = { version = "0.2.4", features = ["no-env-filter"] }
+tracing.workspace = true
 
 [dev-dependencies]
 dwn-test-utils = { path = "../dwn-test-utils" }
 reqwest = { version = "0.11.22", features = ["json"] }
+tracing-test = { version = "0.2.4", features = ["no-env-filter"] }

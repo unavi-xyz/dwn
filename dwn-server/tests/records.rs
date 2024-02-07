@@ -1,5 +1,5 @@
 use dwn::request::{descriptor::records::RecordsWrite, message::Message, RequestBody};
-use dwn_test_utils::{expect_status, gen_auth, spawn_server};
+use dwn_test_utils::{authorize, expect_status, gen_did, spawn_server};
 use reqwest::StatusCode;
 use tracing_test::traced_test;
 
@@ -17,7 +17,8 @@ async fn records_write() {
     }
 
     // Add authorization
-    msg.authorization = Some(gen_auth(&msg).await);
+    let (did, key) = gen_did();
+    msg.authorization = Some(authorize(did, &key, &msg).await);
 
     // Valid message
     {

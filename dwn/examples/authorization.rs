@@ -1,17 +1,24 @@
-use didkit::{ssi::jwk::Algorithm, Source, DIDURL, DID_METHODS, JWK};
+use did_method_key::DIDKey;
+use didkit::{ssi::jwk::Algorithm, DIDMethod, Source, JWK};
 use dwn::request::{
     descriptor::records::RecordsWrite,
     message::{AuthPayload, Authorization, Message},
 };
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
+    tracing_subscriber::fmt().init();
 
     // Create RecordsWrite message
     let key = JWK::generate_ed25519().expect("failed to generate key");
+    let source = Source::Key(&key);
+    let did = DIDKey.generate(&source).expect("failed to generate DID");
+
+    info!("DID: {}", did);
+
+    let fragment = did.clone().strip_prefix("did:key:").unwrap().to_string();
+    let key_id = format!("{}#{}", did, fragment);
 
     let mut msg = Message::new(RecordsWrite::default());
 
@@ -21,17 +28,8 @@ async fn main() {
         permissions_grant_cid: None,
     };
 
-    let did = DID_METHODS
-        .get_method("did:key")
-        .expect("did:key method not found")
-        .generate(&Source::Key(&key))
-        .expect("failed to generate did");
-    let mut key_url = DIDURL::try_from(did.clone()).expect("failed to parse did url");
-    let did_hash = did.split(':').nth(2).expect("failed to get did body");
-    key_url.fragment = Some(did_hash.to_string());
-
     msg.authorization = Some(
-        Authorization::encode(Algorithm::EdDSA, &payload, &key, &key_url)
+        Authorization::encode(Algorithm::EdDSA, &payload, &key, key_id.clone())
             .await
             .expect("failed to encode authorization"),
     );
@@ -50,6 +48,6 @@ async fn main() {
         .await
         .expect("failed to decode authorization");
 
-    assert_eq!(header.key_id, Some(key_url.to_string()));
+    assert_eq!(header.key_id, Some(key_id));
     assert_eq!(payload.descriptor_cid, msg.descriptor.cid().to_string());
 }

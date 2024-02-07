@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use didkit::{ssi::jwk::Algorithm, Source, DIDURL, DID_METHODS, JWK};
+use did_method_key::DIDKey;
+use didkit::{ssi::jwk::Algorithm, DIDMethod, Source, JWK};
 use dwn::{
     request::{
         message::{AuthPayload, Authorization, Message},
@@ -10,7 +11,7 @@ use dwn::{
 };
 use reqwest::{Response, StatusCode};
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 /// Starts a DWN server on a random open port and returns the port.
 pub async fn spawn_server() -> u16 {
@@ -74,26 +75,27 @@ pub async fn expect_status(body: RequestBody, port: u16, status: StatusCode) {
     }
 }
 
-/// Generates authorization for a message.
-pub async fn gen_auth(msg: &Message) -> Authorization {
-    let key = JWK::generate_ed25519().expect("failed to generate key");
-
-    let did = DID_METHODS
-        .get_method("did:key")
-        .expect("did:key method not found")
-        .generate(&Source::Key(&key))
-        .expect("failed to generate did");
-    let mut key_url = DIDURL::try_from(did.clone()).expect("failed to parse did url");
-    let did_hash = did.split(':').nth(2).expect("failed to get did body");
-    key_url.fragment = Some(did_hash.to_string());
-
+pub async fn authorize(did: String, key: &JWK, msg: &Message) -> Authorization {
     let payload = AuthPayload {
         descriptor_cid: msg.descriptor.cid().to_string(),
         attestation_cid: None,
         permissions_grant_cid: None,
     };
 
-    Authorization::encode(Algorithm::EdDSA, &payload, &key, &key_url)
+    let fragment = did.clone().strip_prefix("did:key:").unwrap().to_string();
+    let key_id = format!("{}#{}", did, fragment);
+
+    Authorization::encode(Algorithm::EdDSA, &payload, key, key_id)
         .await
         .expect("failed to encode authorization")
+}
+
+pub fn gen_did() -> (String, JWK) {
+    let key = JWK::generate_ed25519().expect("failed to generate key");
+    let source = Source::Key(&key);
+    let did = DIDKey.generate(&source).expect("failed to generate did");
+
+    debug!("Generated DID: {}", did);
+
+    (did, key)
 }

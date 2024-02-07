@@ -1,11 +1,12 @@
 use anyhow::Result;
 use didkit::{
     ssi::{did::Resource, jwk::Algorithm, jws::Header},
-    ResolutionInputMetadata, VerificationRelationship, DIDURL, DID_METHODS, JWK,
+    ResolutionInputMetadata, DIDURL, DID_METHODS, JWK,
 };
 use libipld_cbor::DagCborCodec;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use tracing::debug;
 
 use crate::util::cid_from_bytes;
 
@@ -68,12 +69,12 @@ impl Authorization {
         algorithm: Algorithm,
         payload: &AuthPayload,
         key: &JWK,
-        key_url: &DIDURL,
+        key_id: String,
     ) -> Result<Self> {
         let payload = serde_json::to_string(payload)?;
         let header = Header {
             algorithm,
-            key_id: Some(key_url.to_string()),
+            key_id: Some(key_id),
             ..Default::default()
         };
         let jws = didkit::ssi::jws::encode_sign_custom_header(payload.as_str(), key, &header)?;
@@ -98,9 +99,11 @@ impl Authorization {
     }
 }
 
-/// Resolves a DIDURL to a JWK.
+/// Resolves the DID URL to a JWK verification method.
 async fn url_to_key(url: &DIDURL) -> Result<JWK> {
     let url_string = url.to_string();
+
+    debug!("Resolving JWK from DIDURL: {}", url_string);
 
     let method = match DID_METHODS.get_method(&url_string) {
         Ok(method) => method,
@@ -119,36 +122,12 @@ async fn url_to_key(url: &DIDURL) -> Result<JWK> {
         None => return Err(anyhow::anyhow!("document not found")),
     };
 
-    let auth_ids =
-        match document.get_verification_method_ids(VerificationRelationship::Authentication) {
-            Ok(auth_ids) => auth_ids,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "failed to get authentication methods: {}",
-                    e
-                ));
-            }
-        };
-
-    if !auth_ids.contains(&url_string) {
-        return Err(anyhow::anyhow!(
-            "key_id not found in authentication methods"
-        ));
-    }
-
-    let resource = document.select_object(url)?;
-
-    let key = match resource {
+    let key = match document.select_object(url)? {
         Resource::VerificationMethod(vm) => vm.public_key_jwk,
         _ => return Err(anyhow::anyhow!("resource is not a verification method")),
     };
 
-    let key = match key {
-        Some(key) => key,
-        None => return Err(anyhow::anyhow!("public key not found")),
-    };
-
-    Ok(key)
+    key.ok_or_else(|| anyhow::anyhow!("public key not found"))
 }
 
 #[skip_serializing_none]

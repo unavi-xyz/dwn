@@ -1562,6 +1562,7 @@ dependencies = [
  "anyhow",
  "axum",
  "base64 0.21.7",
+ "did-method-key",
  "didkit",
  "dotenvy",
  "dwn",
@@ -1581,6 +1582,7 @@ name = "dwn-test-utils"
 version = "0.0.2"
 dependencies = [
  "axum",
+ "did-method-key",
  "didkit",
  "dotenvy",
  "dwn",

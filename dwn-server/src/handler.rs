@@ -57,12 +57,6 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
             let entry_id = message.generate_record_id()?;
 
             if entry_id == message.record_id {
-                // "IF Initial Entry exists for a record, store the entry as the Initial Entry for the record
-                //  IF no Initial Entry exists and cease any further processing."
-                // https://identity.foundation/decentralized-web-node/spec/#initial-record-entry
-                //
-                // THIS MAKES NO SENSE TO ME. HOW DO YOU CREATE THE INITIAL ENTRY???
-                // I'm just going to assume the spec is wrong and got the logic backwards.
                 match sqlx::query_as!(model::Record, "SELECT * FROM Record WHERE id = 'test'")
                     .fetch_one(pool)
                     .await
