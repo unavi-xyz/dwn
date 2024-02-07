@@ -1,7 +1,7 @@
 use sqlx::{MySql, Pool};
 use tracing_test::traced_test;
 
-#[sqlx::test]
+#[tokio::test]
 #[traced_test]
 async fn insert_record() {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is not set");

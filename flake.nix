@@ -47,6 +47,7 @@
 
           nativeBuildInputs = with pkgs; [ cargo-auditable pkg-config ];
 
+          DATABASE_URL = "mysql://root@localhost:3306/dwn";
           SQLX_OFFLINE = true;
         };
 
