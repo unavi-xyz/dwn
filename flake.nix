@@ -80,7 +80,6 @@
         apps = rec {
           migrate = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "migrate" ''
-              ${pkgs.sqlx-cli}/bin/sqlx database create
               ${pkgs.sqlx-cli}/bin/sqlx migrate run
             '';
           };
