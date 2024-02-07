@@ -50,17 +50,11 @@
             nodePackages.prettier
             pkg-config
           ];
-
-          DATABASE_URL = "mysql://root@localhost:3306/dwn";
-          SQLX_OFFLINE = true;
         };
 
         commonShell = {
           checks = self.checks.${localSystem};
           packages = with pkgs; [ cargo-watch mariadb rust-analyzer sqlx-cli ];
-
-          DATABASE_URL = "mysql://root@localhost:3306/dwn";
-          SQLX_OFFLINE = true;
         };
 
         cargoArtifacts =
