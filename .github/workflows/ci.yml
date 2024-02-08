@@ -48,6 +48,15 @@ jobs:
     needs:
       - lint
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_DATABASE: dwn
+          MYSQL_USER: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
       - uses: AdityaGarg8/remove-unwanted-software@v2
         with:
@@ -67,9 +76,6 @@ jobs:
 
       - name: Set up MySQL
         run: |
-          sudo systemctl start mysql
-          mysqladmin -u$DB_USER -p$DB_PASSWORD password ''
-          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u$DB_USER
           nix develop -c nix run .#migrate
           nix develop -c sqlx database create
 
