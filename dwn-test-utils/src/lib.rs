@@ -10,6 +10,7 @@ use dwn::{
     response::ResponseBody,
 };
 use reqwest::{Response, StatusCode};
+use sqlx::mysql::MySqlPoolOptions;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
@@ -21,9 +22,12 @@ pub async fn spawn_server() -> u16 {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = dwn_server::create_pool(&database_url)
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(4)
+        .connect(&database_url)
         .await
-        .expect("Failed to create pool");
+        .expect("Failed to create connection pool");
 
     tokio::spawn(async move {
         let app = dwn_server::router(Arc::new(dwn_server::AppState { pool }));

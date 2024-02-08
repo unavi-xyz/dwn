@@ -10,16 +10,18 @@ use tracing::info;
 async fn main() {
     tracing_subscriber::fmt().init();
 
-    // Create RecordsWrite message
+    // Generate a did:key
     let key = JWK::generate_ed25519().expect("failed to generate key");
     let source = Source::Key(&key);
     let did = DIDKey.generate(&source).expect("failed to generate DID");
 
     info!("DID: {}", did);
 
+    // Get DID URL to the verification method
     let fragment = did.clone().strip_prefix("did:key:").unwrap().to_string();
     let key_id = format!("{}#{}", did, fragment);
 
+    // Create RecordsWrite message
     let mut msg = Message::new(RecordsWrite::default());
 
     let payload = AuthPayload {

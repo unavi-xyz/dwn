@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use dwn_server::{create_pool, router, AppState};
+use dwn_server::{router, AppState};
+use sqlx::mysql::MySqlPoolOptions;
 use tracing::{error, info};
 
 #[tokio::main]
@@ -10,9 +11,13 @@ async fn main() {
     dotenvy::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = create_pool(&database_url)
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
         .await
-        .expect("Failed to create pool");
+        .expect("Failed to create connection pool");
+
     let app = router(Arc::new(AppState { pool }));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));

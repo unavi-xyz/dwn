@@ -12,16 +12,16 @@ axum.workspace = true
 base64.workspace = true
 did-method-key.workspace = true
 didkit.workspace = true
-dotenvy = "0.15.7"
+dotenvy.workspace = true
 dwn = { version = "0.0.2", path = "../dwn" }
 serde.workspace = true
 serde_json.workspace = true
-sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-rustls"] }
+sqlx.workspace = true
 tokio.workspace = true
-tracing-subscriber = "0.3.18"
+tracing-subscriber.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
 dwn-test-utils = { path = "../dwn-test-utils" }
-reqwest = { version = "0.11.22", features = ["json"] }
+reqwest.workspace = true
 tracing-test = { version = "0.2.4", features = ["no-env-filter"] }

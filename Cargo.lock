@@ -1590,6 +1590,7 @@ dependencies = [
  "port_check",
  "reqwest",
  "serde_json",
+ "sqlx",
  "tokio",
  "tracing",
 ]
