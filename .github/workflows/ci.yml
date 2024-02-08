@@ -26,7 +26,7 @@ jobs:
         run: |
           sudo systemctl start mysql
           mysqladmin -u$DB_USER -p$DB_PASSWORD password ''
-          mysql -e 'CREATE DATABASE $DB_DATABASE;' -u$DB_USER
+          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u$DB_USER
           nix develop -c nix run .#migrate
 
       - run: nix develop -c nix run .#prepare
@@ -69,7 +69,7 @@ jobs:
         run: |
           sudo systemctl start mysql
           mysqladmin -u$DB_USER -p$DB_PASSWORD password ''
-          mysql -e 'CREATE DATABASE $DB_DATABASE;' -u$DB_USER
+          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u$DB_USER
           nix develop -c nix run .#migrate
           nix develop -c sqlx database create
 

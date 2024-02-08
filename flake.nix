@@ -52,7 +52,13 @@
           MYSQL_PID=$!
 
           # Wait for the server to start
+          count=0
           while ! mysqladmin ping &>/dev/null; do
+            if [ $count -eq 10 ]; then
+              echo "Failed to start MariaDB server"
+              exit 1
+            fi
+            count=$((count+1))
             sleep 1
           done
 
@@ -138,6 +144,12 @@
         checks = { inherit dwn dwn-server cargoClippy cargoDoc; };
 
         apps = rec {
+          db = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "db" ''
+              ${createDbScript}
+            '';
+          };
+
           migrate = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "migrate" ''
               ${pkgs.sqlx-cli}/bin/sqlx migrate run --source dwn-server/migrations
