@@ -14,11 +14,6 @@ mod tests {
 
     #[sqlx::test]
     fn test_record(pool: Pool<MySql>) {
-        sqlx::migrate!("../migrations")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
-
         let record = Record {
             id: "test_id".to_string(),
             data: "test_data".to_string(),
