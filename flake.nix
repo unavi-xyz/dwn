@@ -29,6 +29,54 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
+        createDbScript = ''
+          MYSQL_BASEDIR=${pkgs.mariadb}
+          MYSQL_HOME=$PWD/mysql
+          MYSQL_DATADIR=$MYSQL_HOME/data
+          MYSQL_UNIX_SOCK=$MYSQL_HOME/mysql.sock
+          MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
+
+          alias mysqladmin="${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_SOCK"
+
+          if [ ! -d "$MYSQL_HOME" ]; then
+            # Make sure to use normal authentication method otherwise we can only
+            # connect with unix account. But users do not actually exists in nix.
+            mysql_install_db --auth-root-authentication-method=normal \
+              --datadir=$MYSQL_DATADIR --basedir=$MYSQL_BASEDIR \
+              --pid-file=$MYSQL_PID_FILE
+          fi
+
+          # Starts the daemon
+          ${pkgs.mariadb}/bin/mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
+            --socket=$MYSQL_UNIX_SOCK 2> $MYSQL_HOME/mysql.log &
+          MYSQL_PID=$!
+
+          # Wait for the server to start
+          while ! mysqladmin ping &>/dev/null; do
+            sleep 1
+          done
+
+          echo "MariaDB server started with PID $MYSQL_PID"
+
+          # Create the database
+          mysqladmin create dwn > /dev/null 2>&1
+
+          export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
+          nix run .#migrate
+        '';
+
+        trapDbScript = ''
+          finish()
+          {
+            echo "Shutting down MariaDB server"
+            mysqladmin shutdown
+            pkill $MYSQL_PID
+            wait $MYSQL_PID
+          }
+
+          trap finish EXIT
+        '';
+
         commonArgs = {
           src = lib.cleanSourceWith {
             src = ./.;
@@ -47,14 +95,24 @@
 
           nativeBuildInputs = with pkgs; [
             cargo-auditable
+            mariadb
             nodePackages.prettier
             pkg-config
+            sqlx-cli
           ];
+
+          DATABASE_URL =
+            "mysql://root@localhost/dwn?unix_socket=${pkgs.mariadb}/mysql.sock";
+          SQLX_OFFLINE = true;
         };
 
         commonShell = {
           checks = self.checks.${localSystem};
-          packages = with pkgs; [ cargo-watch mariadb rust-analyzer sqlx-cli ];
+          packages = with pkgs; [ cargo-watch rust-analyzer ];
+
+          DATABASE_URL =
+            "mysql://root@localhost/dwn?unix_socket=${pkgs.mariadb}/mysql.sock";
+          SQLX_OFFLINE = true;
         };
 
         cargoArtifacts =
@@ -91,7 +149,9 @@
 
           prepare = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "prepare" ''
-              ${rustToolchain}/bin/cargo sqlx prepare --workspace -- --all-targets --all-features --tests
+              ${createDbScript}
+              nix develop -c cargo sqlx prepare --workspace -- --all-features --all-targets --tests
+              ${trapDbScript}
             '';
           };
 
@@ -119,46 +179,8 @@
 
           db = craneLib.devShell (commonShell // {
             shellHook = ''
-              MYSQL_BASEDIR=${pkgs.mariadb}
-              MYSQL_HOME=$PWD/mysql
-              MYSQL_DATADIR=$MYSQL_HOME/data
-              MYSQL_UNIX_PORT=$MYSQL_HOME/mysql.sock
-              MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
-
-              alias mysqladmin="${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_PORT"
-
-              if [ ! -d "$MYSQL_HOME" ]; then
-                # Make sure to use normal authentication method otherwise we can only
-                # connect with unix account. But users do not actually exists in nix.
-                mysql_install_db --auth-root-authentication-method=normal \
-                  --datadir=$MYSQL_DATADIR --basedir=$MYSQL_BASEDIR \
-                  --pid-file=$MYSQL_PID_FILE
-              fi
-
-              # Starts the daemon
-              ${pkgs.mariadb}/bin/mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
-                --socket=$MYSQL_UNIX_PORT 2> $MYSQL_HOME/mysql.log &
-              MYSQL_PID=$!
-
-              # Wait for the server to start
-              while ! mysqladmin ping &>/dev/null; do
-                sleep 1
-              done
-
-              echo "MariaDB server started with PID $MYSQL_PID"
-
-              # Create the database
-              mysqladmin create dwn > /dev/null 2>&1
-
-              finish()
-              {
-                echo "Shutting down MariaDB server"
-                mysqladmin shutdown
-                pkill $MYSQL_PID
-                wait $MYSQL_PID
-              }
-
-              trap finish EXIT
+              ${createDbScript}
+              ${trapDbScript}
             '';
           });
         };
