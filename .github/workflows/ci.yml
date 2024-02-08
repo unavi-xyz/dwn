@@ -6,13 +6,15 @@ on:
       - main
   pull_request:
 
+env:
+  DB_DATABASE: dwn
+  DB_USER: root
+  DB_PASSWORD: root
+  DATABASE_URL: mysql://root:root@localhost/dwn
+
 jobs:
   lint:
     runs-on: ubuntu-latest
-    env:
-      DB_DATABASE: dwn
-      DB_USER: root
-      DATABASE_URL: mysql://root:root@localhost/dwn
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,7 +26,9 @@ jobs:
       - name: Set up MySQL
         run: |
           sudo /etc/init.d/mysql start
-          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }}
+          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}
+          nix run .#migrate
+
       - run: nix run .#prepare
       - uses: EndBug/add-and-commit@v9
         with:
@@ -44,8 +48,6 @@ jobs:
     needs:
       - lint
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: AdityaGarg8/remove-unwanted-software@v2
         with:
@@ -62,6 +64,13 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - uses: Swatinem/rust-cache@v2
-      - run: nix run .#migrate
+
+      - name: Set up MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}
+          nix run .#migrate
+          nix develop -c sqlx database create
+
       - run: nix develop -c cargo doc --workspace --all-features --no-deps
       - run: nix develop -c cargo test --workspace --all-features --all-targets
