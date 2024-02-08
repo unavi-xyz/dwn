@@ -57,7 +57,7 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
             let entry_id = message.generate_record_id()?;
 
             if entry_id == message.record_id {
-                match sqlx::query_as!(model::Record, "SELECT * FROM Record WHERE id = 'test'")
+                match sqlx::query_as!(model::Record, "SELECT * FROM Record WHERE id = ?", entry_id)
                     .fetch_one(pool)
                     .await
                 {

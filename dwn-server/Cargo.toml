@@ -13,7 +13,7 @@ base64.workspace = true
 did-method-key.workspace = true
 didkit.workspace = true
 dotenvy.workspace = true
-dwn = { version = "0.0.2", path = "../dwn" }
+dwn = { path = "../dwn" }
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true

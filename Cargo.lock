@@ -1533,7 +1533,7 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
 name = "dwn"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-server"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "anyhow",
  "axum",
@@ -1579,7 +1579,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-test-utils"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "axum",
  "did-method-key",

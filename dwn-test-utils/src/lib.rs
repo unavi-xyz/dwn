@@ -24,7 +24,7 @@ pub async fn spawn_server() -> u16 {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let pool = MySqlPoolOptions::new()
-        .max_connections(4)
+        .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Failed to create connection pool");

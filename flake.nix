@@ -119,6 +119,8 @@
               MYSQL_UNIX_PORT=$MYSQL_HOME/mysql.sock
               MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
 
+              alias mysqladmin="${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_PORT"
+
               if [ ! -d "$MYSQL_HOME" ]; then
                 # Make sure to use normal authentication method otherwise we can only
                 # connect with unix account. But users do not actually exists in nix.
@@ -133,19 +135,19 @@
               MYSQL_PID=$!
 
               # Wait for the server to start
-              while ! ${pkgs.mariadb}/bin/mysqladmin -u root --socket=$MYSQL_UNIX_PORT ping &>/dev/null; do
+              while ! mysqladmin ping &>/dev/null; do
                 sleep 1
               done
 
               echo "MariaDB server started with PID $MYSQL_PID"
 
               # Create the database
-              ${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_PORT create dwn || true
+              mysqladmin create dwn > /dev/null 2>&1
 
               finish()
               {
                 echo "Shutting down MariaDB server"
-                ${pkgs.mariadb}/bin/mysqladmin -u root --socket=$MYSQL_UNIX_PORT shutdown
+                mysqladmin shutdown
                 pkill $MYSQL_PID
                 wait $MYSQL_PID
               }
