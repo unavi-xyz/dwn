@@ -62,7 +62,6 @@
           mysqladmin create dwn > /dev/null 2>&1
 
           export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
-          nix run .#migrate
         '';
 
         trapDbScript = ''
@@ -128,7 +127,7 @@
           pname = "doc";
         });
 
-        dwn-lib = craneLib.buildPackage (commonArgs // {
+        dwn = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           pname = "dwn";
         });
@@ -138,7 +137,7 @@
           pname = "dwn-server";
         });
       in {
-        checks = { inherit dwn-lib dwn-server cargoClippy cargoDoc; };
+        checks = { inherit dwn dwn-server cargoClippy cargoDoc; };
 
         apps = rec {
           migrate = flake-utils.lib.mkApp {
@@ -149,9 +148,7 @@
 
           prepare = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "prepare" ''
-              ${createDbScript}
               nix develop -c cargo sqlx prepare --workspace -- --all-features --all-targets --tests
-              ${trapDbScript}
             '';
           };
 
@@ -165,12 +162,12 @@
         };
 
         packages = rec {
-          dwn = dwn-lib;
+          lib = dwn;
           server = dwn-server;
 
           default = pkgs.symlinkJoin {
             name = "all";
-            paths = [ dwn server ];
+            paths = [ lib server ];
           };
         };
 
