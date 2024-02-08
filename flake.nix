@@ -70,12 +70,17 @@
           pname = "doc";
         });
 
+        dwn-lib = craneLib.buildPackage (commonArgs // {
+          inherit cargoArtifacts;
+          pname = "dwn";
+        });
+
         dwn-server = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           pname = "dwn-server";
         });
       in {
-        checks = { inherit dwn-server cargoClippy cargoDoc; };
+        checks = { inherit dwn-lib dwn-server cargoClippy cargoDoc; };
 
         apps = rec {
           migrate = flake-utils.lib.mkApp {
@@ -100,11 +105,12 @@
         };
 
         packages = rec {
+          dwn = dwn-lib;
           server = dwn-server;
 
           default = pkgs.symlinkJoin {
             name = "all";
-            paths = [ server ];
+            paths = [ dwn server ];
           };
         };
 
