@@ -10,7 +10,6 @@ env:
   DB_DATABASE: dwn
   DB_USER: root
   DB_PASSWORD: root
-  DATABASE_URL: mysql://root@localhost/dwn
 
 jobs:
   lint:
@@ -26,8 +25,8 @@ jobs:
       - name: Set up MySQL
         run: |
           sudo systemctl start mysql
-          mysqladmin -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} password ''
-          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }}
+          mysqladmin -u$DB_USER -p$DB_PASSWORD password ''
+          mysql -e 'CREATE DATABASE $DB_DATABASE;' -u$DB_USER
           nix run .#migrate
 
       - run: nix develop -c nix run .#prepare
@@ -69,8 +68,8 @@ jobs:
       - name: Set up MySQL
         run: |
           sudo systemctl start mysql
-          mysqladmin -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} password ''
-          mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }}
+          mysqladmin -u$DB_USER -p$DB_PASSWORD password ''
+          mysql -e 'CREATE DATABASE $DB_DATABASE;' -u$DB_USER
           nix run .#migrate
           nix develop -c sqlx database create
 

@@ -100,8 +100,7 @@
             sqlx-cli
           ];
 
-          DATABASE_URL =
-            "mysql://root@localhost/dwn?unix_socket=${pkgs.mariadb}/mysql.sock";
+          DATABASE_URL = "mysql://root@localhost/dwn";
           SQLX_OFFLINE = true;
         };
 
@@ -109,8 +108,7 @@
           checks = self.checks.${localSystem};
           packages = with pkgs; [ cargo-watch rust-analyzer ];
 
-          DATABASE_URL =
-            "mysql://root@localhost/dwn?unix_socket=${pkgs.mariadb}/mysql.sock";
+          DATABASE_URL = "mysql://root@localhost/dwn";
           SQLX_OFFLINE = true;
         };
 
