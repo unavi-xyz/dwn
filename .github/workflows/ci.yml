@@ -10,7 +10,7 @@ env:
   DB_DATABASE: dwn
   DB_USER: root
   DB_PASSWORD: root
-  DATABASE_URL: mysql://root:root@localhost/dwn
+  DATABASE_URL: mysql://root@localhost/dwn
 
 jobs:
   lint:
@@ -30,7 +30,7 @@ jobs:
           mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }}
           nix run .#migrate
 
-      - run: nix run .#prepare
+      - run: nix develop -c nix run .#prepare
       - uses: EndBug/add-and-commit@v9
         with:
           message: "chore: sqlx prepare"

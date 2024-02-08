@@ -148,7 +148,7 @@
 
           prepare = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "prepare" ''
-              nix develop -c cargo sqlx prepare --workspace -- --all-features --all-targets --tests
+              cargo sqlx prepare --workspace -- --all-features --all-targets --tests
             '';
           };
 
