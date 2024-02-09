@@ -49,8 +49,8 @@ jobs:
       - lint
     runs-on: ubuntu-latest
     services:
-      mysql:
-        image: mysql:latest
+      mariadb:
+        image: mariadb
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
           MYSQL_DATABASE: dwn
