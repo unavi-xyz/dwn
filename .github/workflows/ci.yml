@@ -18,7 +18,7 @@ jobs:
       mariadb:
         image: mariadb
         env:
-          MARIADB_ALLOW_EMPTY_PASSWORD: yes
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: yes
           MARIADB_DATABASE: dwn
         ports:
           - 3306:3306
@@ -56,7 +56,7 @@ jobs:
       mariadb:
         image: mariadb
         env:
-          MARIADB_ALLOW_EMPTY_PASSWORD: yes
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: yes
           MARIADB_DATABASE: dwn
         ports:
           - 3306:3306
