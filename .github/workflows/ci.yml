@@ -52,6 +52,7 @@ jobs:
       mysql:
         image: mysql:latest
         env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
           MYSQL_DATABASE: dwn
           MYSQL_USER: root
         ports:
