@@ -18,8 +18,8 @@ jobs:
       mariadb:
         image: mariadb
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
-          MYSQL_DATABASE: dwn
+          MARIADB_ALLOW_EMPTY_PASSWORD: yes
+          MARIADB_DATABASE: dwn
         ports:
           - 3306:3306
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -56,8 +56,8 @@ jobs:
       mariadb:
         image: mariadb
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
-          MYSQL_DATABASE: dwn
+          MARIADB_ALLOW_EMPTY_PASSWORD: yes
+          MARIADB_DATABASE: dwn
         ports:
           - 3306:3306
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
