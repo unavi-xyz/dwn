@@ -1,40 +1,75 @@
+CREATE TABLE CidData (
+  cid VARCHAR(255) NOT NULL,
+  path VARCHAR(255) NOT NULL,
+
+  date_created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (cid)
+);
+
 CREATE TABLE Record (
   id VARCHAR(255) NOT NULL,
-  data TEXT NOT NULL,
+  data_cid VARCHAR(255) NOT NULL,
+
+  date_created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (data_cid) REFERENCES CidData(cid),
+  KEY data_cid_idx (data_cid),
   PRIMARY KEY (id)
 );
 
 CREATE TABLE RecordsWrite (
   id INT NOT NULL AUTO_INCREMENT,
-  record_id VARCHAR(255) NOT NULL,
-  parent_id VARCHAR(255) NOT NULL,
-  data_cid VARCHAR(255) NOT NULL,
-  date_created DATETIME NOT NULL,
-  published BOOLEAN NOT NULL,
-  encryption VARCHAR(255),
-  schema_uri VARCHAR(255),
+
   commit_strategy ENUM('json-patch', 'json-merge') NOT NULL,
+  data_cid VARCHAR(255) NOT NULL,
   data_format VARCHAR(255) NOT NULL,
-  PRIMARY KEY (id),
-  KEY record_id_idx (record_id)
+  encryption VARCHAR(255),
+  parent_id VARCHAR(255) NOT NULL,
+  published BOOLEAN NOT NULL,
+  record_id VARCHAR(255) NOT NULL,
+  schema_uri VARCHAR(255),
+
+  date_created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (data_cid) REFERENCES CidData(cid),
+  FOREIGN KEY (record_id) REFERENCES Record(id),
+  KEY data_cid_idx (data_cid),
+  KEY record_id_idx (record_id),
+  PRIMARY KEY (id)
 );
 
 CREATE TABLE RecordsCommit (
   id INT NOT NULL AUTO_INCREMENT,
-  record_id VARCHAR(255) NOT NULL,
-  data_cid VARCHAR(255) NOT NULL,
-  parent_id VARCHAR(255) NOT NULL,
-  date_created DATETIME NOT NULL,
+
   commit_strategy ENUM('json-patch', 'json-merge') NOT NULL,
+  data_cid VARCHAR(255) NOT NULL,
   data_format VARCHAR(255) NOT NULL,
-  PRIMARY KEY (id),
-  KEY record_id_idx (record_id)
+  parent_id VARCHAR(255) NOT NULL,
+  record_id VARCHAR(255) NOT NULL,
+
+  date_created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (data_cid) REFERENCES CidData(cid),
+  FOREIGN KEY (record_id) REFERENCES Record(id),
+  KEY record_id_idx (record_id),
+  PRIMARY KEY (id)
 );
 
 CREATE TABLE RecordsDelete (
   id INT NOT NULL AUTO_INCREMENT,
-  record_id VARCHAR(255) NOT NULL,
+
   message_timestamp DATETIME NOT NULL,
-  PRIMARY KEY (id),
-  KEY record_id_idx (record_id)
+  record_id VARCHAR(255) NOT NULL,
+
+  date_created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (record_id) REFERENCES Record(id),
+  KEY record_id_idx (record_id),
+  PRIMARY KEY (id)
 );
