@@ -10,7 +10,6 @@ use dwn::{
     request::{descriptor::Descriptor, message::Message, RequestBody},
     response::{MessageResult, MessageStatus, ResponseBody},
 };
-use serde_json::Value;
 use sqlx::MySqlPool;
 use tracing::{span, warn};
 
@@ -43,16 +42,19 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
         Descriptor::RecordsRead(_) => {
             match sqlx::query_as!(
                 model::Record,
-                "SELECT * FROM Record WHERE id = ?",
+                "SELECT id, data_cid FROM Record WHERE id = ?",
                 &message.record_id
             )
             .fetch_one(pool)
             .await
             {
-                Ok(record) => Ok(MessageResult {
-                    entries: Some(vec![Value::String(record.data)]),
-                    status: MessageStatus::ok(),
-                }),
+                Ok(_record) => {
+                    // TODO: Fetch data_cid from S3
+                    Ok(MessageResult {
+                        entries: None,
+                        status: MessageStatus::ok(),
+                    })
+                }
                 Err(_) => Ok(MessageResult {
                     entries: None,
                     status: MessageStatus::ok(),
@@ -75,9 +77,13 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
             let entry_id = message.generate_record_id()?;
 
             if entry_id == message.record_id {
-                match sqlx::query_as!(model::Record, "SELECT * FROM Record WHERE id = ?", entry_id)
-                    .fetch_one(pool)
-                    .await
+                match sqlx::query_as!(
+                    model::Record,
+                    "SELECT id, data_cid FROM Record WHERE id = ?",
+                    entry_id
+                )
+                .fetch_one(pool)
+                .await
                 {
                     Ok(_) => {
                         return Ok(MessageResult {
@@ -86,13 +92,8 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                         });
                     }
                     Err(_) => {
-                        sqlx::query!(
-                            "INSERT INTO Record (id, data) VALUES (?, ?)",
-                            entry_id,
-                            message.data.as_ref()
-                        )
-                        .execute(pool)
-                        .await?;
+                        // TODO: Store RecordsWrite message in db
+                        // TODO: Store data in S3
                     }
                 }
             }
