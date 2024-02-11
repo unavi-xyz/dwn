@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id, data FROM Record WHERE id = ?",
+  "query": "SELECT id, data_cid FROM Record WHERE id = ?",
   "describe": {
     "columns": [
       {
@@ -15,12 +15,12 @@
       },
       {
         "ordinal": 1,
-        "name": "data",
+        "name": "data_cid",
         "type_info": {
-          "type": "Blob",
-          "flags": "NOT_NULL | BLOB | NO_DEFAULT_VALUE",
+          "type": "VarString",
+          "flags": "NOT_NULL | MULTIPLE_KEY | NO_DEFAULT_VALUE",
           "char_set": 224,
-          "max_size": 262140
+          "max_size": 1020
         }
       }
     ],
@@ -32,5 +32,5 @@
       false
     ]
   },
-  "hash": "f00023020538a28b0ea298c68ab4996a62d2e8a8aa94475d061b5f722fa796d1"
+  "hash": "90d7fe469fe2c3491835e1bba2d32cfa5f15b72c289829179766145ed410f608"
 }
