@@ -15,18 +15,20 @@ use super::descriptor::Descriptor;
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Message {
+    pub authorization: Option<Authorization>,
+    pub data: Option<String>,
+    pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
     pub record_id: String,
-    pub descriptor: Descriptor,
-    pub authorization: Option<Authorization>,
 }
 
 impl Message {
     pub fn new<T: Serialize + Into<Descriptor>>(descriptor: T) -> Self {
         let mut msg = Message {
-            record_id: "".to_string(),
-            descriptor: descriptor.into(),
             authorization: None,
+            data: None,
+            descriptor: descriptor.into(),
+            record_id: "".to_string(),
         };
 
         msg.record_id = msg.generate_record_id().unwrap();
