@@ -115,7 +115,6 @@
           packages = with pkgs; [ cargo-watch rust-analyzer ];
 
           DATABASE_URL = "mysql://root@localhost/dwn";
-          SQLX_OFFLINE = true;
         };
 
         cargoArtifacts =

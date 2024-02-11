@@ -12,7 +12,7 @@ use dwn::{
 };
 use serde_json::Value;
 use sqlx::MySqlPool;
-use tracing::{info, span, warn};
+use tracing::{span, warn};
 
 use crate::{model, AppState};
 
@@ -40,7 +40,7 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
     span!(tracing::Level::INFO, "message", ?message);
 
     match message.descriptor {
-        Descriptor::RecordsQuery(_) => {
+        Descriptor::RecordsRead(_) => {
             match sqlx::query_as!(
                 model::Record,
                 "SELECT * FROM Record WHERE id = ?",
@@ -49,13 +49,10 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
             .fetch_one(pool)
             .await
             {
-                Ok(record) => {
-                    info!("Found: {:?}", record);
-                    Ok(MessageResult {
-                        entries: Some(vec![Value::String(record.data)]),
-                        status: MessageStatus::ok(),
-                    })
-                }
+                Ok(record) => Ok(MessageResult {
+                    entries: Some(vec![Value::String(record.data)]),
+                    status: MessageStatus::ok(),
+                }),
                 Err(_) => Ok(MessageResult {
                     entries: None,
                     status: MessageStatus::ok(),
@@ -82,16 +79,13 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                     .fetch_one(pool)
                     .await
                 {
-                    Ok(record) => {
-                        info!("Found existing record: {:?}", record);
+                    Ok(_) => {
                         return Ok(MessageResult {
                             entries: None,
                             status: MessageStatus::ok(),
                         });
                     }
                     Err(_) => {
-                        info!("No record found, creating new record");
-
                         sqlx::query!(
                             "INSERT INTO Record (id, data) VALUES (?, ?)",
                             entry_id,

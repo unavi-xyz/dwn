@@ -1,7 +1,7 @@
 use dwn::{
     request::{
         data::{Data, JsonData},
-        descriptor::records::{RecordsQuery, RecordsWrite},
+        descriptor::records::{RecordsRead, RecordsWrite},
         message::Message,
         RequestBody,
     },
@@ -52,11 +52,11 @@ async fn main() {
         expect_status(body, port, StatusCode::OK).await;
     }
 
-    // RecordsQuery
+    // RecordsRead
     {
-        info!("Sending RecordsQuery message");
+        info!("Sending RecordsRead message");
 
-        let mut msg = Message::new(RecordsQuery::default());
+        let mut msg = Message::new(RecordsRead::default());
         msg.record_id = record_id;
 
         let body = RequestBody::new(vec![msg]);
