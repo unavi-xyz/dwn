@@ -84,7 +84,7 @@ impl Authorization {
     }
 
     /// Decodes the JWS and verifies the signature.
-    pub async fn decode(&self) -> Result<(Header, AuthPayload)> {
+    pub async fn decode_verify(&self) -> Result<(Header, AuthPayload)> {
         let (header, _) = didkit::ssi::jws::decode_unverified(&self.0)?;
 
         let key_id = match header.key_id {

@@ -64,7 +64,7 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
         Descriptor::RecordsWrite(_) => {
             match &message.authorization {
                 Some(auth) => {
-                    let (_header, _payload) = auth.decode().await?;
+                    let _ = auth.decode_verify().await?;
                 }
                 None => {
                     return Ok(MessageResult {

@@ -46,7 +46,7 @@ async fn main() {
     let (header, payload) = msg
         .authorization
         .expect("message is missing authorization")
-        .decode()
+        .decode_verify()
         .await
         .expect("failed to decode authorization");
 
