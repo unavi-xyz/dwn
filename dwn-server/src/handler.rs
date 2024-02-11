@@ -7,8 +7,13 @@ use axum::{
     Json,
 };
 use dwn::{
-    request::{descriptor::Descriptor, message::Message, RequestBody},
-    response::{MessageResult, MessageStatus, ResponseBody},
+    request::{
+        data::{Data, JsonData},
+        descriptor::Descriptor,
+        message::Message,
+        RequestBody,
+    },
+    response::{MessageResult, ResponseBody},
 };
 use sqlx::MySqlPool;
 use tracing::{span, warn};
@@ -49,15 +54,10 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
             {
                 Ok(_record) => {
                     // TODO: Fetch data_cid from S3
-                    Ok(MessageResult {
-                        entries: None,
-                        status: MessageStatus::ok(),
-                    })
+
+                    Ok(MessageResult::ok(None))
                 }
-                Err(_) => Ok(MessageResult {
-                    entries: None,
-                    status: MessageStatus::ok(),
-                }),
+                Err(_) => Ok(MessageResult::ok(None)),
             }
         }
         Descriptor::RecordsWrite(_) => {
@@ -66,51 +66,80 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                     let _ = auth.decode_verify().await?;
                 }
                 None => {
-                    return Ok(MessageResult {
-                        entries: None,
-                        status: MessageStatus::unauthorized(),
-                    })
+                    return Ok(MessageResult::unauthorized());
                 }
             };
 
             let entry_id = message.generate_record_id()?;
 
             if entry_id == message.record_id {
-                match sqlx::query!("SELECT id FROM RecordsWrite WHERE id = ?", entry_id)
-                    .fetch_one(pool)
-                    .await
+                match sqlx::query!(
+                    "SELECT entry_id FROM RecordsWrite WHERE entry_id = ?",
+                    entry_id
+                )
+                .fetch_one(pool)
+                .await
                 {
                     Ok(_) => {
                         // Inital entry already exists, cease processing
-                        return Ok(MessageResult {
-                            entries: None,
-                            status: MessageStatus::ok(),
-                        });
+                        return Ok(MessageResult::ok(None));
                     }
                     Err(_) => {
-                        // Store as initial entry
-                        sqlx::query!(
-                            "INSERT INTO RecordsWrite (id, data) VALUES (?, ?)",
-                            entry_id,
-                            message.data.as_ref().unwrap()
-                        )
+                        // Store message as initial entry
+                        let data = match &message.data {
+                            Some(data) => data.as_ref(),
+                            None => {
+                                return Ok(MessageResult::bad_request());
+                            }
+                        };
 
-                        // TODO: Store RecordsWrite message in db
+                        let data = match JsonData::try_from_base64url(data) {
+                            Ok(data) => data,
+                            Err(_) => {
+                                return Ok(MessageResult::bad_request());
+                            }
+                        };
+
+                        let data_cid = data.data_cid();
+
                         // TODO: Store data in S3
+
+                        let descriptor_cid = message.descriptor.cid().to_bytes();
+
+                        let descriptor = match &message.descriptor {
+                            Descriptor::RecordsWrite(descriptor) => descriptor,
+                            _ => {
+                                return Ok(MessageResult::bad_request());
+                            }
+                        };
+
+                        sqlx::query!(
+                            "INSERT INTO RecordsWrite (entry_id, data_cid) VALUES (?, ?)",
+                            entry_id,
+                            data_cid
+                        )
+                        .execute(pool)
+                        .await?;
+
+                        // entry_id VARCHAR(255) NOT NULL,
+                        // descriptor_cid VARCHAR(255) NOT NULL,
+                        //
+                        // commit_strategy ENUM('json-patch', 'json-merge') NOT NULL,
+                        // data_cid VARCHAR(255) NOT NULL,
+                        // data_format VARCHAR(255) NOT NULL,
+                        // encryption VARCHAR(255),
+                        // parent_id VARCHAR(255),
+                        // published BOOLEAN NOT NULL,
+                        // record_id VARCHAR(255) NOT NULL,
+                        // schema_uri VARCHAR(255),
                     }
                 }
             } else {
                 // TODO: Process parent_id
             }
 
-            Ok(MessageResult {
-                entries: None,
-                status: MessageStatus::ok(),
-            })
+            Ok(MessageResult::ok(None))
         }
-        _ => Ok(MessageResult {
-            entries: None,
-            status: MessageStatus::interface_not_implemented(),
-        }),
+        _ => Ok(MessageResult::interface_not_implemented()),
     }
 }

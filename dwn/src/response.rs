@@ -37,26 +37,39 @@ pub struct MessageResult {
     pub status: Status,
 }
 
-pub struct MessageStatus;
-
-impl MessageStatus {
-    pub fn ok() -> Status {
-        Status::new(200, Some("OK"))
+impl MessageResult {
+    pub fn ok(entries: Option<Vec<Value>>) -> Self {
+        Self {
+            entries,
+            status: Status::new(200, Some("OK")),
+        }
     }
-    pub fn bad_request() -> Status {
-        Status::new(
-            400,
-            Some("The message was malformed or improperly constructed"),
-        )
+    pub fn bad_request() -> Self {
+        Self {
+            entries: None,
+            status: Status::new(
+                400,
+                Some("The message was malformed or improperly constructed"),
+            ),
+        }
     }
-    pub fn unauthorized() -> Status {
-        Status::new(401, Some("The message failed authorization requirements"))
+    pub fn unauthorized() -> Self {
+        Self {
+            entries: None,
+            status: Status::new(401, Some("The message failed authorization requirements")),
+        }
     }
-    pub fn interface_not_implemented() -> Status {
-        Status::new(501, Some("The interface method is not implemented"))
+    pub fn interface_not_implemented() -> Self {
+        Self {
+            entries: None,
+            status: Status::new(501, Some("The interface method is not implemented")),
+        }
     }
-    pub fn resource_consumption_limit_exceeded() -> Status {
-        Status::new(429, Some("Resource consumption has exceeded tolerances"))
+    pub fn resource_consumption_limit_exceeded() -> Self {
+        Self {
+            entries: None,
+            status: Status::new(429, Some("Resource consumption has exceeded tolerances")),
+        }
     }
 }
 

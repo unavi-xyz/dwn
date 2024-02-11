@@ -10,11 +10,9 @@ use serde_json::Value;
 
 use crate::util::cid_from_bytes;
 
-pub trait Data {
-    /// Returns the data format of this data.
+pub trait Data: Sized {
+    /// MIME type of the data.
     fn data_format(&self) -> MediaType;
-    /// Returns the data as a byte array.
-    fn to_bytes(&self) -> Vec<u8>;
 
     /// Encodes an IPLD object into a byte array.
     fn encode(&self, ipld: &Ipld) -> Vec<u8>;
@@ -23,10 +21,17 @@ pub trait Data {
     /// Returns the codec of the encoder.
     fn codec(&self) -> u64;
 
-    /// Returns the data as a base64url-encoded string.
+    fn to_bytes(&self) -> Vec<u8>;
+    fn from_bytes(bytes: &[u8]) -> Self;
+
     fn to_base64url(&self) -> String {
         URL_SAFE_NO_PAD.encode(self.to_bytes())
     }
+    fn try_from_base64url(data: &str) -> Result<Self, base64::DecodeError> {
+        let bytes = URL_SAFE_NO_PAD.decode(data.as_bytes())?;
+        Ok(Self::from_bytes(&bytes))
+    }
+
     /// Returns the CID of the DAG-PB encoded data.
     fn data_cid(&self) -> String {
         let pb = self.to_pb();
@@ -95,7 +100,7 @@ pub trait Data {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct JsonData(pub Value);
 
 impl Data for JsonData {
@@ -104,6 +109,10 @@ impl Data for JsonData {
     }
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_string().into_bytes()
+    }
+    fn from_bytes(bytes: &[u8]) -> Self {
+        let value = serde_json::from_slice(bytes).expect("Failed to parse JSON");
+        JsonData(value)
     }
     fn encode(&self, ipld: &Ipld) -> Vec<u8> {
         DagJsonCodec.encode(ipld).expect("Failed to encode IPLD")
@@ -125,8 +134,13 @@ mod tests {
         let data = JsonData(serde_json::json!({
             "foo": "bar",
         }));
-        assert_eq!(data.to_base64url(), "eyJmb28iOiJiYXIifQ");
+
         assert_eq!(data.data_format().to_string(), "application/json");
+
+        let base64url = data.to_base64url();
+
+        assert_eq!(base64url, "eyJmb28iOiJiYXIifQ");
+        assert_eq!(JsonData::try_from_base64url(&base64url), Ok(data.clone()));
 
         let ipld = data.decode(&data.to_bytes());
         let encoded = data.encode(&ipld);
