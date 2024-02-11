@@ -143,12 +143,6 @@
         checks = { inherit dwn dwn-server cargoClippy cargoDoc; };
 
         apps = rec {
-          db = flake-utils.lib.mkApp {
-            drv = pkgs.writeScriptBin "db" ''
-              ${createDbScript}
-            '';
-          };
-
           migrate = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "migrate" ''
               ${pkgs.sqlx-cli}/bin/sqlx migrate run --source dwn-server/migrations
@@ -158,6 +152,12 @@
           prepare = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "prepare" ''
               cargo sqlx prepare --workspace -- --all-features --all-targets --tests
+            '';
+          };
+
+          reset = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "reset" ''
+              ${pkgs.sqlx-cli}/bin/sqlx database reset -y --source dwn-server/migrations
             '';
           };
 
