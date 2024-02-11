@@ -4,7 +4,6 @@ use axum::{routing::post, Router};
 use sqlx::MySqlPool;
 
 mod handler;
-mod model;
 
 pub struct AppState {
     pub pool: MySqlPool,

@@ -13,7 +13,7 @@ use dwn::{
 use sqlx::MySqlPool;
 use tracing::{span, warn};
 
-use crate::{model, AppState};
+use crate::AppState;
 
 pub async fn post(State(state): State<Arc<AppState>>, Json(body): Json<RequestBody>) -> Response {
     let mut replies = Vec::new();
@@ -40,9 +40,8 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
 
     match message.descriptor {
         Descriptor::RecordsRead(_) => {
-            match sqlx::query_as!(
-                model::Record,
-                "SELECT id, data_cid FROM Record WHERE id = ?",
+            match sqlx::query!(
+                "SELECT data_cid FROM Record WHERE id = ?",
                 &message.record_id
             )
             .fetch_one(pool)
@@ -77,25 +76,31 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
             let entry_id = message.generate_record_id()?;
 
             if entry_id == message.record_id {
-                match sqlx::query_as!(
-                    model::Record,
-                    "SELECT id, data_cid FROM Record WHERE id = ?",
-                    entry_id
-                )
-                .fetch_one(pool)
-                .await
+                match sqlx::query!("SELECT id FROM RecordsWrite WHERE id = ?", entry_id)
+                    .fetch_one(pool)
+                    .await
                 {
                     Ok(_) => {
+                        // Inital entry already exists, cease processing
                         return Ok(MessageResult {
                             entries: None,
                             status: MessageStatus::ok(),
                         });
                     }
                     Err(_) => {
+                        // Store as initial entry
+                        sqlx::query!(
+                            "INSERT INTO RecordsWrite (id, data) VALUES (?, ?)",
+                            entry_id,
+                            message.data.as_ref().unwrap()
+                        )
+
                         // TODO: Store RecordsWrite message in db
                         // TODO: Store data in S3
                     }
                 }
+            } else {
+                // TODO: Process parent_id
             }
 
             Ok(MessageResult {
