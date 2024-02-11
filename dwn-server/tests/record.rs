@@ -6,13 +6,13 @@ use tracing_test::traced_test;
 
 #[sqlx::test]
 #[traced_test]
-fn require_auth(pool: MySqlPool) {
+fn records_write(pool: MySqlPool) {
     let port = spawn_server(pool).await;
     let (did, key) = gen_did();
 
     let mut msg = Message::new(RecordsWrite::default());
 
-    // Without authorization
+    // Require authorization
     {
         let body = RequestBody::new(vec![msg.clone()]);
         expect_status(body, port, StatusCode::UNAUTHORIZED).await;
@@ -20,7 +20,7 @@ fn require_auth(pool: MySqlPool) {
 
     msg.authorization = Some(authorize(did, &key, &msg).await);
 
-    // With authorization
+    // Valid write
     {
         let body = RequestBody::new(vec![msg]);
         expect_status(body, port, StatusCode::OK).await;
