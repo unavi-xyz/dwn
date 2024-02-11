@@ -8,12 +8,12 @@ pub struct Record {
 
 #[cfg(test)]
 mod tests {
-    use sqlx::{Executor, MySql, Pool};
+    use sqlx::{Executor, MySqlPool};
 
     use super::*;
 
     #[sqlx::test]
-    fn test_record(pool: Pool<MySql>) {
+    fn test_record(pool: MySqlPool) {
         let record = Record {
             id: "test_id".to_string(),
             data: "test_data".to_string(),

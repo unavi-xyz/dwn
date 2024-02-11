@@ -10,24 +10,16 @@ use dwn::{
     response::ResponseBody,
 };
 use reqwest::{Response, StatusCode};
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::MySqlPool;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
 /// Starts a DWN server on a random open port and returns the port.
-pub async fn spawn_server() -> u16 {
+pub async fn spawn_server(pool: MySqlPool) -> u16 {
     dotenvy::dotenv().ok();
 
     let port = port_check::free_local_port().expect("Failed to find free port");
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
-
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    let pool = MySqlPoolOptions::new()
-        .max_connections(10)
-        .connect(&database_url)
-        .await
-        .expect("Failed to create connection pool");
 
     tokio::spawn(async move {
         let app = dwn_server::router(Arc::new(dwn_server::AppState { pool }));
