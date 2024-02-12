@@ -15,8 +15,9 @@ use dwn::{
     },
     response::{MessageResult, ResponseBody},
 };
-use sqlx::MySqlPool;
-use tracing::{span, warn};
+use s3::{creds::Credentials, Bucket, Region};
+use sqlx::{Executor, MySqlPool};
+use tracing::{info_span, warn};
 
 use crate::AppState;
 
@@ -41,7 +42,7 @@ pub async fn post(State(state): State<Arc<AppState>>, Json(body): Json<RequestBo
 }
 
 pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<MessageResult> {
-    span!(tracing::Level::INFO, "message", ?message);
+    info_span!("message", ?message);
 
     match message.descriptor {
         Descriptor::RecordsRead(_) => {
@@ -104,9 +105,38 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
 
                         let data_cid = data.data_cid();
 
-                        // TODO: Store data in S3
+                        const S3_ACCESS_KEY_ID: &str = env!("S3_ACCESS_KEY_ID");
+                        const S3_BUCKET_NAME: &str = env!("S3_BUCKET_NAME");
+                        const S3_ENDPOINT: &str = env!("S3_ENDPOINT");
+                        const S3_REGION: &str = env!("S3_REGION");
+                        const S3_SECRET_ACCESS_KEY: &str = env!("S3_SECRET_ACCESS_KEY");
 
-                        let descriptor_cid = message.descriptor.cid().to_bytes();
+                        let region = Region::Custom {
+                            region: S3_REGION.to_owned(),
+                            endpoint: S3_ENDPOINT.to_owned(),
+                        };
+                        let credentials = Credentials {
+                            access_key: Some(S3_ACCESS_KEY_ID.to_owned()),
+                            expiration: None,
+                            secret_key: Some(S3_SECRET_ACCESS_KEY.to_owned()),
+                            security_token: None,
+                            session_token: None,
+                        };
+
+                        let bucket = Bucket::new(S3_BUCKET_NAME, region.clone(), credentials)?
+                            .with_path_style();
+
+                        let s3_path = format!("records/{}.bin", data_cid);
+                        let bytes = data.to_bytes();
+
+                        let response_data = bucket.put_object(&s3_path, &bytes).await?;
+                        assert_eq!(response_data.status_code(), 200);
+
+                        let response_data = bucket.get_object(&s3_path).await?;
+                        assert_eq!(response_data.status_code(), 200);
+                        assert_eq!(bytes, response_data.as_slice());
+
+                        let descriptor_cid = message.descriptor.cid().to_string();
 
                         let descriptor = match &message.descriptor {
                             Descriptor::RecordsWrite(descriptor) => descriptor,
@@ -120,17 +150,28 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                         let published = descriptor.published.unwrap_or_default();
                         let record_id = message.record_id.to_string();
 
-                        sqlx::query!(
-                            "INSERT INTO RecordsWrite (entry_id, descriptor_cid, data_cid, data_format, published, record_id) VALUES (?, ?, ?, ?, ?, ?)",
-                            entry_id,
-                            descriptor_cid,
+                        let mut tx = pool.begin().await?;
+
+                        tx.execute(sqlx::query!(
+                            "INSERT INTO CidData (cid, path) VALUES (?, ?)",
                             data_cid,
-                            data_format,
-                            published,
-                            record_id,
-                        )
-                        .execute(pool)
+                            s3_path,
+                        ))
                         .await?;
+
+                        tx.execute(
+                            sqlx::query!(
+                                "INSERT INTO RecordsWrite (entry_id, descriptor_cid, data_cid, data_format, published, record_id) VALUES (?, ?, ?, ?, ?, ?)",
+                                entry_id,
+                                descriptor_cid,
+                                data_cid,
+                                data_format,
+                                published,
+                                record_id,
+                        ))
+                        .await?;
+
+                        tx.commit().await?;
                     }
                 }
             } else {

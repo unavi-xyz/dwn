@@ -49,6 +49,7 @@
             cargo-auditable
             mariadb
             minio
+            minio-client
             nodePackages.prettier
             pkg-config
             sqlx-cli
@@ -131,7 +132,7 @@
         devShells = {
           default = craneLib.devShell commonShell;
 
-          db = craneLib.devShell (commonShell // {
+          server = craneLib.devShell (commonShell // {
             shellHook = ''
               MYSQL_BASEDIR=${pkgs.mariadb}
               MYSQL_HOME=$PWD/mysql
@@ -149,12 +150,17 @@
                   --pid-file=$MYSQL_PID_FILE
               fi
 
-              # Starts the daemon
+              # Starts mariadb
               ${pkgs.mariadb}/bin/mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
                 --socket=$MYSQL_UNIX_SOCK 2> $MYSQL_HOME/mysql.log &
               MYSQL_PID=$!
 
-              # Wait for the server to start
+              # Start minio
+              mkdir -p $PWD/minio
+              ${pkgs.minio}/bin/minio server $PWD/minio > $PWD/minio/minio.log 2>&1 &
+              MINIO_PID=$!
+
+              # Wait for servers to start
               count=0
               while ! mysqladmin ping &>/dev/null; do
                 if [ $count -eq 10 ]; then
@@ -167,25 +173,36 @@
 
               echo "MariaDB server started with PID $MYSQL_PID"
 
-              # Create the database
-              mysqladmin create dwn > /dev/null 2>&1
-
-              export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
-
-              # Start minio
-              ${pkgs.minio}/bin/minio server $PWD/minio > $PWD/minio/minio.log 2>&1 &
-              MINIO_PID=$!
+              while ! curl -s http://localhost:9000/minio/health/live > /dev/null; do
+                if [ $count -eq 10 ]; then
+                  echo "Failed to start Minio server"
+                  exit 1
+                fi
+                count=$((count+1))
+                sleep 1
+              done
 
               echo "Minio server started with PID $MINIO_PID"
+
+              # Create database
+              mysqladmin create dwn > /dev/null 2>&1
+              export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
+
+              # Run migrations
+              ${pkgs.sqlx-cli}/bin/sqlx migrate run --source dwn-server/migrations
+
+              # Create bucket
+              mc alias set minio http://localhost:9000 minioadmin minioadmin 
+              mc mb minio/dwn > /dev/null 2>&1
 
               finish()
               {
                 echo "Shutting down MariaDB server, PID $MYSQL_PID"
                 mysqladmin shutdown
-                wait $MYSQL_PID
-
                 echo "Shutting down Minio server, PID $MINIO_PID"
                 kill -9 $MINIO_PID
+                wait $MYSQL_PID
+                wait $MINIO_PID
               }
 
               trap finish EXIT
