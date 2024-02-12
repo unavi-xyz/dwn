@@ -72,7 +72,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - run: nix develop -c nix run .#migrate
-      - run: nix develop -c sqlx database create
 
       - run: nix develop -c cargo doc --workspace --all-features --no-deps
       - run: nix develop -c cargo test --workspace --all-features --all-targets
