@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
-use super::{CommitStrategy, Encryption, Interface, Method};
+use super::{Encryption, Interface, Method};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsRead {
@@ -31,6 +31,7 @@ impl Default for RecordsRead {
 pub struct RecordsQuery {
     interface: Interface,
     method: Method,
+
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
     pub filter: Option<RecordsQueryFilter>,
@@ -94,14 +95,13 @@ pub enum FilterDateSort {
 pub struct RecordsWrite {
     interface: Interface,
     method: Method,
+
     #[serde(rename = "parentId")]
     pub parent_id: Option<String>,
     pub protocol: Option<String>,
     #[serde(rename = "protocolVersion")]
     pub protocol_version: Option<String>,
     pub schema: Option<String>,
-    #[serde(rename = "commitStrategy")]
-    pub commit_strategy: Option<CommitStrategy>,
     pub published: Option<bool>,
     pub encryption: Option<Encryption>,
     #[serde(rename = "dateCreated", with = "time::serde::rfc3339")]
@@ -117,11 +117,11 @@ impl Default for RecordsWrite {
         RecordsWrite {
             interface: Interface::Records,
             method: Method::Write,
+
             parent_id: None,
             protocol: None,
             protocol_version: None,
             schema: None,
-            commit_strategy: None,
             published: None,
             encryption: None,
             date_created: time,
@@ -136,8 +136,6 @@ pub struct RecordsCommit {
     method: Method,
     #[serde(rename = "parentId")]
     pub parent_id: String,
-    #[serde(rename = "commitStrategy")]
-    pub commit_strategy: CommitStrategy,
     #[serde(rename = "dateCreated", with = "time::serde::rfc3339")]
     pub date_created: OffsetDateTime,
 }
@@ -148,7 +146,6 @@ impl Default for RecordsCommit {
             interface: Interface::Records,
             method: Method::Commit,
             parent_id: "".to_string(),
-            commit_strategy: CommitStrategy::JsonPatch,
             date_created: OffsetDateTime::now_utc(),
         }
     }

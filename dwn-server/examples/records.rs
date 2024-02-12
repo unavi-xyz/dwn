@@ -66,10 +66,11 @@ async fn main() {
             .await
             .expect("Failed to parse response body");
 
-        for reply in res.replies.unwrap().iter() {
+        for reply in res.replies.expect("No replies") {
             assert_eq!(reply.status.code, StatusCode::OK);
+            assert!(reply.entries.is_some());
 
-            for entry in reply.entries.as_ref().unwrap().iter() {
+            for entry in reply.entries.as_ref().unwrap() {
                 let json = serde_json::from_str::<serde_json::Value>(entry.as_str().unwrap())
                     .expect("Failed to parse entry as JSON");
 

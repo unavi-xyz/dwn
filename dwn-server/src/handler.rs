@@ -89,6 +89,7 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                         let data = match &message.data {
                             Some(data) => data.as_ref(),
                             None => {
+                                warn!("Data not provided");
                                 return Ok(MessageResult::bad_request());
                             }
                         };
@@ -96,6 +97,7 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                         let data = match JsonData::try_from_base64url(data) {
                             Ok(data) => data,
                             Err(_) => {
+                                warn!("Data not valid");
                                 return Ok(MessageResult::bad_request());
                             }
                         };
@@ -109,29 +111,26 @@ pub async fn process_message(message: &Message, pool: &MySqlPool) -> Result<Mess
                         let descriptor = match &message.descriptor {
                             Descriptor::RecordsWrite(descriptor) => descriptor,
                             _ => {
+                                warn!("Descriptor not provided");
                                 return Ok(MessageResult::bad_request());
                             }
                         };
 
+                        let data_format = data.data_format().to_string();
+                        let published = descriptor.published.unwrap_or_default();
+                        let record_id = message.record_id.to_string();
+
                         sqlx::query!(
-                            "INSERT INTO RecordsWrite (entry_id, data_cid) VALUES (?, ?)",
+                            "INSERT INTO RecordsWrite (entry_id, descriptor_cid, data_cid, data_format, published, record_id) VALUES (?, ?, ?, ?, ?, ?)",
                             entry_id,
-                            data_cid
+                            descriptor_cid,
+                            data_cid,
+                            data_format,
+                            published,
+                            record_id,
                         )
                         .execute(pool)
                         .await?;
-
-                        // entry_id VARCHAR(255) NOT NULL,
-                        // descriptor_cid VARCHAR(255) NOT NULL,
-                        //
-                        // commit_strategy ENUM('json-patch', 'json-merge') NOT NULL,
-                        // data_cid VARCHAR(255) NOT NULL,
-                        // data_format VARCHAR(255) NOT NULL,
-                        // encryption VARCHAR(255),
-                        // parent_id VARCHAR(255),
-                        // published BOOLEAN NOT NULL,
-                        // record_id VARCHAR(255) NOT NULL,
-                        // schema_uri VARCHAR(255),
                     }
                 }
             } else {

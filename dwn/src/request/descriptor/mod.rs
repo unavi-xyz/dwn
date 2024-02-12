@@ -28,14 +28,6 @@ pub enum Method {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum CommitStrategy {
-    #[serde(rename = "json-patch")]
-    JsonPatch,
-    #[serde(rename = "json-merge")]
-    JsonMerge,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Encryption {
     #[serde(rename = "AES-GCM")]
     AesGcm,

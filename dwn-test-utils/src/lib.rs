@@ -66,7 +66,7 @@ pub async fn expect_status(body: RequestBody, port: u16, status: StatusCode) {
         .await
         .expect("Failed to parse response body");
 
-    for reply in res.replies.unwrap().iter() {
+    for reply in res.replies.unwrap_or_default() {
         assert_eq!(reply.status.code, status);
     }
 }
@@ -78,7 +78,11 @@ pub async fn authorize(did: String, key: &JWK, msg: &Message) -> Authorization {
         permissions_grant_cid: None,
     };
 
-    let fragment = did.clone().strip_prefix("did:key:").unwrap().to_string();
+    let fragment = did
+        .clone()
+        .strip_prefix("did:key:")
+        .expect("invalid did")
+        .to_string();
     let key_id = format!("{}#{}", did, fragment);
 
     Authorization::encode(Algorithm::EdDSA, &payload, key, key_id)
