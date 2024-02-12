@@ -29,59 +29,6 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
-        createDbScript = ''
-          MYSQL_BASEDIR=${pkgs.mariadb}
-          MYSQL_HOME=$PWD/mysql
-          MYSQL_DATADIR=$MYSQL_HOME/data
-          MYSQL_UNIX_SOCK=$MYSQL_HOME/mysql.sock
-          MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
-
-          alias mysqladmin="${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_SOCK"
-
-          if [ ! -d "$MYSQL_HOME" ]; then
-            # Make sure to use normal authentication method otherwise we can only
-            # connect with unix account. But users do not actually exists in nix.
-            ${pkgs.mariadb}/bin/mysql_install_db --auth-root-authentication-method=normal \
-              --datadir=$MYSQL_DATADIR --basedir=$MYSQL_BASEDIR \
-              --pid-file=$MYSQL_PID_FILE
-          fi
-
-          # Starts the daemon
-          ${pkgs.mariadb}/bin/mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
-            --socket=$MYSQL_UNIX_SOCK 2> $MYSQL_HOME/mysql.log &
-          MYSQL_PID=$!
-
-          # Wait for the server to start
-          count=0
-          while ! mysqladmin ping &>/dev/null; do
-            if [ $count -eq 10 ]; then
-              echo "Failed to start MariaDB server"
-              exit 1
-            fi
-            count=$((count+1))
-            sleep 1
-          done
-
-          echo "MariaDB server started with PID $MYSQL_PID"
-
-          # Create the database
-          mysqladmin create dwn > /dev/null 2>&1
-
-          export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
-        '';
-
-        trapDbScript = ''
-          finish()
-          {
-            echo "Shutting down MariaDB server"
-            mysqladmin shutdown
-            pkill $MYSQL_PID
-            wait $MYSQL_PID
-          }
-
-          trap finish EXIT
-        '';
-
         commonArgs = {
           src = lib.cleanSourceWith {
             src = ./.;
@@ -101,6 +48,7 @@
           nativeBuildInputs = with pkgs; [
             cargo-auditable
             mariadb
+            minio
             nodePackages.prettier
             pkg-config
             sqlx-cli
@@ -185,8 +133,62 @@
 
           db = craneLib.devShell (commonShell // {
             shellHook = ''
-              ${createDbScript}
-              ${trapDbScript}
+              MYSQL_BASEDIR=${pkgs.mariadb}
+              MYSQL_HOME=$PWD/mysql
+              MYSQL_DATADIR=$MYSQL_HOME/data
+              MYSQL_UNIX_SOCK=$MYSQL_HOME/mysql.sock
+              MYSQL_PID_FILE=$MYSQL_HOME/mysql.pid
+
+              alias mysqladmin="${pkgs.mariadb}/bin/mysqladmin -u root --socket $MYSQL_UNIX_SOCK"
+
+              if [ ! -d "$MYSQL_HOME" ]; then
+                # Make sure to use normal authentication method otherwise we can only
+                # connect with unix account. But users do not actually exists in nix.
+                ${pkgs.mariadb}/bin/mysql_install_db --auth-root-authentication-method=normal \
+                  --datadir=$MYSQL_DATADIR --basedir=$MYSQL_BASEDIR \
+                  --pid-file=$MYSQL_PID_FILE
+              fi
+
+              # Starts the daemon
+              ${pkgs.mariadb}/bin/mysqld --datadir=$MYSQL_DATADIR --pid-file=$MYSQL_PID_FILE \
+                --socket=$MYSQL_UNIX_SOCK 2> $MYSQL_HOME/mysql.log &
+              MYSQL_PID=$!
+
+              # Wait for the server to start
+              count=0
+              while ! mysqladmin ping &>/dev/null; do
+                if [ $count -eq 10 ]; then
+                  echo "Failed to start MariaDB server"
+                  exit 1
+                fi
+                count=$((count+1))
+                sleep 1
+              done
+
+              echo "MariaDB server started with PID $MYSQL_PID"
+
+              # Create the database
+              mysqladmin create dwn > /dev/null 2>&1
+
+              export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
+
+              # Start minio
+              ${pkgs.minio}/bin/minio server $PWD/minio > $PWD/minio/minio.log 2>&1 &
+              MINIO_PID=$!
+
+              echo "Minio server started with PID $MINIO_PID"
+
+              finish()
+              {
+                echo "Shutting down MariaDB server, PID $MYSQL_PID"
+                mysqladmin shutdown
+                wait $MYSQL_PID
+
+                echo "Shutting down Minio server, PID $MINIO_PID"
+                kill -9 $MINIO_PID
+              }
+
+              trap finish EXIT
             '';
           });
         };
