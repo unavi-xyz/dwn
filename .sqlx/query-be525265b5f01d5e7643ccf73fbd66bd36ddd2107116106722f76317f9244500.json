@@ -1,20 +1,10 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id, data_cid FROM Record WHERE id = ?",
+  "query": "SELECT data_cid FROM Record WHERE id = ?",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
-        "type_info": {
-          "type": "VarString",
-          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
-          "char_set": 224,
-          "max_size": 1020
-        }
-      },
-      {
-        "ordinal": 1,
         "name": "data_cid",
         "type_info": {
           "type": "VarString",
@@ -28,9 +18,8 @@
       "Right": 1
     },
     "nullable": [
-      false,
       false
     ]
   },
-  "hash": "90d7fe469fe2c3491835e1bba2d32cfa5f15b72c289829179766145ed410f608"
+  "hash": "be525265b5f01d5e7643ccf73fbd66bd36ddd2107116106722f76317f9244500"
 }

@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT entry_id FROM RecordsWrite WHERE entry_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "entry_id",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
+          "char_set": 224,
+          "max_size": 1020
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a6eb0074917eb59d44f4b6ffeff1a9aaaf6b9528407316e8bc72f9d2f7ed21a6"
+}
