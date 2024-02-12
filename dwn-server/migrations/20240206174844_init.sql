@@ -48,7 +48,6 @@ CREATE TABLE RecordsCommit (
   entry_id VARCHAR(255) NOT NULL,
   descriptor_cid VARCHAR(255) NOT NULL,
 
-  commit_strategy ENUM('json-patch', 'json-merge') NOT NULL,
   data_cid VARCHAR(255) NOT NULL,
   data_format VARCHAR(255) NOT NULL,
   parent_id VARCHAR(255) NOT NULL,
