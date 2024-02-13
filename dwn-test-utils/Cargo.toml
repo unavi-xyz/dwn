@@ -7,7 +7,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-axum = "0.7.2"
+axum.workspace = true
 did-method-key.workspace = true
 didkit.workspace = true
 dotenvy.workspace = true
@@ -15,6 +15,6 @@ dwn = { path = "../dwn" }
 port_check = "0.1.5"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde_json.workspace = true
-sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-rustls"] }
+sqlx.workspace = true
 tokio.workspace = true
 tracing.workspace = true
