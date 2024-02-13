@@ -7,22 +7,22 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["axum", "mysql", "s3"]
+default = ["axum", "mysql", "s3", "surrealdb"]
 axum = ["dep:axum"]
 mysql = ["dep:sqlx"]
 s3 = ["dep:rust-s3"]
 surrealdb = ["dep:surrealdb", "dep:tokio"]
 
 [dependencies]
+anyhow = "1.0.79"
 base64 = "0.21.5"
 did-method-key.workspace = true
 didkit.workspace = true
 dotenvy.workspace = true
 iana-media-types = "0.1.2"
+libipld = { version = "0.16.0", features = ["serde-codec"] }
 libipld-cbor = "0.16.0"
-libipld-core = "0.16.0"
-libipld-json = "0.16.0"
-libipld-pb = "0.16.0"
+libipld-core = { version = "0.16.0", features = ["serde", "serde-codec", "multibase"] }
 ring = "0.17.7"
 serde = { version = "1.0.193", features = ["derive"] }
 serde_ipld_dagcbor = "0.4.2"
