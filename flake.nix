@@ -83,18 +83,13 @@
           inherit cargoArtifacts;
           pname = "dwn";
         });
-
-        dwn-server = craneLib.buildPackage (commonArgs // {
-          inherit cargoArtifacts;
-          pname = "dwn-server";
-        });
       in {
-        checks = { inherit dwn dwn-server cargoClippy cargoDoc; };
+        checks = { inherit dwn cargoClippy cargoDoc; };
 
         apps = rec {
           migrate = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "migrate" ''
-              ${pkgs.sqlx-cli}/bin/sqlx migrate run --source dwn-server/migrations
+              ${pkgs.sqlx-cli}/bin/sqlx migrate run
             '';
           };
 
@@ -106,27 +101,22 @@
 
           reset = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "reset" ''
-              ${pkgs.sqlx-cli}/bin/sqlx database reset -y --source dwn-server/migrations
+              ${pkgs.sqlx-cli}/bin/sqlx database reset -y
             '';
           };
 
-          server = flake-utils.lib.mkApp {
-            drv = pkgs.writeScriptBin "server" ''
-              ${self.packages.${localSystem}.server}/bin/dwn-server
+          dwn = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "dwn" ''
+              ${self.packages.${localSystem}.dwn}/bin/dwn
             '';
           };
 
-          default = server;
+          default = dwn;
         };
 
-        packages = rec {
-          lib = dwn;
-          server = dwn-server;
-
-          default = pkgs.symlinkJoin {
-            name = "all";
-            paths = [ lib server ];
-          };
+        packages = {
+          dwn = dwn;
+          default = dwn;
         };
 
         devShells = {
