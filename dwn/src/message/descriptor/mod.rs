@@ -1,9 +1,11 @@
-use libipld::{cid::Cid, Block, DefaultParams};
+use libipld::{Block, DefaultParams};
 use libipld_cbor::DagCborCodec;
-use libipld_core::{error::SerdeError, multihash::Code, serde::to_ipld};
+use libipld_core::{multihash::Code, serde::to_ipld};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tracing::warn;
+
+use super::CidError;
 
 pub mod records;
 
@@ -29,10 +31,12 @@ pub enum Method {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Encryption {
-    #[serde(rename = "AES-GCM")]
-    AesGcm,
-    #[serde(rename = "XSalsa20-Poly1305")]
-    XSalsa20Poly1305,
+    /// AES-GCM
+    #[serde(rename = "jwe")]
+    JWE,
+    /// XSalsa20-Poly1305
+    #[serde(rename = "X25519")]
+    X25519,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
@@ -45,19 +49,12 @@ pub enum Descriptor {
     RecordsDelete(records::RecordsDelete),
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum CidError {
-    #[error("Failed to serialize descriptor to IPLD: {0}")]
-    Serde(#[from] SerdeError),
-    #[error("Failed to encode descriptor to CBOR: {0}")]
-    Encode(#[from] anyhow::Error),
-}
-
 impl Descriptor {
-    pub fn cid(&self) -> Result<Cid, CidError> {
+    /// Generate a CBOR encoded IPLD block from the descriptor
+    pub fn cbor_block(&self) -> Result<Block<DefaultParams>, CidError> {
         let ipld = to_ipld(self)?;
         let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)?;
-        Ok(block.cid().to_owned())
+        Ok(block)
     }
 }
 
@@ -179,7 +176,7 @@ mod tests {
     #[test]
     fn test_cid() {
         for desc in default_descriptors() {
-            desc.cid().expect("Failed to generate CID");
+            desc.cbor_block().expect("Failed to generate CBOR block");
         }
     }
 }

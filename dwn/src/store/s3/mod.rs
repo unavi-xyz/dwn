@@ -1,1 +1,1 @@
-pub struct S3DataStore;
+pub struct S3;
