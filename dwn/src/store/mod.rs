@@ -1,7 +1,9 @@
+use std::future::Future;
+
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
 
-use crate::message::{CidError, Message};
+use crate::message::Message;
 
 #[cfg(feature = "mysql")]
 pub mod mysql;
@@ -52,5 +54,6 @@ pub trait MessageStore {
 
     fn delete(&self, tenant: &str, cid: String) -> Result<(), Self::Error>;
     fn get(&self, tenant: &str, cid: String) -> Result<Message, Self::Error>;
-    async fn put(&self, tenant: &str, message: Message) -> Result<Cid, Self::Error>;
+    fn put(&self, tenant: &str, message: Message)
+        -> impl Future<Output = Result<Cid, Self::Error>>;
 }

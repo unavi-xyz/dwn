@@ -47,6 +47,7 @@
 
           nativeBuildInputs = with pkgs; [
             cargo-auditable
+            clang
             mariadb
             minio
             minio-client
@@ -56,6 +57,7 @@
           ];
 
           DATABASE_URL = "mysql://root@localhost/dwn";
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
           SQLX_OFFLINE = true;
         };
 
@@ -64,6 +66,7 @@
           packages = with pkgs; [ cargo-watch rust-analyzer ];
 
           DATABASE_URL = "mysql://root@localhost/dwn";
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
         };
 
         cargoArtifacts =
