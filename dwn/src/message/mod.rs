@@ -2,9 +2,15 @@ use std::collections::BTreeMap;
 
 use libipld::{Block, DefaultParams};
 use libipld_cbor::DagCborCodec;
-use libipld_core::{error::SerdeError, ipld::Ipld, multihash::Code, serde::to_ipld};
+use libipld_core::{
+    error::SerdeError,
+    ipld::Ipld,
+    multihash::Code,
+    serde::{from_ipld, to_ipld},
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use thiserror::Error;
 
 use self::descriptor::Descriptor;
 
@@ -21,20 +27,35 @@ pub struct Message {
     pub record_id: Option<String>,
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum CidError {
-    #[error("Failed to serialize descriptor to IPLD: {0}")]
+#[derive(Error, Debug)]
+pub enum EncodeError {
+    #[error("Failed to serialize to IPLD: {0}")]
     Serde(#[from] SerdeError),
-    #[error("Failed to encode descriptor to CBOR: {0}")]
+    #[error("Failed to encode to CBOR: {0}")]
     Encode(#[from] anyhow::Error),
 }
 
+#[derive(Error, Debug)]
+pub enum DecodeError {
+    #[error("Failed to serialize to IPLD: {0}")]
+    Serde(#[from] SerdeError),
+    #[error("Failed to decode CBOR: {0}")]
+    Decode(#[from] anyhow::Error),
+}
+
 impl Message {
-    /// Generate a CBOR encoded IPLD block from the message
-    pub fn cbor_block(&self) -> Result<Block<DefaultParams>, CidError> {
+    /// Encodes the message to a CBOR block
+    pub fn encode_block(&self) -> Result<Block<DefaultParams>, EncodeError> {
         let ipld = to_ipld(self)?;
         let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)?;
         Ok(block)
+    }
+
+    /// Decodes a CBOR block to a message
+    pub fn decode_block(block: Block<DefaultParams>) -> Result<Self, DecodeError> {
+        let ipld = block.decode::<DagCborCodec, Ipld>()?;
+        let msg = from_ipld(ipld)?;
+        Ok(msg)
     }
 }
 

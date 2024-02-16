@@ -3,13 +3,15 @@
 
 use std::sync::Arc;
 
+use libipld::{Block, Cid, DefaultParams};
 use surrealdb::{
     engine::local::{Db, Mem},
     sql::{Id, Table, Thing},
     Surreal,
 };
+use tracing::info;
 
-use crate::message::{CidError, Message};
+use crate::message::{DecodeError, EncodeError, Message};
 
 use self::model::{CreateEncodedMessage, GetEncodedMessage};
 
@@ -25,19 +27,27 @@ pub enum MessageStoreError {
     #[error("Message missing data")]
     MissingData,
     #[error("Failed to generate CID: {0}")]
-    CidError(#[from] CidError),
+    MessageEncode(#[from] EncodeError),
     #[error("Failed to interact with SurrealDB: {0}")]
     SurrealDB(#[from] surrealdb::Error),
     #[error("Failed to encode data: {0}")]
     DataEncodeError(#[from] libipld_core::error::SerdeError),
+    #[error("Not found")]
+    NotFound,
+    #[error("Failed to decode message: {0}")]
+    MessageDecodeError(#[from] DecodeError),
+    #[error("Failed to generate CID: {0}")]
+    Cid(#[from] libipld::cid::Error),
+    #[error("Anyhow error: {0}")]
+    Anyhow(#[from] anyhow::Error),
 }
 
 pub struct SurrealDB {
-    pub db: Arc<Surreal<Db>>,
+    db: Arc<Surreal<Db>>,
 }
 
 impl SurrealDB {
-    async fn new() -> Result<Self, surrealdb::Error> {
+    pub async fn new() -> Result<Self, surrealdb::Error> {
         let db = Surreal::new::<Mem>(()).await?;
         Ok(SurrealDB { db: Arc::new(db) })
     }
@@ -51,12 +61,33 @@ impl SurrealDB {
 impl MessageStore for SurrealDB {
     type Error = MessageStoreError;
 
-    fn delete(&self, tenant: &str, cid: String) -> Result<(), Self::Error> {
+    fn delete(&self, tenant: &str, cid: &str) -> Result<(), Self::Error> {
         unimplemented!()
     }
 
-    fn get(&self, tenant: &str, cid: String) -> Result<Message, Self::Error> {
-        unimplemented!()
+    async fn get(&self, tenant: &str, cid: &str) -> Result<Message, Self::Error> {
+        let id = Thing::from((
+            Table::from(tenant.to_string()).to_string(),
+            Id::String(cid.to_string()),
+        ));
+
+        let encoded_message: GetEncodedMessage = self
+            .db
+            .select(id.clone())
+            .await?
+            .ok_or_else(|| Self::Error::NotFound)?;
+
+        let cid = Cid::try_from(cid)?;
+        let block = Block::<DefaultParams>::new(cid, encoded_message.encoded_message)?;
+
+        let message = Message::decode_block(block)?;
+
+        if let Some(data) = encoded_message.encoded_data {
+            // TODO: set data
+            info!("Data: {:?}", data)
+        }
+
+        Ok(message)
     }
 
     async fn put(&self, tenant: &str, message: Message) -> Result<libipld::Cid, Self::Error> {
@@ -65,7 +96,7 @@ impl MessageStore for SurrealDB {
         let data = message.data.as_ref().ok_or(Self::Error::MissingData)?;
         let encoded_data = data.encode()?;
 
-        let block = message.cbor_block()?;
+        let block = message.encode_block()?;
         let cid = block.cid();
 
         let id = Thing::from((
@@ -95,7 +126,7 @@ mod tests {
     };
 
     #[tokio::test]
-    async fn test_put() {
+    async fn test_put_get() {
         let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
 
         let data = Data::Base64("hello".to_string());
@@ -111,9 +142,48 @@ mod tests {
 
         let did = "did:example:123";
 
-        let _ = surreal
-            .put(did, message)
+        let cid = surreal
+            .put(did, message.clone())
             .await
             .expect("Failed to put message");
+
+        let got = surreal
+            .get(did, &cid.to_string())
+            .await
+            .expect("Failed to get message");
+
+        assert_eq!(message, got);
+    }
+
+    #[tokio::test]
+    async fn test_get_missing() {
+        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
+
+        let did = "did:example:123";
+
+        let got = surreal.get(did, "missing").await;
+
+        assert!(got.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_put_missing_data() {
+        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
+
+        let write = RecordsWrite::default();
+
+        let message = Message {
+            attestation: None,
+            authorization: None,
+            data: None,
+            descriptor: Descriptor::RecordsWrite(write),
+            record_id: None,
+        };
+
+        let did = "did:example:123";
+
+        let got = surreal.put(did, message).await;
+
+        assert!(got.is_err());
     }
 }

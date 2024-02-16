@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tracing::warn;
 
-use super::CidError;
+use super::EncodeError;
 
 pub mod records;
 
@@ -51,7 +51,7 @@ pub enum Descriptor {
 
 impl Descriptor {
     /// Generate a CBOR encoded IPLD block from the descriptor
-    pub fn cbor_block(&self) -> Result<Block<DefaultParams>, CidError> {
+    pub fn cbor_block(&self) -> Result<Block<DefaultParams>, EncodeError> {
         let ipld = to_ipld(self)?;
         let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)?;
         Ok(block)
