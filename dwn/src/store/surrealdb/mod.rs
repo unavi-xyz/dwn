@@ -9,7 +9,6 @@ use surrealdb::{
     sql::{Id, Table, Thing},
     Surreal,
 };
-use tracing::info;
 
 use crate::message::{DecodeError, EncodeError, Message};
 
@@ -73,7 +72,7 @@ impl MessageStore for SurrealDB {
 
         let encoded_message: GetEncodedMessage = self
             .db
-            .select(id.clone())
+            .select(id)
             .await?
             .ok_or_else(|| Self::Error::NotFound)?;
 
@@ -96,7 +95,7 @@ impl MessageStore for SurrealDB {
             Id::String(cid.to_string()),
         ));
 
-        db.create::<Option<GetEncodedMessage>>(id.clone())
+        db.create::<Option<GetEncodedMessage>>(id)
             .content(CreateEncodedMessage {
                 cid: cid.to_string(),
                 message: block.data().to_vec(),
