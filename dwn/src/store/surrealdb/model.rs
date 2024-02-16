@@ -1,4 +1,3 @@
-use libipld::Ipld;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use surrealdb::sql::Thing;
@@ -7,8 +6,7 @@ use surrealdb::sql::Thing;
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct CreateEncodedMessage {
     pub(super) cid: String,
-    pub(super) encoded_data: Option<Ipld>,
-    pub(super) encoded_message: Vec<u8>,
+    pub(super) message: Vec<u8>,
     pub(super) tenant: String,
 }
 
@@ -16,8 +14,7 @@ pub(crate) struct CreateEncodedMessage {
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct GetEncodedMessage {
     pub(super) cid: String,
-    pub(super) encoded_data: Option<Ipld>,
-    pub(super) encoded_message: Vec<u8>,
+    pub(super) message: Vec<u8>,
     pub(super) id: Thing,
     pub(super) tenant: String,
 }

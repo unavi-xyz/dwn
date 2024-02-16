@@ -78,23 +78,15 @@ impl MessageStore for SurrealDB {
             .ok_or_else(|| Self::Error::NotFound)?;
 
         let cid = Cid::try_from(cid)?;
-        let block = Block::<DefaultParams>::new(cid, encoded_message.encoded_message)?;
+        let block = Block::<DefaultParams>::new(cid, encoded_message.message)?;
 
         let message = Message::decode_block(block)?;
-
-        if let Some(data) = encoded_message.encoded_data {
-            // TODO: set data
-            info!("Data: {:?}", data)
-        }
 
         Ok(message)
     }
 
     async fn put(&self, tenant: &str, message: Message) -> Result<libipld::Cid, Self::Error> {
         let db = self.message_db().await?;
-
-        let data = message.data.as_ref().ok_or(Self::Error::MissingData)?;
-        let encoded_data = data.encode()?;
 
         let block = message.encode_block()?;
         let cid = block.cid();
@@ -107,8 +99,7 @@ impl MessageStore for SurrealDB {
         db.create::<Option<GetEncodedMessage>>(id.clone())
             .content(CreateEncodedMessage {
                 cid: cid.to_string(),
-                encoded_data: Some(encoded_data),
-                encoded_message: block.data().to_vec(),
+                message: block.data().to_vec(),
                 tenant: tenant.to_string(),
             })
             .await?;
@@ -162,27 +153,6 @@ mod tests {
         let did = "did:example:123";
 
         let got = surreal.get(did, "missing").await;
-
-        assert!(got.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_missing_data() {
-        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
-
-        let write = RecordsWrite::default();
-
-        let message = Message {
-            attestation: None,
-            authorization: None,
-            data: None,
-            descriptor: Descriptor::RecordsWrite(write),
-            record_id: None,
-        };
-
-        let did = "did:example:123";
-
-        let got = surreal.put(did, message).await;
 
         assert!(got.is_err());
     }
