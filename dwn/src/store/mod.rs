@@ -53,6 +53,9 @@ pub trait MessageStore {
 
     fn delete(&self, tenant: &str, cid: String) -> impl Future<Output = Result<(), Self::Error>>;
     fn get(&self, tenant: &str, cid: &str) -> impl Future<Output = Result<Message, Self::Error>>;
-    fn put(&self, tenant: &str, message: Message)
-        -> impl Future<Output = Result<Cid, Self::Error>>;
+    fn put(
+        &self,
+        tenant: &str,
+        message: &Message,
+    ) -> impl Future<Output = Result<Cid, Self::Error>>;
 }

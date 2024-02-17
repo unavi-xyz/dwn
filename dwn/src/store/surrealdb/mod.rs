@@ -93,7 +93,7 @@ impl MessageStore for SurrealDB {
         Ok(message)
     }
 
-    async fn put(&self, tenant: &str, message: Message) -> Result<Cid, Self::Error> {
+    async fn put(&self, tenant: &str, message: &Message) -> Result<Cid, Self::Error> {
         let db = self.message_db().await?;
 
         let block = message.encode_block()?;
@@ -143,7 +143,7 @@ mod tests {
 
         // Test put and get
         let cid = surreal
-            .put(did, message.clone())
+            .put(did, &message)
             .await
             .expect("Failed to put message");
 
@@ -204,7 +204,7 @@ mod tests {
         };
 
         let cid = surreal
-            .put(did, message.clone())
+            .put(did, &message)
             .await
             .expect("Failed to put message");
 
