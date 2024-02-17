@@ -1,5 +1,5 @@
 *.local
-minio
-mysql
-result
-target
+/minio
+/mysql
+/result
+/target
