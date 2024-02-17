@@ -60,15 +60,24 @@ impl SurrealDB {
 impl MessageStore for SurrealDB {
     type Error = MessageStoreError;
 
-    fn delete(&self, tenant: &str, cid: &str) -> Result<(), Self::Error> {
-        unimplemented!()
+    async fn delete(&self, tenant: &str, cid: String) -> Result<(), Self::Error> {
+        let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
+
+        let encoded_message: Option<GetEncodedMessage> = self.db.select(id.clone()).await?;
+
+        if let Some(msg) = encoded_message {
+            if msg.tenant != tenant {
+                return Err(Self::Error::NotFound);
+            }
+
+            self.db.delete::<Option<CreateEncodedMessage>>(id).await?;
+        }
+
+        Ok(())
     }
 
     async fn get(&self, tenant: &str, cid: &str) -> Result<Message, Self::Error> {
-        let id = Thing::from((
-            Table::from(tenant.to_string()).to_string(),
-            Id::String(cid.to_string()),
-        ));
+        let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid.to_string())));
 
         let encoded_message: GetEncodedMessage = self
             .db
@@ -84,7 +93,7 @@ impl MessageStore for SurrealDB {
         Ok(message)
     }
 
-    async fn put(&self, tenant: &str, message: Message) -> Result<libipld::Cid, Self::Error> {
+    async fn put(&self, tenant: &str, message: Message) -> Result<Cid, Self::Error> {
         let db = self.message_db().await?;
 
         let block = message.encode_block()?;
@@ -116,7 +125,7 @@ mod tests {
     };
 
     #[tokio::test]
-    async fn test_put_get() {
+    async fn test_all_methods() {
         let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
 
         let data = Data::Base64("hello".to_string());
@@ -132,6 +141,7 @@ mod tests {
 
         let did = "did:example:123";
 
+        // Test put and get
         let cid = surreal
             .put(did, message.clone())
             .await
@@ -143,6 +153,16 @@ mod tests {
             .expect("Failed to get message");
 
         assert_eq!(message, got);
+
+        // Test delete
+        surreal
+            .delete(did, cid.to_string())
+            .await
+            .expect("Failed to delete message");
+
+        let got = surreal.get(did, &cid.to_string()).await;
+
+        assert!(got.is_err());
     }
 
     #[tokio::test]
@@ -154,5 +174,49 @@ mod tests {
         let got = surreal.get(did, "missing").await;
 
         assert!(got.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_delete_missing() {
+        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
+
+        let did = "did:example:123";
+
+        let got = surreal.delete(did, "missing".to_string()).await;
+        assert!(got.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_delete_wrong_tenant() {
+        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
+
+        let did = "did:example:123";
+
+        let data = Data::Base64("hello".to_string());
+        let write = RecordsWrite::default();
+
+        let message = Message {
+            attestation: None,
+            authorization: None,
+            data: Some(data),
+            descriptor: Descriptor::RecordsWrite(write),
+            record_id: None,
+        };
+
+        let cid = surreal
+            .put(did, message.clone())
+            .await
+            .expect("Failed to put message");
+
+        // Delete returns OK, but message should not be deleted
+        let res = surreal.delete("wrong", cid.to_string()).await;
+        assert!(res.is_ok());
+
+        let got = surreal
+            .get(did, &cid.to_string())
+            .await
+            .expect("Failed to get message");
+
+        assert_eq!(message, got);
     }
 }
