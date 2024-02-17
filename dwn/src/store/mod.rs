@@ -19,22 +19,13 @@ pub mod surrealdb;
 pub trait DataStore {
     type Error: Error + Send + Sync + 'static;
 
-    fn delete(
-        &self,
-        tenant: &str,
-        record_id: &str,
-        cid: Cid,
-    ) -> impl Future<Output = Result<(), Self::Error>>;
+    fn delete(&self, cid: Cid) -> impl Future<Output = Result<(), Self::Error>>;
     fn get<T: Read + Send + Sync>(
         &self,
-        tenant: &str,
-        record_id: &str,
         cid: Cid,
     ) -> impl Future<Output = Result<Option<GetDataResults<T>>, Self::Error>>;
     fn put(
         &self,
-        tenant: &str,
-        record_id: &str,
         cid: Cid,
         value: impl Write + Send + Sync,
     ) -> impl Future<Output = Result<PutDataResults, Self::Error>>;

@@ -1,5 +1,5 @@
-use handlers::{records::write::RecordsWriteHandler, MethodHandler};
-use message::descriptor::Descriptor;
+use handlers::{records::write::RecordsWriteHandler, MessageReply, MethodHandler};
+use message::{descriptor::Descriptor, Message};
 use store::{surrealdb::message::MessageStoreError, DataStore, MessageStore};
 use thiserror::Error;
 
@@ -24,8 +24,8 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
     pub fn handle_message(
         &self,
         tenant: &str,
-        message: message::Message,
-    ) -> Result<handlers::MessageReply, HandleMessageError> {
+        message: Message,
+    ) -> Result<MessageReply, HandleMessageError> {
         match &message.descriptor {
             Descriptor::RecordsWrite(_) => {
                 let handler = RecordsWriteHandler {
