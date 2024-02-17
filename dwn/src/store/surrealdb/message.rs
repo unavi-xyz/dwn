@@ -64,7 +64,7 @@ impl MessageStore for SurrealDB {
 
         let cid = Cid::try_from(cid)?;
         let block = Block::<DefaultParams>::new(cid, encoded_message.message)
-            .map_err(|e| Self::Error::CreateBlockError(e))?;
+            .map_err(Self::Error::CreateBlockError)?;
 
         let message = Message::decode_block(block)?;
 
@@ -72,10 +72,7 @@ impl MessageStore for SurrealDB {
     }
 
     async fn put(&self, tenant: &str, message: &Message) -> Result<Cid, Self::Error> {
-        let db = self
-            .message_db()
-            .await
-            .map_err(|e| Self::Error::GetDbError(e))?;
+        let db = self.message_db().await.map_err(Self::Error::GetDbError)?;
 
         let block = message.encode_block()?;
         let cid = block.cid();
