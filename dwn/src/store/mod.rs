@@ -1,4 +1,4 @@
-use std::{error::Error, future::Future, io::Write};
+use std::{error::Error, future::Future};
 
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub trait DataStore {
     fn put(
         &self,
         cid: &Cid,
-        value: impl Write + Send + Sync,
+        value: Vec<u8>,
     ) -> impl Future<Output = Result<PutDataResults, Self::Error>>;
 }
 
@@ -50,6 +50,36 @@ pub trait MessageStore {
 
 #[cfg(test)]
 mod tests {
+    pub mod data {
+        use super::super::*;
+
+        pub async fn test_all_methods(store: impl DataStore) {
+            let cid = Cid::default();
+            let data = vec![1, 2, 3, 4, 5];
+
+            // Test put and get
+            store
+                .put(&cid, data.clone())
+                .await
+                .expect("Failed to put data");
+
+            let got = store
+                .get(&cid)
+                .await
+                .expect("Failed to get data")
+                .expect("No data found");
+
+            assert_eq!(data, got.data);
+
+            // Test delete
+            store.delete(&cid).await.expect("Failed to delete data");
+
+            let got = store.get(&cid).await;
+
+            assert!(got.is_ok());
+            assert!(got.unwrap().is_none());
+        }
+    }
 
     pub mod message {
         use super::super::*;

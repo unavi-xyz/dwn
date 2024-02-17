@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use libipld::Cid;
 use surrealdb::sql::{Id, Table, Thing};
 use thiserror::Error;
@@ -28,8 +26,15 @@ pub enum DataStoreError {
 impl DataStore for SurrealDB {
     type Error = DataStoreError;
 
-    async fn delete(&self, _cid: &Cid) -> Result<(), Self::Error> {
-        unimplemented!()
+    async fn delete(&self, cid: &Cid) -> Result<(), Self::Error> {
+        let id = Thing::from((
+            Table::from(CID_TABLE_NAME).to_string(),
+            Id::String(cid.to_string()),
+        ));
+
+        self.db.delete::<Option<GetData>>(id).await?;
+
+        Ok(())
     }
     async fn get(&self, cid: &Cid) -> Result<Option<GetDataResults>, Self::Error> {
         let id = Thing::from((
@@ -47,11 +52,7 @@ impl DataStore for SurrealDB {
             data: res.data,
         }))
     }
-    async fn put(
-        &self,
-        cid: &Cid,
-        mut writer: impl Write + Send + Sync,
-    ) -> Result<PutDataResults, Self::Error> {
+    async fn put(&self, cid: &Cid, data: Vec<u8>) -> Result<PutDataResults, Self::Error> {
         let db = self.data_db().await.map_err(Self::Error::GetDbError)?;
 
         let id = Thing::from((
@@ -59,8 +60,7 @@ impl DataStore for SurrealDB {
             Id::String(cid.to_string()),
         ));
 
-        let mut data = Vec::new();
-        let size = writer.write(&mut data)?;
+        let size = data.len();
 
         db.create::<Option<GetData>>(id)
             .content(CreateData {
@@ -70,5 +70,20 @@ impl DataStore for SurrealDB {
             .await?;
 
         Ok(PutDataResults { size })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn store() -> SurrealDB {
+        SurrealDB::new().await.expect("Failed to create SurrealDB")
+    }
+
+    #[tokio::test]
+    async fn test_all_methods() {
+        let store = store().await;
+        crate::store::tests::data::test_all_methods(store).await;
     }
 }
