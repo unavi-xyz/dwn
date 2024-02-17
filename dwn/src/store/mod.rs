@@ -50,6 +50,8 @@ pub trait MessageStore {
 
 #[cfg(test)]
 mod tests {
+    // Generic tests for all data stores
+    // Should be added to each data store's test suite
     pub mod data {
         use super::super::*;
 
@@ -81,6 +83,8 @@ mod tests {
         }
     }
 
+    // Generic tests for all message stores
+    // Should be added to each message store's test suite
     pub mod message {
         use super::super::*;
         use crate::message::{
