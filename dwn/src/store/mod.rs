@@ -1,4 +1,8 @@
-use std::{error::Error, future::Future};
+use std::{
+    error::Error,
+    future::Future,
+    io::{Read, Write},
+};
 
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
@@ -15,26 +19,31 @@ pub mod surrealdb;
 pub trait DataStore {
     type Error: Error + Send + Sync + 'static;
 
-    fn delete(&self, tenant: &str, record_id: &str, cid: Cid) -> Result<(), Self::Error>;
-    fn get<T: std::io::Read + Send + Sync>(
+    fn delete(
         &self,
         tenant: &str,
         record_id: &str,
         cid: Cid,
-    ) -> Result<Option<GetDataResults<T>>, Self::Error>;
+    ) -> impl Future<Output = Result<(), Self::Error>>;
+    fn get<T: Read + Send + Sync>(
+        &self,
+        tenant: &str,
+        record_id: &str,
+        cid: Cid,
+    ) -> impl Future<Output = Result<Option<GetDataResults<T>>, Self::Error>>;
     fn put(
         &self,
         tenant: &str,
         record_id: &str,
         cid: Cid,
-        value: impl std::io::Write + Send + Sync,
-    ) -> Result<PutDataResults, Self::Error>;
+        value: impl Write + Send + Sync,
+    ) -> impl Future<Output = Result<PutDataResults, Self::Error>>;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetDataResults<T>
 where
-    T: std::io::Read + Send + Sync,
+    T: Read + Send + Sync,
 {
     #[serde(rename = "dataSize")]
     size: usize,
