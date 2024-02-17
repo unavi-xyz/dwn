@@ -8,8 +8,6 @@ use surrealdb::{
     Surreal,
 };
 
-use self::message::MessageStoreError;
-
 pub mod data;
 pub mod message;
 pub mod model;
@@ -29,12 +27,12 @@ impl SurrealDB {
         Ok(SurrealDB { db: Arc::new(db) })
     }
 
-    pub async fn data_db(&self) -> Result<Arc<Surreal<Db>>, MessageStoreError> {
+    pub async fn data_db(&self) -> Result<Arc<Surreal<Db>>, anyhow::Error> {
         self.db.use_ns(NAMESPACE).use_db(DATA_DB_NAME).await?;
         Ok(self.db.clone())
     }
 
-    pub async fn message_db(&self) -> Result<Arc<Surreal<Db>>, MessageStoreError> {
+    pub async fn message_db(&self) -> Result<Arc<Surreal<Db>>, anyhow::Error> {
         self.db.use_ns(NAMESPACE).use_db(MESSAGE_DB_NAME).await?;
         Ok(self.db.clone())
     }

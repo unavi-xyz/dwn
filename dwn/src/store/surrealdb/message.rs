@@ -8,7 +8,7 @@ use crate::{
 };
 
 use super::{
-    model::{CreateEncodedMessage, GetEncodedMessage},
+    model::{CreateMessage, GetMessage},
     SurrealDB,
 };
 
@@ -28,8 +28,10 @@ pub enum MessageStoreError {
     MessageDecodeError(#[from] DecodeError),
     #[error("Failed to generate CID: {0}")]
     Cid(#[from] libipld::cid::Error),
-    #[error("Anyhow error: {0}")]
-    Anyhow(#[from] anyhow::Error),
+    #[error("Failed to create block {0}")]
+    CreateBlockError(anyhow::Error),
+    #[error("Failed to interact with SurrealDB: {0}")]
+    GetDbError(anyhow::Error),
 }
 
 impl MessageStore for SurrealDB {
@@ -38,14 +40,14 @@ impl MessageStore for SurrealDB {
     async fn delete(&self, tenant: &str, cid: String) -> Result<(), Self::Error> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
 
-        let encoded_message: Option<GetEncodedMessage> = self.db.select(id.clone()).await?;
+        let encoded_message: Option<GetMessage> = self.db.select(id.clone()).await?;
 
         if let Some(msg) = encoded_message {
             if msg.tenant != tenant {
                 return Err(Self::Error::NotFound);
             }
 
-            self.db.delete::<Option<CreateEncodedMessage>>(id).await?;
+            self.db.delete::<Option<CreateMessage>>(id).await?;
         }
 
         Ok(())
@@ -54,14 +56,15 @@ impl MessageStore for SurrealDB {
     async fn get(&self, tenant: &str, cid: &str) -> Result<Message, Self::Error> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid.to_string())));
 
-        let encoded_message: GetEncodedMessage = self
+        let encoded_message: GetMessage = self
             .db
             .select(id)
             .await?
             .ok_or_else(|| Self::Error::NotFound)?;
 
         let cid = Cid::try_from(cid)?;
-        let block = Block::<DefaultParams>::new(cid, encoded_message.message)?;
+        let block = Block::<DefaultParams>::new(cid, encoded_message.message)
+            .map_err(|e| Self::Error::CreateBlockError(e))?;
 
         let message = Message::decode_block(block)?;
 
@@ -69,7 +72,10 @@ impl MessageStore for SurrealDB {
     }
 
     async fn put(&self, tenant: &str, message: &Message) -> Result<Cid, Self::Error> {
-        let db = self.message_db().await?;
+        let db = self
+            .message_db()
+            .await
+            .map_err(|e| Self::Error::GetDbError(e))?;
 
         let block = message.encode_block()?;
         let cid = block.cid();
@@ -79,8 +85,8 @@ impl MessageStore for SurrealDB {
             Id::String(cid.to_string()),
         ));
 
-        db.create::<Option<GetEncodedMessage>>(id)
-            .content(CreateEncodedMessage {
+        db.create::<Option<GetMessage>>(id)
+            .content(CreateMessage {
                 cid: cid.to_string(),
                 message: block.data().to_vec(),
                 tenant: tenant.to_string(),
@@ -94,104 +100,32 @@ impl MessageStore for SurrealDB {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::{
-        descriptor::{records::RecordsWrite, Descriptor},
-        Data, Message,
-    };
+
+    async fn store() -> SurrealDB {
+        SurrealDB::new().await.expect("Failed to create SurrealDB")
+    }
 
     #[tokio::test]
     async fn test_all_methods() {
-        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
-
-        let data = Data::Base64("hello".to_string());
-        let write = RecordsWrite::default();
-
-        let message = Message {
-            attestation: None,
-            authorization: None,
-            data: Some(data),
-            descriptor: Descriptor::RecordsWrite(write),
-            record_id: None,
-        };
-
-        let did = "did:example:123";
-
-        // Test put and get
-        let cid = surreal
-            .put(did, &message)
-            .await
-            .expect("Failed to put message");
-
-        let got = surreal
-            .get(did, &cid.to_string())
-            .await
-            .expect("Failed to get message");
-
-        assert_eq!(message, got);
-
-        // Test delete
-        surreal
-            .delete(did, cid.to_string())
-            .await
-            .expect("Failed to delete message");
-
-        let got = surreal.get(did, &cid.to_string()).await;
-
-        assert!(got.is_err());
+        let store = store().await;
+        crate::store::tests::message::test_all_methods(store).await;
     }
 
     #[tokio::test]
     async fn test_get_missing() {
-        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
-
-        let did = "did:example:123";
-
-        let got = surreal.get(did, "missing").await;
-
-        assert!(got.is_err());
+        let store = store().await;
+        crate::store::tests::message::test_get_missing(store).await;
     }
 
     #[tokio::test]
     async fn test_delete_missing() {
-        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
-
-        let did = "did:example:123";
-
-        let got = surreal.delete(did, "missing".to_string()).await;
-        assert!(got.is_err());
+        let store = store().await;
+        crate::store::tests::message::test_delete_missing(store).await;
     }
 
     #[tokio::test]
     async fn test_delete_wrong_tenant() {
-        let surreal = SurrealDB::new().await.expect("Failed to create SurrealDB");
-
-        let did = "did:example:123";
-
-        let data = Data::Base64("hello".to_string());
-        let write = RecordsWrite::default();
-
-        let message = Message {
-            attestation: None,
-            authorization: None,
-            data: Some(data),
-            descriptor: Descriptor::RecordsWrite(write),
-            record_id: None,
-        };
-
-        let cid = surreal
-            .put(did, &message)
-            .await
-            .expect("Failed to put message");
-
-        // Delete returns OK, but message should not be deleted
-        let res = surreal.delete("wrong", cid.to_string()).await;
-        assert!(res.is_ok());
-
-        let got = surreal
-            .get(did, &cid.to_string())
-            .await
-            .expect("Failed to get message");
-
-        assert_eq!(message, got);
+        let store = store().await;
+        crate::store::tests::message::test_delete_wrong_tenant(store).await;
     }
 }

@@ -1,18 +1,28 @@
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 use surrealdb::sql::Thing;
 
-#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct CreateEncodedMessage {
+pub(crate) struct CreateData {
+    pub(super) cid: String,
+    pub(super) data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct GetData {
+    pub(super) cid: String,
+    pub(super) data: Vec<u8>,
+    pub(super) id: Thing,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct CreateMessage {
     pub(super) cid: String,
     pub(super) message: Vec<u8>,
     pub(super) tenant: String,
 }
 
-#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct GetEncodedMessage {
+pub(crate) struct GetMessage {
     pub(super) cid: String,
     pub(super) message: Vec<u8>,
     pub(super) id: Thing,
