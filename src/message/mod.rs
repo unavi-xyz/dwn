@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use thiserror::Error;
 
-
 use crate::message::auth::{AuthPayload, Protected, SignatureEntry, JWS};
 
 use self::{auth::SignatureVerifyError, descriptor::Descriptor};
