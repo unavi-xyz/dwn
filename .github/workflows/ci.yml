@@ -73,5 +73,5 @@ jobs:
 
       - run: nix develop -c nix run .#migrate
 
-      - run: nix develop -c cargo doc --workspace --all-features --no-deps
-      - run: nix develop -c cargo test --workspace --all-features --all-targets
+      - run: nix develop -c cargo doc --all-features --no-deps
+      - run: nix develop -c cargo test --all-features --all-targets
