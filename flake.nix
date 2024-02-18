@@ -90,18 +90,6 @@
         checks = { inherit dwn cargoClippy cargoDoc; };
 
         apps = rec {
-          migrate = flake-utils.lib.mkApp {
-            drv = pkgs.writeScriptBin "migrate" ''
-              ${pkgs.sqlx-cli}/bin/sqlx migrate run
-            '';
-          };
-
-          prepare = flake-utils.lib.mkApp {
-            drv = pkgs.writeScriptBin "prepare" ''
-              cargo sqlx prepare -- --all-features --all-targets --tests
-            '';
-          };
-
           reset = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "reset" ''
               ${pkgs.sqlx-cli}/bin/sqlx database reset -y
@@ -182,7 +170,7 @@
               export DATABASE_URL=mysql://root@localhost/dwn?unix_socket=$MYSQL_UNIX_SOCK
 
               # Run migrations
-              ${pkgs.sqlx-cli}/bin/sqlx migrate run --source dwn-server/migrations
+              ${pkgs.sqlx-cli}/bin/sqlx migrate run
 
               # Create bucket
               mc alias set minio http://localhost:9000 minioadmin minioadmin 
