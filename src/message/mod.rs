@@ -11,9 +11,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use thiserror::Error;
 
+
 use crate::message::auth::{AuthPayload, Protected, SignatureEntry, JWS};
 
-use self::descriptor::Descriptor;
+use self::{auth::SignatureVerifyError, descriptor::Descriptor};
 
 pub mod auth;
 pub mod descriptor;
@@ -65,6 +66,10 @@ pub enum VerifyAuthError {
     AuthorizationMissing,
     #[error("Signature missing")]
     SignatureMissing,
+    #[error("Failed to verify signature: {0}")]
+    SignatureVerify(#[from] SignatureVerifyError),
+    #[error("Serialization error: {0}")]
+    Serde(#[from] serde_json::Error),
 }
 
 impl Message {
@@ -108,7 +113,7 @@ impl Message {
         Ok(block)
     }
 
-    pub fn verify_auth(&self) -> Result<(), VerifyAuthError> {
+    pub async fn verify_auth(&self) -> Result<(), VerifyAuthError> {
         let auth = self
             .authorization
             .as_ref()
@@ -116,6 +121,13 @@ impl Message {
 
         if auth.signatures.is_empty() {
             return Err(VerifyAuthError::SignatureMissing);
+        }
+
+        let payload = serde_json::to_string(&auth.payload)?;
+        let payload = payload.as_bytes();
+
+        for entry in &auth.signatures {
+            entry.verify(payload).await?;
         }
 
         Ok(())

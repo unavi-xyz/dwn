@@ -1983,6 +1983,7 @@ name = "dwn"
 version = "0.0.3"
 dependencies = [
  "anyhow",
+ "async-recursion",
  "axum",
  "base64 0.21.7",
  "did-method-key",

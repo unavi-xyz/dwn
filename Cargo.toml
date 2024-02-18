@@ -38,6 +38,7 @@ axum = { version = "0.7.2", optional = true }
 rust-s3 = { version = "0.33.0", optional = true }
 sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-rustls"], optional = true }
 tokio = { version = "1.35.0", features = ["full"], optional = true }
+async-recursion = "1.0.5"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 surrealdb = { version = "1.2.0", default-featuers = false, features = ["kv-mem", "kv-indxdb"], optional = true }
