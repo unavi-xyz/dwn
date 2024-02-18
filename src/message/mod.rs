@@ -11,8 +11,11 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use thiserror::Error;
 
+use crate::message::auth::{AuthPayload, Protected, SignatureEntry, JWS};
+
 use self::descriptor::Descriptor;
 
+pub mod auth;
 pub mod descriptor;
 
 #[skip_serializing_none]
@@ -82,10 +85,7 @@ impl Message {
         let jws = JWS {
             payload,
             signatures: vec![SignatureEntry {
-                protected: Protected {
-                    alg: serde_json::to_string(&alg)?,
-                    kid,
-                },
+                protected: Protected { alg, kid },
                 signature,
             }],
         };
@@ -120,37 +120,6 @@ impl Message {
 
         Ok(())
     }
-}
-
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct AuthPayload {
-    #[serde(rename = "attestationCid")]
-    pub attestation_cid: Option<String>,
-    #[serde(rename = "descriptorCid")]
-    pub descriptor_cid: String,
-    #[serde(rename = "permissionsGrantCid")]
-    pub permissions_grant_cid: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct JWS<T> {
-    pub payload: T,
-    pub signatures: Vec<SignatureEntry>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct SignatureEntry {
-    pub protected: Protected,
-    pub signature: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct Protected {
-    /// Algorithm used to verify the signature
-    pub alg: String,
-    /// DID URL of the key used to verify the signature
-    pub kid: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
