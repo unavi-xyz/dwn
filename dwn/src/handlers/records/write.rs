@@ -1,7 +1,7 @@
 use crate::{
-    handlers::{MessageReply, MethodHandler, Status},
+    handlers::{auth::authenticate, HandlerError, MessageReply, MethodHandler, Status},
     message::Message,
-    store::{surrealdb::message::MessageStoreError, DataStore, MessageStore},
+    store::{DataStore, MessageStore},
 };
 
 pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
@@ -10,9 +10,9 @@ pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D, M> {
-    type Error = MessageStoreError;
+    async fn handle(&self, tenant: &str, message: Message) -> Result<MessageReply, HandlerError> {
+        authenticate(&message).await?;
 
-    fn handle(&self, _tenant: &str, _message: Message) -> Result<MessageReply, Self::Error> {
         Ok(MessageReply {
             status: Status::ok(),
         })

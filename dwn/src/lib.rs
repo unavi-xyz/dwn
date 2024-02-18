@@ -1,6 +1,6 @@
-use handlers::{records::write::RecordsWriteHandler, MessageReply, MethodHandler};
+use handlers::{records::write::RecordsWriteHandler, HandlerError, MessageReply, MethodHandler};
 use message::{descriptor::Descriptor, Message};
-use store::{surrealdb::message::MessageStoreError, DataStore, MessageStore};
+use store::{DataStore, MessageStore};
 use thiserror::Error;
 
 pub mod handlers;
@@ -14,14 +14,14 @@ pub struct DWN<D: DataStore, M: MessageStore> {
 
 #[derive(Error, Debug)]
 pub enum HandleMessageError {
-    #[error("Message store error: {0}")]
-    MessageStoreError(#[from] MessageStoreError),
     #[error("Unsupported interface")]
     UnsupportedInterface,
+    #[error("Failed to handle message: {0}")]
+    HandlerError(#[from] HandlerError),
 }
 
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
-    pub fn handle_message(
+    pub async fn handle_message(
         &self,
         tenant: &str,
         message: Message,
@@ -32,7 +32,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
-                let reply = handler.handle(tenant, message)?;
+                let reply = handler.handle(tenant, message).await?;
                 Ok(reply)
             }
             _ => Err(HandleMessageError::UnsupportedInterface),
@@ -73,10 +73,10 @@ mod tests {
 
         let tenant = "did:example:123";
 
-        let reply = dwn
-            .handle_message(tenant, message)
-            .expect("Failed to handle message");
-
-        assert_eq!(reply.status.code, 200);
+        // Require authorization
+        {
+            let reply = dwn.handle_message(tenant, message).await;
+            assert!(reply.is_err());
+        }
     }
 }

@@ -1,16 +1,35 @@
-use std::error::Error;
+use std::future::Future;
 
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use thiserror::Error;
 
-use crate::message::Message;
+use crate::{
+    message::Message,
+    store::surrealdb::{data::DataStoreError, message::MessageStoreError},
+};
 
+use self::auth::AuthError;
+
+pub mod auth;
 pub mod records;
 
-pub trait MethodHandler {
-    type Error: Error + Send + Sync + 'static;
+#[derive(Debug, Error)]
+pub enum HandlerError {
+    #[error("Failed to authenticate")]
+    AuthError(#[from] AuthError),
+    #[error("Failed to interact with data store: {0}")]
+    DataStoreError(#[from] DataStoreError),
+    #[error("Failed to interact with message store: {0}")]
+    MessageStoreError(#[from] MessageStoreError),
+}
 
-    fn handle(&self, tenant: &str, message: Message) -> Result<MessageReply, Self::Error>;
+pub trait MethodHandler {
+    fn handle(
+        &self,
+        tenant: &str,
+        message: Message,
+    ) -> impl Future<Output = Result<MessageReply, HandlerError>>;
 }
 
 pub struct MessageReply {
