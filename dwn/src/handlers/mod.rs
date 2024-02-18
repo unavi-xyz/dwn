@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     message::Message,
-    store::surrealdb::{data::DataStoreError, message::MessageStoreError},
+    store::{DataStoreError, MessageStoreError},
 };
 
 use self::auth::AuthError;
@@ -32,6 +32,7 @@ pub trait MethodHandler {
     ) -> impl Future<Output = Result<MessageReply, HandlerError>>;
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MessageReply {
     pub status: Status,
 }

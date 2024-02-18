@@ -7,7 +7,9 @@ use tracing::warn;
 
 use super::EncodeError;
 
-pub mod records;
+mod records;
+
+pub use records::*;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Interface {

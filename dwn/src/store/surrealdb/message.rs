@@ -1,10 +1,9 @@
 use libipld::{Block, Cid, DefaultParams};
 use surrealdb::sql::{Id, Table, Thing};
-use thiserror::Error;
 
 use crate::{
-    message::{DecodeError, EncodeError, Message},
-    store::MessageStore,
+    message::Message,
+    store::{MessageStore, MessageStoreError},
 };
 
 use super::{
@@ -12,67 +11,54 @@ use super::{
     SurrealDB,
 };
 
-#[derive(Error, Debug)]
-pub enum MessageStoreError {
-    #[error("Message missing data")]
-    MissingData,
-    #[error("Failed to generate CID: {0}")]
-    MessageEncode(#[from] EncodeError),
-    #[error("Failed to interact with SurrealDB: {0}")]
-    SurrealDB(#[from] surrealdb::Error),
-    #[error("Failed to encode data: {0}")]
-    DataEncodeError(#[from] libipld_core::error::SerdeError),
-    #[error("Not found")]
-    NotFound,
-    #[error("Failed to decode message: {0}")]
-    MessageDecodeError(#[from] DecodeError),
-    #[error("Failed to generate CID: {0}")]
-    Cid(#[from] libipld::cid::Error),
-    #[error("Failed to create block {0}")]
-    CreateBlockError(anyhow::Error),
-    #[error("Failed to interact with SurrealDB: {0}")]
-    GetDbError(anyhow::Error),
-}
-
 impl MessageStore for SurrealDB {
-    type Error = MessageStoreError;
-
-    async fn delete(&self, tenant: &str, cid: String) -> Result<(), Self::Error> {
+    async fn delete(&self, tenant: &str, cid: String) -> Result<(), MessageStoreError> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
 
-        let encoded_message: Option<GetMessage> = self.db.select(id.clone()).await?;
+        let encoded_message: Option<GetMessage> = self
+            .db
+            .select(id.clone())
+            .await
+            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
         if let Some(msg) = encoded_message {
             if msg.tenant != tenant {
-                return Err(Self::Error::NotFound);
+                return Err(MessageStoreError::NotFound);
             }
 
-            self.db.delete::<Option<CreateMessage>>(id).await?;
+            self.db
+                .delete::<Option<CreateMessage>>(id)
+                .await
+                .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
         }
 
         Ok(())
     }
 
-    async fn get(&self, tenant: &str, cid: &str) -> Result<Message, Self::Error> {
+    async fn get(&self, tenant: &str, cid: &str) -> Result<Message, MessageStoreError> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid.to_string())));
 
         let encoded_message: GetMessage = self
             .db
             .select(id)
-            .await?
-            .ok_or_else(|| Self::Error::NotFound)?;
+            .await
+            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?
+            .ok_or_else(|| MessageStoreError::NotFound)?;
 
         let cid = Cid::try_from(cid)?;
         let block = Block::<DefaultParams>::new(cid, encoded_message.message)
-            .map_err(Self::Error::CreateBlockError)?;
+            .map_err(MessageStoreError::CreateBlockError)?;
 
         let message = Message::decode_block(block)?;
 
         Ok(message)
     }
 
-    async fn put(&self, tenant: &str, message: &Message) -> Result<Cid, Self::Error> {
-        let db = self.message_db().await.map_err(Self::Error::GetDbError)?;
+    async fn put(&self, tenant: &str, message: &Message) -> Result<Cid, MessageStoreError> {
+        let db = self
+            .message_db()
+            .await
+            .map_err(MessageStoreError::BackendError)?;
 
         let block = message.encode_block()?;
         let cid = block.cid();
@@ -88,7 +74,8 @@ impl MessageStore for SurrealDB {
                 message: block.data().to_vec(),
                 tenant: tenant.to_string(),
             })
-            .await?;
+            .await
+            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
         Ok(*cid)
     }

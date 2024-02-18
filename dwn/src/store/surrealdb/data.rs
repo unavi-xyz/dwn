@@ -1,8 +1,7 @@
 use libipld::Cid;
 use surrealdb::sql::{Id, Table, Thing};
-use thiserror::Error;
 
-use crate::store::{DataStore, GetDataResults, PutDataResults};
+use crate::store::{DataStore, DataStoreError, GetDataResults, PutDataResults};
 
 use super::{
     model::{CreateData, GetData},
@@ -11,38 +10,32 @@ use super::{
 
 const CID_TABLE_NAME: &str = "cid";
 
-#[derive(Error, Debug)]
-pub enum DataStoreError {
-    #[error("Failed to interact with SurrealDB: {0}")]
-    GetDbError(anyhow::Error),
-    #[error("SurrealDB error: {0}")]
-    SurrealDB(#[from] surrealdb::Error),
-    #[error("Failed to write data: {0}")]
-    WriteError(#[from] std::io::Error),
-    #[error("No data found for CID")]
-    NotFound,
-}
-
 impl DataStore for SurrealDB {
-    type Error = DataStoreError;
-
-    async fn delete(&self, cid: &Cid) -> Result<(), Self::Error> {
+    async fn delete(&self, cid: &Cid) -> Result<(), DataStoreError> {
         let id = Thing::from((
             Table::from(CID_TABLE_NAME).to_string(),
             Id::String(cid.to_string()),
         ));
 
-        self.db.delete::<Option<GetData>>(id).await?;
+        self.db
+            .delete::<Option<GetData>>(id)
+            .await
+            .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
 
         Ok(())
     }
-    async fn get(&self, cid: &Cid) -> Result<Option<GetDataResults>, Self::Error> {
+    async fn get(&self, cid: &Cid) -> Result<Option<GetDataResults>, DataStoreError> {
         let id = Thing::from((
             Table::from(CID_TABLE_NAME).to_string(),
             Id::String(cid.to_string()),
         ));
 
-        let res: GetData = match self.db.select(id).await? {
+        let res: GetData = match self
+            .db
+            .select(id)
+            .await
+            .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?
+        {
             Some(res) => res,
             None => return Ok(None),
         };
@@ -52,8 +45,8 @@ impl DataStore for SurrealDB {
             data: res.data,
         }))
     }
-    async fn put(&self, cid: &Cid, data: Vec<u8>) -> Result<PutDataResults, Self::Error> {
-        let db = self.data_db().await.map_err(Self::Error::GetDbError)?;
+    async fn put(&self, cid: &Cid, data: Vec<u8>) -> Result<PutDataResults, DataStoreError> {
+        let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
         let id = Thing::from((
             Table::from(CID_TABLE_NAME).to_string(),
@@ -67,7 +60,8 @@ impl DataStore for SurrealDB {
                 cid: cid.to_string(),
                 data,
             })
-            .await?;
+            .await
+            .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
 
         Ok(PutDataResults { size })
     }

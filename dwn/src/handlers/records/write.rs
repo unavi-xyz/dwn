@@ -10,7 +10,7 @@ pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D, M> {
-    async fn handle(&self, tenant: &str, message: Message) -> Result<MessageReply, HandlerError> {
+    async fn handle(&self, _tenant: &str, message: Message) -> Result<MessageReply, HandlerError> {
         authenticate(&message).await?;
 
         Ok(MessageReply {

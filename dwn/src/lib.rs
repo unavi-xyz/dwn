@@ -21,7 +21,7 @@ pub enum HandleMessageError {
 }
 
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
-    pub async fn handle_message(
+    pub async fn process_message(
         &self,
         tenant: &str,
         message: Message,
@@ -44,10 +44,10 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 mod tests {
     use crate::{
         message::{
-            descriptor::{records::RecordsWrite, Descriptor},
+            descriptor::{Descriptor, RecordsWrite},
             Message,
         },
-        store::surrealdb::SurrealDB,
+        store::SurrealDB,
         DWN,
     };
 
@@ -75,7 +75,7 @@ mod tests {
 
         // Require authorization
         {
-            let reply = dwn.handle_message(tenant, message).await;
+            let reply = dwn.process_message(tenant, message).await;
             assert!(reply.is_err());
         }
     }

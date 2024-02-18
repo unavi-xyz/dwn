@@ -1,27 +1,46 @@
-use std::{error::Error, future::Future};
+use std::future::Future;
 
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-use crate::message::Message;
+use crate::message::{DecodeError, EncodeError, Message};
 
 #[cfg(feature = "mysql")]
-pub mod mysql;
+mod mysql;
 #[cfg(feature = "s3")]
-pub mod s3;
+mod s3;
 #[cfg(feature = "surrealdb")]
-pub mod surrealdb;
+mod surrealdb;
+
+#[cfg(feature = "mysql")]
+pub use mysql::MySQL;
+#[cfg(feature = "s3")]
+pub use s3::S3;
+#[cfg(feature = "surrealdb")]
+pub use surrealdb::SurrealDB;
+
+#[derive(Error, Debug)]
+pub enum DataStoreError {
+    #[error("Failed to write data: {0}")]
+    WriteError(#[from] std::io::Error),
+    #[error("No data found for CID")]
+    NotFound,
+    #[error("Failed to interact with backend: {0}")]
+    BackendError(anyhow::Error),
+}
 
 pub trait DataStore {
-    type Error: Error + Send + Sync + 'static;
-
-    fn delete(&self, cid: &Cid) -> impl Future<Output = Result<(), Self::Error>>;
-    fn get(&self, cid: &Cid) -> impl Future<Output = Result<Option<GetDataResults>, Self::Error>>;
+    fn delete(&self, cid: &Cid) -> impl Future<Output = Result<(), DataStoreError>>;
+    fn get(
+        &self,
+        cid: &Cid,
+    ) -> impl Future<Output = Result<Option<GetDataResults>, DataStoreError>>;
     fn put(
         &self,
         cid: &Cid,
         value: Vec<u8>,
-    ) -> impl Future<Output = Result<PutDataResults, Self::Error>>;
+    ) -> impl Future<Output = Result<PutDataResults, DataStoreError>>;
 }
 
 #[derive(Debug)]
@@ -36,16 +55,42 @@ pub struct PutDataResults {
     size: usize,
 }
 
-pub trait MessageStore {
-    type Error: Error + Send + Sync + 'static;
+#[derive(Error, Debug)]
+pub enum MessageStoreError {
+    #[error("Message missing data")]
+    MissingData,
+    #[error("Failed to generate CID: {0}")]
+    MessageEncode(#[from] EncodeError),
+    #[error("Failed to encode data: {0}")]
+    DataEncodeError(#[from] libipld_core::error::SerdeError),
+    #[error("Not found")]
+    NotFound,
+    #[error("Failed to decode message: {0}")]
+    MessageDecodeError(#[from] DecodeError),
+    #[error("Failed to generate CID: {0}")]
+    Cid(#[from] libipld::cid::Error),
+    #[error("Failed to create block {0}")]
+    CreateBlockError(anyhow::Error),
+    #[error("Failed to interact with backend: {0}")]
+    BackendError(anyhow::Error),
+}
 
-    fn delete(&self, tenant: &str, cid: String) -> impl Future<Output = Result<(), Self::Error>>;
-    fn get(&self, tenant: &str, cid: &str) -> impl Future<Output = Result<Message, Self::Error>>;
+pub trait MessageStore {
+    fn delete(
+        &self,
+        tenant: &str,
+        cid: String,
+    ) -> impl Future<Output = Result<(), MessageStoreError>>;
+    fn get(
+        &self,
+        tenant: &str,
+        cid: &str,
+    ) -> impl Future<Output = Result<Message, MessageStoreError>>;
     fn put(
         &self,
         tenant: &str,
         message: &Message,
-    ) -> impl Future<Output = Result<Cid, Self::Error>>;
+    ) -> impl Future<Output = Result<Cid, MessageStoreError>>;
 }
 
 #[cfg(test)]
@@ -88,7 +133,7 @@ mod tests {
     pub mod message {
         use super::super::*;
         use crate::message::{
-            descriptor::{records::RecordsWrite, Descriptor},
+            descriptor::{Descriptor, RecordsWrite},
             Data, Message,
         };
 
