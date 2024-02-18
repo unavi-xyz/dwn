@@ -62,6 +62,13 @@ jobs:
           - 3306:3306
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
+      - uses: AdityaGarg8/remove-unwanted-software@v2
+        with:
+          remove-android: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+          remove-dotnet: "true"
+          remove-haskell: "true"
       - uses: actions/checkout@v4
         with:
           submodules: "true"
