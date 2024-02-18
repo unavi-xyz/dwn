@@ -5,19 +5,16 @@ use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
-    message::Message,
+    message::{Message, VerifyAuthError},
     store::{DataStoreError, MessageStoreError},
 };
 
-use self::auth::AuthError;
-
-pub mod auth;
 pub mod records;
 
 #[derive(Debug, Error)]
 pub enum HandlerError {
-    #[error("Failed to authenticate")]
-    AuthError(#[from] AuthError),
+    #[error("Failed to verify message: {0}")]
+    VerifyError(#[from] VerifyAuthError),
     #[error("Failed to interact with data store: {0}")]
     DataStoreError(#[from] DataStoreError),
     #[error("Failed to interact with message store: {0}")]

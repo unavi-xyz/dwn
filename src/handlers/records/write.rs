@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{auth::authenticate, HandlerError, MessageReply, MethodHandler, Status},
+    handlers::{HandlerError, MessageReply, MethodHandler, Status},
     message::Message,
     store::{DataStore, MessageStore},
 };
@@ -11,7 +11,7 @@ pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D, M> {
     async fn handle(&self, _tenant: &str, message: Message) -> Result<MessageReply, HandlerError> {
-        authenticate(&message).await?;
+        message.verify_auth()?;
 
         Ok(MessageReply {
             status: Status::ok(),

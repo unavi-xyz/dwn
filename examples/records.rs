@@ -1,3 +1,4 @@
+use didkit::{ssi::jwk::Algorithm, DIDMethod, Source, JWK};
 use dwn::{
     message::{
         descriptor::{Descriptor, RecordsWrite},
@@ -21,8 +22,18 @@ async fn main() {
         message_store: db,
     };
 
-    // Create a message to write a record.
-    let message = Message {
+    // Generate a JWK and DID.
+    let mut jwk = JWK::generate_ed25519().expect("Failed to generate JWK");
+    jwk.algorithm = Some(Algorithm::EdDSA);
+
+    let did = did_method_key::DIDKey
+        .generate(&Source::Key(&jwk))
+        .expect("Failed to generate DID");
+
+    info!("DID: {}", did);
+
+    // Create a RecordsWrite message.
+    let mut message = Message {
         attestation: None,
         authorization: None,
         data: None,
@@ -30,11 +41,19 @@ async fn main() {
         record_id: None,
     };
 
-    let tenant = "did:example:123";
+    // Authorize the message using our JWK.
+    // `kid` is the DID URL that identifies the key within our DID document.
+    let id = did.clone();
+    let id = id.strip_prefix("did:key:").unwrap();
+    let kid = format!("{}#{}", did, id);
+
+    message
+        .authorize(kid, &jwk)
+        .expect("Failed to authorize message");
 
     // Process the message.
     let reply = dwn
-        .process_message(tenant, message)
+        .process_message(&did, message)
         .await
         .expect("Failed to handle message");
 

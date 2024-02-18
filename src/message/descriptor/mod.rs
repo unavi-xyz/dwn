@@ -52,8 +52,8 @@ pub enum Descriptor {
 }
 
 impl Descriptor {
-    /// Generate a CBOR encoded IPLD block from the descriptor
-    pub fn cbor_block(&self) -> Result<Block<DefaultParams>, EncodeError> {
+    /// Encodes the descriptor -> CBOR block
+    pub fn encode_block(&self) -> Result<Block<DefaultParams>, EncodeError> {
         let ipld = to_ipld(self)?;
         let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)?;
         Ok(block)
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn test_cid() {
         for desc in default_descriptors() {
-            desc.cbor_block().expect("Failed to generate CBOR block");
+            desc.encode_block().expect("Failed to generate CBOR block");
         }
     }
 }
