@@ -89,7 +89,7 @@ pub trait MessageStore {
     fn put(
         &self,
         tenant: &str,
-        message: &Message,
+        message: Message,
     ) -> impl Future<Output = Result<Cid, MessageStoreError>>;
     fn query(
         &self,
@@ -225,7 +225,7 @@ mod tests {
 
             // Test put and get
             let cid = store
-                .put(did, &message)
+                .put(did, message.clone())
                 .await
                 .expect("Failed to put message");
 
@@ -291,7 +291,7 @@ mod tests {
             };
 
             let cid = store
-                .put(did, &message)
+                .put(did, message.clone())
                 .await
                 .expect("Failed to put message");
 

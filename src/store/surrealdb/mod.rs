@@ -10,7 +10,6 @@ use surrealdb::{
 
 pub mod data;
 pub mod message;
-pub mod model;
 
 const NAMESPACE: &str = "dwn";
 const DATA_DB_NAME: &str = "data";

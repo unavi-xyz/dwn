@@ -1,4 +1,5 @@
-use libipld::{Block, Cid, DefaultParams};
+use libipld::Cid;
+use serde::{Deserialize, Serialize};
 use surrealdb::sql::{Id, Table, Thing};
 
 use crate::{
@@ -6,16 +7,13 @@ use crate::{
     store::{MessageStore, MessageStoreError},
 };
 
-use super::{
-    model::{CreateMessage, GetMessage},
-    SurrealDB,
-};
+use super::SurrealDB;
 
 impl MessageStore for SurrealDB {
     async fn delete(&self, tenant: &str, cid: String) -> Result<(), MessageStoreError> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
 
-        let message: Option<GetMessage> = self
+        let message: Option<DbMessage> = self
             .db
             .select(id.clone())
             .await
@@ -27,7 +25,7 @@ impl MessageStore for SurrealDB {
             }
 
             self.db
-                .delete::<Option<CreateMessage>>(id)
+                .delete::<Option<DbMessage>>(id)
                 .await
                 .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
         }
@@ -38,23 +36,17 @@ impl MessageStore for SurrealDB {
     async fn get(&self, tenant: &str, cid: &str) -> Result<Message, MessageStoreError> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid.to_string())));
 
-        let encoded_message: GetMessage = self
+        let db_message: DbMessage = self
             .db
             .select(id)
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?
             .ok_or_else(|| MessageStoreError::NotFound)?;
 
-        let cid = Cid::try_from(cid)?;
-        let block = Block::<DefaultParams>::new(cid, encoded_message.message)
-            .map_err(MessageStoreError::CreateBlockError)?;
-
-        let message = Message::decode_block(block)?;
-
-        Ok(message)
+        Ok(db_message.message)
     }
 
-    async fn put(&self, tenant: &str, message: &Message) -> Result<Cid, MessageStoreError> {
+    async fn put(&self, tenant: &str, message: Message) -> Result<Cid, MessageStoreError> {
         let db = self
             .message_db()
             .await
@@ -68,10 +60,10 @@ impl MessageStore for SurrealDB {
             Id::String(cid.to_string()),
         ));
 
-        db.create::<Option<GetMessage>>(id)
-            .content(CreateMessage {
+        db.create::<Option<DbMessage>>(id)
+            .content(DbMessage {
                 cid: cid.to_string(),
-                message: block.data().to_vec(),
+                message,
                 tenant: tenant.to_string(),
             })
             .await
@@ -98,22 +90,20 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        let db_messages: Vec<GetMessage> = res
+        let db_messages: Vec<DbMessage> = res
             .take(0)
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        let mut messages = Vec::new();
-
-        for db_message in db_messages {
-            let cid = Cid::try_from(db_message.cid.as_str())?;
-            let block = Block::<DefaultParams>::new(cid, db_message.message)
-                .map_err(MessageStoreError::CreateBlockError)?;
-
-            let message = Message::decode_block(block)?;
-
-            messages.push(message);
-        }
-
-        Ok(messages)
+        Ok(db_messages
+            .into_iter()
+            .map(|db_message| db_message.message)
+            .collect())
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DbMessage {
+    cid: String,
+    message: Message,
+    tenant: String,
 }

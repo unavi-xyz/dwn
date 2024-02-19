@@ -1,12 +1,10 @@
 use libipld::Cid;
+use serde::{Deserialize, Serialize};
 use surrealdb::sql::{Id, Table, Thing};
 
 use crate::store::{DataStore, DataStoreError, GetDataResults, PutDataResults};
 
-use super::{
-    model::{CreateData, GetData},
-    SurrealDB,
-};
+use super::SurrealDB;
 
 const CID_TABLE_NAME: &str = "cid";
 
@@ -18,19 +16,20 @@ impl DataStore for SurrealDB {
         ));
 
         self.db
-            .delete::<Option<GetData>>(id)
+            .delete::<Option<DbData>>(id)
             .await
             .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
 
         Ok(())
     }
+
     async fn get(&self, cid: &Cid) -> Result<Option<GetDataResults>, DataStoreError> {
         let id = Thing::from((
             Table::from(CID_TABLE_NAME).to_string(),
             Id::String(cid.to_string()),
         ));
 
-        let res: GetData = match self
+        let res: DbData = match self
             .db
             .select(id)
             .await
@@ -45,6 +44,7 @@ impl DataStore for SurrealDB {
             data: res.data,
         }))
     }
+
     async fn put(&self, cid: &Cid, data: Vec<u8>) -> Result<PutDataResults, DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
@@ -55,14 +55,22 @@ impl DataStore for SurrealDB {
 
         let size = data.len();
 
-        db.create::<Option<GetData>>(id)
-            .content(CreateData {
+        db.create::<Option<DbData>>(id)
+            .content(DbData {
                 cid: cid.to_string(),
                 data,
+                ref_count: 1,
             })
             .await
             .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
 
         Ok(PutDataResults { size })
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DbData {
+    cid: String,
+    data: Vec<u8>,
+    ref_count: usize,
 }

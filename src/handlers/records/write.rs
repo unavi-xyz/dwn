@@ -20,7 +20,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
         // TODO: Get existing messages for the record.
 
-        self.message_store.put(tenant, &message).await?;
+        self.message_store.put(tenant, message).await?;
 
         Ok(MessageReply {
             status: Status::ok(),
