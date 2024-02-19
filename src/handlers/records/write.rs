@@ -13,7 +13,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
     async fn handle(&self, tenant: &str, message: Message) -> Result<MessageReply, HandlerError> {
         message.verify_auth().await?;
 
-        let entry_id = message.generate_record_id();
+        let _entry_id = message.generate_record_id();
 
         let _descriptor = match &message.descriptor {
             Descriptor::RecordsWrite(descriptor) => descriptor,

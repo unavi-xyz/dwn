@@ -1,7 +1,7 @@
 use dwn::{
     message::{
         builder::MessageBuilder,
-        descriptor::{Descriptor, Filter, RecordsWrite},
+        descriptor::{Filter, RecordsWrite},
     },
     store::{MessageStore, SurrealDB},
     util::DidKey,
@@ -28,7 +28,7 @@ async fn main() {
 
     // Write a record.
     {
-        let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+        let message = MessageBuilder::new(RecordsWrite::default())
             .authorize(did_key.kid, &did_key.jwk)
             .build()
             .expect("Failed to build message");

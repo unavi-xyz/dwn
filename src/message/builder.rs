@@ -20,11 +20,11 @@ pub enum MessageBuildError {
 }
 
 impl<'a> MessageBuilder<'a> {
-    pub fn new(descriptor: Descriptor) -> Self {
+    pub fn new(descriptor: impl Into<Descriptor>) -> Self {
         MessageBuilder {
             authorizer: None,
             data: None,
-            descriptor,
+            descriptor: descriptor.into(),
         }
     }
 
@@ -46,6 +46,8 @@ impl<'a> MessageBuilder<'a> {
             authorization: None,
             record_id: String::new(),
         };
+
+        // TODO: Write descriptor data_cid.
 
         msg.record_id = msg.generate_record_id()?;
 

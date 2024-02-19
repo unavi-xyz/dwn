@@ -46,7 +46,7 @@ mod tests {
     use crate::{
         message::{
             builder::MessageBuilder,
-            descriptor::{Descriptor, RecordsWrite},
+            descriptor::{RecordsWrite},
         },
         store::SurrealDB,
         util::DidKey,
@@ -69,7 +69,7 @@ mod tests {
 
         // Fails without authorization
         {
-            let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+            let message = MessageBuilder::new(RecordsWrite::default())
                 .build()
                 .expect("Failed to build message");
 
@@ -79,7 +79,7 @@ mod tests {
 
         // Succeeds with authorization
         {
-            let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+            let message = MessageBuilder::new(RecordsWrite::default())
                 .authorize(did_key.kid, &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
