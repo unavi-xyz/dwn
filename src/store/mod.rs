@@ -211,11 +211,7 @@ mod tests {
     pub mod message {
         use super::*;
         use crate::{
-            message::{
-                builder::MessageBuilder,
-                descriptor::{RecordsWrite},
-                Data,
-            },
+            message::{builder::MessageBuilder, descriptor::RecordsWrite},
             util::DidKey,
         };
 
@@ -333,15 +329,15 @@ mod tests {
 
             let message1 = MessageBuilder::new(RecordsWrite::default())
                 .authorize(did_key.kid.clone(), &did_key.jwk)
-                .data(Data::Base64(String::from("data1")))
                 .build()
                 .expect("Failed to build message");
 
-            let message2 = MessageBuilder::new(RecordsWrite::default())
+            let mut message2 = MessageBuilder::new(RecordsWrite::default())
                 .authorize(did_key.kid.clone(), &did_key.jwk)
-                .data(Data::Base64(String::from("data2")))
                 .build()
                 .expect("Failed to build message");
+
+            message2.record_id = "record2".to_string();
 
             store
                 .put(&did_key.did, message1.clone())
@@ -370,7 +366,7 @@ mod tests {
             // Query specific message
             {
                 let filter = Filter {
-                    record_id: Some("record1".to_string()),
+                    record_id: Some(message1.record_id.clone()),
                     ..Default::default()
                 };
 
@@ -379,8 +375,8 @@ mod tests {
                     .await
                     .expect("Failed to query messages");
 
-                assert_eq!(1, got.len());
-                assert_eq!(message1, got[0]);
+                assert_eq!(got.len(), 1);
+                assert_eq!(got[0], message1);
             }
         }
     }
