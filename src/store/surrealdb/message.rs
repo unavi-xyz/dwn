@@ -1,9 +1,13 @@
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::{Id, Table, Thing};
+use time::OffsetDateTime;
 
 use crate::{
-    message::{descriptor::Filter, Message},
+    message::{
+        descriptor::{Descriptor, Filter},
+        Message,
+    },
     store::{MessageStore, MessageStoreError},
 };
 
@@ -19,11 +23,7 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        if let Some(msg) = message {
-            if msg.tenant != tenant {
-                return Err(MessageStoreError::NotFound);
-            }
-
+        if message.is_some() {
             self.db
                 .delete::<Option<DbMessage>>(id)
                 .await
@@ -46,7 +46,7 @@ impl MessageStore for SurrealDB {
         Ok(db_message.message)
     }
 
-    async fn put(&self, tenant: &str, message: Message) -> Result<Cid, MessageStoreError> {
+    async fn put(&self, tenant: &str, mut message: Message) -> Result<Cid, MessageStoreError> {
         let db = self
             .message_db()
             .await
@@ -60,11 +60,26 @@ impl MessageStore for SurrealDB {
             Id::String(cid.to_string()),
         ));
 
+        message.data = None;
+
+        let record_id = message.record_id.clone();
+
+        let date_created = match &message.descriptor {
+            Descriptor::RecordsWrite(desc) => Some(desc.date_created.clone()),
+            _ => None,
+        };
+
+        let date_published = match &message.descriptor {
+            Descriptor::RecordsWrite(desc) => desc.date_published.clone(),
+            _ => None,
+        };
+
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
-                cid: cid.to_string(),
+                date_created,
+                date_published,
                 message,
-                tenant: tenant.to_string(),
+                record_id,
             })
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
@@ -72,21 +87,30 @@ impl MessageStore for SurrealDB {
         Ok(*cid)
     }
 
-    async fn query(
-        &self,
-        tenant: &str,
-        _filter: Filter,
-    ) -> Result<Vec<Message>, MessageStoreError> {
+    async fn query(&self, tenant: &str, filter: Filter) -> Result<Vec<Message>, MessageStoreError> {
         let db = self
             .message_db()
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let query = "SELECT * FROM type::table($table);";
+        let mut conditions = Vec::new();
+
+        if filter.record_id.is_some() {
+            conditions.push("record_id = $record_id");
+        }
+
+        let condition_statement = if conditions.is_empty() {
+            "".to_string()
+        } else {
+            format!(" WHERE {}", conditions.join(" AND "))
+        };
+
+        let query = format!("SELECT * FROM type::table($table){}", condition_statement);
 
         let mut res = db
             .query(query)
             .bind(("table", Table::from(tenant).to_string()))
+            .bind(("record_id", filter.record_id))
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
@@ -103,7 +127,8 @@ impl MessageStore for SurrealDB {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
-    cid: String,
+    date_created: Option<OffsetDateTime>,
+    date_published: Option<OffsetDateTime>,
     message: Message,
-    tenant: String,
+    record_id: String,
 }

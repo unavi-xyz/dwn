@@ -156,6 +156,18 @@ mod tests {
                     let store = <$type>::new().await.expect("Failed to create store");
                     super::message::test_delete_wrong_tenant(store).await;
                 }
+
+                #[tokio::test]
+                async fn test_strip_data() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::message::test_strip_data(store).await;
+                }
+
+                #[tokio::test]
+                async fn test_query() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::message::test_query(store).await;
+                }
             }
         )*
         }
@@ -210,13 +222,12 @@ mod tests {
         };
 
         pub async fn test_all_methods(store: impl MessageStore) {
-            let data = Data::Base64("hello".to_string());
             let write = RecordsWrite::default();
 
             let message = Message {
                 attestation: None,
                 authorization: None,
-                data: Some(data),
+                data: None,
                 descriptor: Descriptor::RecordsWrite(write),
                 record_id: "".to_string(),
             };
@@ -279,14 +290,11 @@ mod tests {
         pub async fn test_delete_wrong_tenant(store: impl MessageStore) {
             let did = &generate_did();
 
-            let data = Data::Base64("hello".to_string());
-            let write = RecordsWrite::default();
-
             let message = Message {
                 attestation: None,
                 authorization: None,
-                data: Some(data),
-                descriptor: Descriptor::RecordsWrite(write),
+                data: None,
+                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
                 record_id: "".to_string(),
             };
 
@@ -305,6 +313,92 @@ mod tests {
                 .expect("Failed to get message");
 
             assert_eq!(message, got);
+        }
+
+        pub async fn test_strip_data(store: impl MessageStore) {
+            let did = &generate_did();
+
+            let mut message = Message {
+                attestation: None,
+                authorization: None,
+                data: Some(Data::Base64("data".to_string())),
+                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
+                record_id: "".to_string(),
+            };
+
+            let cid = store
+                .put(did, message.clone())
+                .await
+                .expect("Failed to put message");
+
+            message.data = None;
+
+            let got = store
+                .get(did, &cid.to_string())
+                .await
+                .expect("Failed to get message");
+
+            assert_eq!(message, got);
+        }
+
+        pub async fn test_query(store: impl MessageStore) {
+            let did = &generate_did();
+
+            let message1 = Message {
+                attestation: None,
+                authorization: None,
+                data: None,
+                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
+                record_id: "record1".to_string(),
+            };
+
+            store
+                .put(did, message1.clone())
+                .await
+                .expect("Failed to put message");
+
+            let message2 = Message {
+                attestation: None,
+                authorization: None,
+                data: None,
+                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
+                record_id: "record2".to_string(),
+            };
+
+            store
+                .put(did, message2.clone())
+                .await
+                .expect("Failed to put message");
+
+            // Query all messages
+            {
+                let filter = Filter::default();
+
+                let got = store
+                    .query(did, filter)
+                    .await
+                    .expect("Failed to query messages");
+
+                assert_eq!(2, got.len());
+                assert!(got.contains(&message1));
+                assert!(got.contains(&message2));
+            }
+
+            // Query specific message
+            {
+                let filter = Filter {
+                    record_id: Some("record1".to_string()),
+                    ..Default::default()
+                };
+
+                let got = store
+                    .query(did, filter)
+                    .await
+                    .expect("Failed to query messages");
+
+                assert_eq!(1, got.len());
+                assert_eq!(message1, got[0]);
+            }
         }
     }
 }
