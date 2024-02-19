@@ -36,60 +36,57 @@ async fn main() {
 
     info!("DID: {}", did);
 
-    write(&did, &kid, &jwk, &dwn).await;
-    query(&did, &dwn).await;
-}
+    // Write a record.
+    {
+        let mut message = Message {
+            attestation: None,
+            authorization: None,
+            data: None,
+            descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
+            record_id: "".to_string(),
+        };
 
-// Create a RecordsWrite message.
-async fn write(did: &str, kid: &str, jwk: &JWK, dwn: &DWN<SurrealDB, SurrealDB>) {
-    let mut message = Message {
-        attestation: None,
-        authorization: None,
-        data: None,
-        descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-        record_id: "".to_string(),
-    };
+        // Authorize the message using our JWK.
+        message
+            .authorize(kid.to_string(), &jwk)
+            .expect("Failed to authorize message");
 
-    // Authorize the message using our JWK.
-    message
-        .authorize(kid.to_string(), jwk)
-        .expect("Failed to authorize message");
+        // Process the message.
+        let reply = dwn
+            .process_message(&did, message)
+            .await
+            .expect("Failed to handle message");
 
-    // Process the message.
-    let reply = dwn
-        .process_message(did, message)
-        .await
-        .expect("Failed to handle message");
+        info!("RecordsWrite reply: {:?}", reply);
+    }
 
-    info!("RecordsWrite reply: {:?}", reply);
-}
+    // Query the records.
+    {
+        // Filter the query to only include records authored by our DID.
+        let filter = Filter {
+            attester: Some(did.to_string()),
+            ..Default::default()
+        };
 
-// Create a RecordsQuery message.
-async fn query(did: &str, dwn: &DWN<SurrealDB, SurrealDB>) {
-    // Filter the query to only include records authored by our DID.
-    let filter = Filter {
-        attester: Some(did.to_string()),
-        ..Default::default()
-    };
+        let reply = dwn.message_store.query(&did, filter).await;
 
-    let reply = dwn.message_store.query(did, filter).await;
+        // let mut descriptor = RecordsQuery::default();
+        // descriptor.filter = Some(filter);
+        //
+        // let message = Message {
+        //     attestation: None,
+        //     authorization: None,
+        //     data: None,
+        //     descriptor: Descriptor::RecordsQuery(descriptor),
+        //     record_id: "".to_string(),
+        // };
+        //
+        // // Process the message.
+        // let reply = dwn
+        //     .process_message(&did, message)
+        //     .await
+        //     .expect("Failed to handle message");
 
-    // let mut descriptor = RecordsQuery::default();
-    // descriptor.filter = Some(filter);
-    //
-    // let message = Message {
-    //     attestation: None,
-    //     authorization: None,
-    //     data: None,
-    //     descriptor: Descriptor::RecordsQuery(descriptor),
-    //     record_id: "".to_string(),
-    // };
-    //
-    // // Process the message.
-    // let reply = dwn
-    //     .process_message(&did, message)
-    //     .await
-    //     .expect("Failed to handle message");
-
-    info!("RecordsQuery reply: {:#?}", reply);
+        info!("RecordsQuery reply: {:#?}", reply);
+    }
 }
