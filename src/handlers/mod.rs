@@ -82,14 +82,14 @@ pub struct RecordsQueryReply {
     pub status: Status,
 }
 
-impl Into<Reply> for RecordsQueryReply {
-    fn into(self) -> Reply {
-        Reply::RecordsQuery(self)
+impl From<RecordsQueryReply> for Reply {
+    fn from(val: RecordsQueryReply) -> Self {
+        Reply::RecordsQuery(val)
     }
 }
 
-impl Into<Reply> for StatusReply {
-    fn into(self) -> Reply {
-        Reply::StatusReply(self)
+impl From<StatusReply> for Reply {
+    fn from(val: StatusReply) -> Self {
+        Reply::StatusReply(val)
     }
 }
