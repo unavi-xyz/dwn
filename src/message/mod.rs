@@ -1,24 +1,19 @@
 use didkit::JWK;
-use libipld::{pb::DagPbCodec, Cid};
-use libipld_core::{
-    codec::Codec,
-    error::SerdeError,
-    multihash::{Code, MultihashDigest},
-    serde::to_ipld,
-};
+use libipld_core::error::SerdeError;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
     message::auth::{AuthPayload, Protected, SignatureEntry, JWS},
-    util::{encode_cbor, CborEncodeError},
+    util::{encode_cbor, EncodeError},
 };
 
-use self::{auth::SignatureVerifyError, descriptor::Descriptor};
+use self::{auth::SignatureVerifyError, data::Data, descriptor::Descriptor};
 
 pub mod auth;
 pub mod builder;
+pub mod data;
 pub mod descriptor;
 
 #[skip_serializing_none]
@@ -39,7 +34,7 @@ pub enum AuthError {
     #[error("Missing public key")]
     MissingPublicKey,
     #[error("Failed to encode descriptor: {0}")]
-    Encode(#[from] CborEncodeError),
+    Encode(#[from] EncodeError),
     #[error("Failed to encode signature: {0}")]
     EncodeSignature(#[from] didkit::ssi::jws::Error),
     #[error("Serialization error: {0}")]
@@ -94,7 +89,7 @@ impl Message {
         Ok(())
     }
 
-    pub fn generate_record_id(&self) -> Result<String, CborEncodeError> {
+    pub fn generate_record_id(&self) -> Result<String, EncodeError> {
         RecordIdGenerator::generate(&self.descriptor)
     }
 
@@ -126,42 +121,10 @@ struct RecordIdGenerator {
 }
 
 impl RecordIdGenerator {
-    pub fn generate(descriptor: &Descriptor) -> Result<String, CborEncodeError> {
+    pub fn generate(descriptor: &Descriptor) -> Result<String, EncodeError> {
         let generator = Self {
             descriptor_cid: encode_cbor(&descriptor)?.cid().to_string(),
         };
         encode_cbor(&generator).map(|block| block.cid().to_string())
     }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum Data {
-    Base64(String),
-    Encrypted(EncryptedData),
-}
-
-impl Data {
-    /// Returns the CID of the data after DAG-PB encoding.
-    pub fn cid(&self) -> Result<Cid, CborEncodeError> {
-        match self {
-            Data::Base64(data) => {
-                let ipld = to_ipld(data)?;
-                let bytes = DagPbCodec.encode(&ipld)?;
-                let hash = Code::Sha2_256.digest(&bytes);
-                Ok(Cid::new_v1(DagPbCodec.into(), hash))
-            }
-            Data::Encrypted(_data) => {
-                todo!()
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct EncryptedData {
-    pub protected: String,
-    pub recipients: Vec<String>,
-    pub ciphertext: String,
-    pub iv: String,
-    pub tag: String,
 }

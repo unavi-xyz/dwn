@@ -42,7 +42,7 @@ impl DidKey {
 }
 
 #[derive(Error, Debug)]
-pub enum CborEncodeError {
+pub enum EncodeError {
     #[error("Failed to serialize/deserialize IPLD: {0}")]
     Serde(#[from] SerdeError),
     #[error("Failed to encode/decode CBOR: {0}")]
@@ -50,16 +50,14 @@ pub enum CborEncodeError {
 }
 
 /// Encodes data to a DAG-CBOR block.
-pub fn encode_cbor(data: &impl Serialize) -> Result<Block<DefaultParams>, CborEncodeError> {
+pub fn encode_cbor(data: &impl Serialize) -> Result<Block<DefaultParams>, EncodeError> {
     let ipld = to_ipld(data)?;
     let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)?;
     Ok(block)
 }
 
 /// Decodes a DAG-CBOR block.
-pub fn decode_block<T: DeserializeOwned>(
-    block: Block<DefaultParams>,
-) -> Result<T, CborEncodeError> {
+pub fn decode_block<T: DeserializeOwned>(block: Block<DefaultParams>) -> Result<T, EncodeError> {
     let ipld = block.decode::<DagCborCodec, Ipld>()?;
     let data = from_ipld(ipld)?;
     Ok(data)

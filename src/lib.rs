@@ -1,4 +1,4 @@
-use handlers::{records::write::RecordsWriteHandler, HandlerError, MessageReply, MethodHandler};
+use handlers::{records::write::RecordsWriteHandler, HandlerError, MethodHandler, Reply};
 use message::{descriptor::Descriptor, Message};
 use store::{DataStore, MessageStore};
 use thiserror::Error;
@@ -26,7 +26,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         &self,
         tenant: &str,
         message: Message,
-    ) -> Result<MessageReply, HandleMessageError> {
+    ) -> Result<Reply, HandleMessageError> {
         match &message.descriptor {
             Descriptor::RecordsWrite(_) => {
                 let handler = RecordsWriteHandler {
@@ -34,7 +34,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                     message_store: &self.message_store,
                 };
                 let reply = handler.handle(tenant, message).await?;
-                Ok(reply)
+                Ok(reply.into())
             }
             _ => Err(HandleMessageError::UnsupportedInterface),
         }

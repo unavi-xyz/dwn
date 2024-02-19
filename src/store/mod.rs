@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     message::{descriptor::Filter, DecodeError, Message},
-    util::CborEncodeError,
+    util::EncodeError,
 };
 
 #[cfg(feature = "mysql")]
@@ -63,7 +63,7 @@ pub enum MessageStoreError {
     #[error("Message missing data")]
     MissingData,
     #[error("Failed to generate CID: {0}")]
-    MessageEncode(#[from] CborEncodeError),
+    MessageEncode(#[from] EncodeError),
     #[error("Failed to encode data: {0}")]
     DataEncodeError(#[from] libipld_core::error::SerdeError),
     #[error("Not found")]

@@ -33,9 +33,9 @@ pub struct RecordsQuery {
     interface: Interface,
     method: Method,
 
+    pub filter: Option<Filter>,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
-    pub filter: Option<Filter>,
 }
 
 impl Default for RecordsQuery {
@@ -43,8 +43,18 @@ impl Default for RecordsQuery {
         RecordsQuery {
             interface: Interface::Records,
             method: Method::Query,
-            message_timestamp: OffsetDateTime::now_utc(),
+
             filter: None,
+            message_timestamp: OffsetDateTime::now_utc(),
+        }
+    }
+}
+
+impl RecordsQuery {
+    pub fn new(filter: Filter) -> Self {
+        RecordsQuery {
+            filter: Some(filter),
+            ..Default::default()
         }
     }
 }

@@ -2,7 +2,7 @@ use didkit::JWK;
 use thiserror::Error;
 use time::OffsetDateTime;
 
-use crate::util::CborEncodeError;
+use crate::util::EncodeError;
 
 use super::{descriptor::Descriptor, AuthError, Data, Message};
 
@@ -15,7 +15,7 @@ pub struct MessageBuilder<'a> {
 #[derive(Debug, Error)]
 pub enum MessageBuildError {
     #[error("Cbord encode error: {0}")]
-    Encode(#[from] CborEncodeError),
+    Encode(#[from] EncodeError),
     #[error("Auth error: {0}")]
     Auth(#[from] AuthError),
 }
@@ -55,7 +55,8 @@ impl<'a> MessageBuilder<'a> {
                 desc.message_timestamp = timestamp;
 
                 if let Some(data) = &msg.data {
-                    desc.data_cid = Some(data.cid()?.to_string());
+                    let cid = data.cid()?;
+                    desc.data_cid = Some(cid.to_string());
                 }
             }
             Descriptor::RecordsCommit(desc) => {
