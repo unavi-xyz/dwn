@@ -52,12 +52,12 @@ async fn write(did: &str, kid: &str, jwk: &JWK, dwn: &DWN<SurrealDB, SurrealDB>)
 
     // Authorize the message using our JWK.
     message
-        .authorize(kid.to_string(), &jwk)
+        .authorize(kid.to_string(), jwk)
         .expect("Failed to authorize message");
 
     // Process the message.
     let reply = dwn
-        .process_message(&did, message)
+        .process_message(did, message)
         .await
         .expect("Failed to handle message");
 
