@@ -62,7 +62,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
             let latest_checkpoint_entry = messages
                 .iter()
                 .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
-                .unwrap_or_else(|| initial_entry);
+                .unwrap_or(initial_entry);
 
             let checkpoint_entry_id = latest_checkpoint_entry.generate_record_id()?;
 
@@ -91,38 +91,36 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
             if existing_writes.is_empty() {
                 // Store message as new entry.
                 self.message_store.put(tenant, message).await?;
-            } else {
-                if existing_writes.iter().all(|m| {
-                    let m_timestamp = match &m.descriptor {
-                        Descriptor::RecordsWrite(desc) => desc.message_timestamp,
-                        _ => unreachable!(),
-                    };
+            } else if existing_writes.iter().all(|m| {
+                let m_timestamp = match &m.descriptor {
+                    Descriptor::RecordsWrite(desc) => desc.message_timestamp,
+                    _ => unreachable!(),
+                };
 
-                    // Ensure message timestamp is greater than the latest write.
-                    // If times are equal, ensure the entry id is greater.
-                    if descriptor.message_timestamp == m_timestamp {
-                        let m_entry_id = m.generate_record_id().unwrap();
-                        entry_id > m_entry_id
-                    } else {
-                        descriptor.message_timestamp > m_timestamp
-                    }
-                }) {
-                    // Delete existing writes.
-                    for m in existing_writes {
-                        let cbor = encode_cbor(&m)?;
-                        self.message_store
-                            .delete(tenant, cbor.cid().to_string())
-                            .await?;
-                    }
-
-                    // Store message as new entry.
-                    self.message_store.put(tenant, message).await?;
+                // Ensure message timestamp is greater than the latest write.
+                // If times are equal, ensure the entry id is greater.
+                if descriptor.message_timestamp == m_timestamp {
+                    let m_entry_id = m.generate_record_id().unwrap();
+                    entry_id > m_entry_id
                 } else {
-                    // Cease processing.
-                    return Ok(MessageReply {
-                        status: Status::ok(),
-                    });
+                    descriptor.message_timestamp > m_timestamp
                 }
+            }) {
+                // Delete existing writes.
+                for m in existing_writes {
+                    let cbor = encode_cbor(&m)?;
+                    self.message_store
+                        .delete(tenant, cbor.cid().to_string())
+                        .await?;
+                }
+
+                // Store message as new entry.
+                self.message_store.put(tenant, message).await?;
+            } else {
+                // Cease processing.
+                return Ok(MessageReply {
+                    status: Status::ok(),
+                });
             }
         }
 
