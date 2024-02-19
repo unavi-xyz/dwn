@@ -1,5 +1,11 @@
 use didkit::JWK;
-use libipld_core::error::SerdeError;
+use libipld::{pb::DagPbCodec, Cid};
+use libipld_core::{
+    codec::Codec,
+    error::SerdeError,
+    multihash::{Code, MultihashDigest},
+    serde::to_ipld,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use thiserror::Error;
@@ -132,6 +138,23 @@ impl RecordIdGenerator {
 pub enum Data {
     Base64(String),
     Encrypted(EncryptedData),
+}
+
+impl Data {
+    /// Returns the CID of the data after DAG-PB encoding.
+    pub fn cid(&self) -> Result<Cid, CborEncodeError> {
+        match self {
+            Data::Base64(data) => {
+                let ipld = to_ipld(data)?;
+                let bytes = DagPbCodec.encode(&ipld)?;
+                let hash = Code::Sha2_256.digest(&bytes);
+                Ok(Cid::new_v1(DagPbCodec.into(), hash))
+            }
+            Data::Encrypted(_data) => {
+                todo!()
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

@@ -1,5 +1,6 @@
 use didkit::JWK;
 use thiserror::Error;
+use time::OffsetDateTime;
 
 use crate::util::CborEncodeError;
 
@@ -47,7 +48,29 @@ impl<'a> MessageBuilder<'a> {
             record_id: String::new(),
         };
 
-        // TODO: Write descriptor data_cid.
+        let timestamp = OffsetDateTime::now_utc();
+
+        match &mut msg.descriptor {
+            Descriptor::RecordsWrite(desc) => {
+                desc.message_timestamp = timestamp;
+
+                if let Some(data) = &msg.data {
+                    desc.data_cid = Some(data.cid()?.to_string());
+                }
+            }
+            Descriptor::RecordsCommit(desc) => {
+                desc.message_timestamp = timestamp;
+            }
+            Descriptor::RecordsDelete(desc) => {
+                desc.message_timestamp = timestamp;
+            }
+            Descriptor::RecordsRead(desc) => {
+                desc.message_timestamp = timestamp;
+            }
+            Descriptor::RecordsQuery(desc) => {
+                desc.message_timestamp = timestamp;
+            }
+        }
 
         msg.record_id = msg.generate_record_id()?;
 

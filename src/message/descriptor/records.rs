@@ -97,18 +97,19 @@ pub struct RecordsWrite {
     interface: Interface,
     method: Method,
 
+    pub data_cid: Option<String>,
+    #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
+    pub date_published: Option<OffsetDateTime>,
+    pub encryption: Option<Encryption>,
+    #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
+    pub message_timestamp: OffsetDateTime,
     #[serde(rename = "parentId")]
     pub parent_id: Option<String>,
     pub protocol: Option<String>,
     #[serde(rename = "protocolVersion")]
     pub protocol_version: Option<String>,
-    pub schema: Option<String>,
     pub published: Option<bool>,
-    pub encryption: Option<Encryption>,
-    #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
-    pub message_timestamp: OffsetDateTime,
-    #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
-    pub date_published: Option<OffsetDateTime>,
+    pub schema: Option<String>,
 }
 
 impl Default for RecordsWrite {
@@ -119,14 +120,15 @@ impl Default for RecordsWrite {
             interface: Interface::Records,
             method: Method::Write,
 
+            data_cid: None,
+            date_published: Some(time),
+            encryption: None,
+            message_timestamp: time,
             parent_id: None,
             protocol: None,
             protocol_version: None,
-            schema: None,
             published: None,
-            encryption: None,
-            message_timestamp: time,
-            date_published: Some(time),
+            schema: None,
         }
     }
 }
