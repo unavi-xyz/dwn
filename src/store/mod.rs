@@ -105,15 +105,6 @@ pub trait MessageStore {
 mod tests {
     use super::*;
 
-    use didkit::{DIDMethod, Source, JWK};
-
-    fn generate_did() -> String {
-        let jwk = JWK::generate_ed25519().expect("Failed to generate JWK");
-        did_method_key::DIDKey
-            .generate(&Source::Key(&jwk))
-            .expect("Failed to generate DID")
-    }
-
     macro_rules! test_data_store {
         ($($name:ident: $type:ty,)*) => {
         $(
@@ -219,32 +210,31 @@ mod tests {
 
     pub mod message {
         use super::*;
-        use crate::message::{
-            descriptor::{Descriptor, RecordsWrite},
-            Data, Message,
+        use crate::{
+            message::{
+                builder::MessageBuilder,
+                descriptor::{Descriptor, RecordsWrite},
+                Message,
+            },
+            util::DidKey,
         };
 
         pub async fn test_all_methods(store: impl MessageStore) {
-            let write = RecordsWrite::default();
+            let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let message = Message {
-                attestation: None,
-                authorization: None,
-                data: None,
-                descriptor: Descriptor::RecordsWrite(write),
-                record_id: "".to_string(),
-            };
-
-            let did = &generate_did();
+            let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
 
             // Test put and get
             let cid = store
-                .put(did, message.clone())
+                .put(&did_key.did, message.clone())
                 .await
                 .expect("Failed to put message");
 
             let got = store
-                .get(did, &cid.to_string())
+                .get(&did_key.did, &cid.to_string())
                 .await
                 .expect("Failed to get message");
 
@@ -252,12 +242,12 @@ mod tests {
 
             // Test query
             let filter = Filter {
-                attester: Some(did.to_string()),
+                attester: Some(did_key.did.clone()),
                 ..Default::default()
             };
 
             let got = store
-                .query(did, filter)
+                .query(&did_key.did, filter)
                 .await
                 .expect("Failed to query messages");
 
@@ -266,43 +256,40 @@ mod tests {
 
             // Test delete
             store
-                .delete(did, cid.to_string())
+                .delete(&did_key.did, cid.to_string())
                 .await
                 .expect("Failed to delete message");
 
-            let got = store.get(did, &cid.to_string()).await;
+            let got = store.get(&did_key.did, &cid.to_string()).await;
 
             assert!(got.is_err());
         }
 
         pub async fn test_get_missing(store: impl MessageStore) {
-            let did = &generate_did();
+            let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let got = store.get(did, "missing").await;
+            let got = store.get(&did_key.did, "missing").await;
 
             assert!(got.is_err());
         }
 
         pub async fn test_delete_missing(store: impl MessageStore) {
-            let did = &generate_did();
+            let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let got = store.delete(did, "missing".to_string()).await;
+            let got = store.delete(&did_key.did, "missing".to_string()).await;
             assert!(got.is_err());
         }
 
         pub async fn test_delete_wrong_tenant(store: impl MessageStore) {
-            let did = &generate_did();
+            let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let message = Message {
-                attestation: None,
-                authorization: None,
-                data: None,
-                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-                record_id: "".to_string(),
-            };
+            let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
 
             let cid = store
-                .put(did, message.clone())
+                .put(&did_key.did, message.clone())
                 .await
                 .expect("Failed to put message");
 
@@ -311,7 +298,7 @@ mod tests {
             assert!(res.is_ok());
 
             let got = store
-                .get(did, &cid.to_string())
+                .get(&did_key.did, &cid.to_string())
                 .await
                 .expect("Failed to get message");
 
@@ -319,25 +306,23 @@ mod tests {
         }
 
         pub async fn test_strip_data(store: impl MessageStore) {
-            let did = &generate_did();
+            let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let mut message = Message {
-                attestation: None,
-                authorization: None,
-                data: Some(Data::Base64("data".to_string())),
-                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-                record_id: "".to_string(),
-            };
+            let mut message =
+                MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+                    .authorize(did_key.kid.clone(), &did_key.jwk)
+                    .build()
+                    .expect("Failed to build message");
 
             let cid = store
-                .put(did, message.clone())
+                .put(&did_key.did, message.clone())
                 .await
                 .expect("Failed to put message");
 
             message.data = None;
 
             let got = store
-                .get(did, &cid.to_string())
+                .get(&did_key.did, &cid.to_string())
                 .await
                 .expect("Failed to get message");
 
@@ -345,18 +330,15 @@ mod tests {
         }
 
         pub async fn test_query(store: impl MessageStore) {
-            let did = &generate_did();
+            let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let message1 = Message {
-                attestation: None,
-                authorization: None,
-                data: None,
-                descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-                record_id: "record1".to_string(),
-            };
+            let message1 = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
 
             store
-                .put(did, message1.clone())
+                .put(&did_key.did, message1.clone())
                 .await
                 .expect("Failed to put message");
 
@@ -369,7 +351,7 @@ mod tests {
             };
 
             store
-                .put(did, message2.clone())
+                .put(&did_key.did, message2.clone())
                 .await
                 .expect("Failed to put message");
 
@@ -378,7 +360,7 @@ mod tests {
                 let filter = Filter::default();
 
                 let got = store
-                    .query(did, filter)
+                    .query(&did_key.did, filter)
                     .await
                     .expect("Failed to query messages");
 
@@ -395,7 +377,7 @@ mod tests {
                 };
 
                 let got = store
-                    .query(did, filter)
+                    .query(&did_key.did, filter)
                     .await
                     .expect("Failed to query messages");
 

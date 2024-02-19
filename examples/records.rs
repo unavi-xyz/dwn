@@ -1,10 +1,10 @@
-use didkit::{ssi::jwk::Algorithm, DIDMethod, Source, JWK};
 use dwn::{
     message::{
+        builder::MessageBuilder,
         descriptor::{Descriptor, Filter, RecordsWrite},
-        Message,
     },
     store::{MessageStore, SurrealDB},
+    util::DidKey,
     DWN,
 };
 use tracing::info;
@@ -22,38 +22,20 @@ async fn main() {
         message_store: db,
     };
 
-    // Generate a JWK and DID.
-    let mut jwk = JWK::generate_ed25519().expect("Failed to generate JWK");
-    jwk.algorithm = Some(Algorithm::EdDSA);
-
-    let did = did_method_key::DIDKey
-        .generate(&Source::Key(&jwk))
-        .expect("Failed to generate DID");
-
-    let id = did.clone();
-    let id = id.strip_prefix("did:key:").unwrap();
-    let kid = format!("{}#{}", did, id); // `kid` is the DID URL of the key within our DID document.
-
-    info!("DID: {}", did);
+    // Generate a DID.
+    let did_key = DidKey::new().expect("Failed to generate DID key");
+    info!("DID: {}", did_key.did);
 
     // Write a record.
     {
-        let mut message = Message {
-            attestation: None,
-            authorization: None,
-            data: None,
-            descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-            record_id: "".to_string(),
-        };
-
-        // Authorize the message using our JWK.
-        message
-            .authorize(kid.to_string(), &jwk)
-            .expect("Failed to authorize message");
+        let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+            .authorize(did_key.kid, &did_key.jwk)
+            .build()
+            .expect("Failed to build message");
 
         // Process the message.
         let reply = dwn
-            .process_message(&did, message)
+            .process_message(&did_key.did, message)
             .await
             .expect("Failed to handle message");
 
@@ -64,28 +46,13 @@ async fn main() {
     {
         // Filter the query to only include records authored by our DID.
         let filter = Filter {
-            attester: Some(did.to_string()),
+            attester: Some(did_key.did.clone()),
             ..Default::default()
         };
 
-        let reply = dwn.message_store.query(&did, filter).await;
+        let reply = dwn.message_store.query(&did_key.did, filter).await;
 
-        // let mut descriptor = RecordsQuery::default();
-        // descriptor.filter = Some(filter);
-        //
-        // let message = Message {
-        //     attestation: None,
-        //     authorization: None,
-        //     data: None,
-        //     descriptor: Descriptor::RecordsQuery(descriptor),
-        //     record_id: "".to_string(),
-        // };
-        //
-        // // Process the message.
-        // let reply = dwn
-        //     .process_message(&did, message)
-        //     .await
-        //     .expect("Failed to handle message");
+        // TODO: Replace with RecordsQuery message.
 
         info!("RecordsQuery reply: {:#?}", reply);
     }

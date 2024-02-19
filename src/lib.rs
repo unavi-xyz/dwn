@@ -45,10 +45,11 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 mod tests {
     use crate::{
         message::{
+            builder::MessageBuilder,
             descriptor::{Descriptor, RecordsWrite},
-            Message,
         },
         store::SurrealDB,
+        util::DidKey,
         DWN,
     };
 
@@ -64,20 +65,27 @@ mod tests {
     async fn test_records_write() {
         let dwn = create_dwn().await;
 
-        let message = Message {
-            attestation: None,
-            authorization: None,
-            data: None,
-            descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-            record_id: "".to_string(),
-        };
+        let did_key = DidKey::new().expect("Failed to generate DID key");
 
-        let tenant = "did:example:123";
-
-        // Require authorization
+        // Fails without authorization
         {
-            let reply = dwn.process_message(tenant, message).await;
+            let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message).await;
             assert!(reply.is_err());
+        }
+
+        // Succeeds with authorization
+        {
+            let message = MessageBuilder::new(Descriptor::RecordsWrite(RecordsWrite::default()))
+                .authorize(did_key.kid, &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message).await;
+            assert!(reply.is_ok());
         }
     }
 }

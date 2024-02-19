@@ -1,0 +1,58 @@
+use didkit::JWK;
+use thiserror::Error;
+
+use crate::util::CborEncodeError;
+
+use super::{descriptor::Descriptor, AuthError, Data, Message};
+
+pub struct MessageBuilder<'a> {
+    data: Option<Data>,
+    descriptor: Descriptor,
+    authorizer: Option<(String, &'a JWK)>,
+}
+
+#[derive(Debug, Error)]
+pub enum MessageBuildError {
+    #[error("Cbord encode error: {0}")]
+    Encode(#[from] CborEncodeError),
+    #[error("Auth error: {0}")]
+    Auth(#[from] AuthError),
+}
+
+impl<'a> MessageBuilder<'a> {
+    pub fn new(descriptor: Descriptor) -> Self {
+        MessageBuilder {
+            authorizer: None,
+            data: None,
+            descriptor,
+        }
+    }
+
+    pub fn data(mut self, data: Data) -> Self {
+        self.data = Some(data);
+        self
+    }
+
+    pub fn authorize(mut self, kid: String, jwk: &'a JWK) -> Self {
+        self.authorizer = Some((kid, jwk));
+        self
+    }
+
+    pub fn build(self) -> Result<Message, MessageBuildError> {
+        let mut msg = Message {
+            data: self.data,
+            descriptor: self.descriptor,
+            attestation: None,
+            authorization: None,
+            record_id: String::new(),
+        };
+
+        msg.record_id = msg.generate_record_id()?;
+
+        if let Some((kid, jwk)) = self.authorizer {
+            msg.authorize(kid, jwk)?;
+        }
+
+        Ok(msg)
+    }
+}

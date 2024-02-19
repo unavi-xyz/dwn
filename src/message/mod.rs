@@ -12,6 +12,7 @@ use crate::{
 use self::{auth::SignatureVerifyError, descriptor::Descriptor};
 
 pub mod auth;
+pub mod builder;
 pub mod descriptor;
 
 #[skip_serializing_none]
