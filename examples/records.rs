@@ -1,9 +1,9 @@
 use dwn::{
     message::{
         builder::MessageBuilder,
-        descriptor::{Filter, RecordsWrite},
+        descriptor::{Filter, RecordsQuery, RecordsWrite},
     },
-    store::{MessageStore, SurrealDB},
+    store::SurrealDB,
     util::DidKey,
     DWN,
 };
@@ -45,18 +45,18 @@ async fn main() {
     // Query the records.
     {
         // Filter the query to only include records authored by our DID.
-        let filter = Filter {
+        let message = MessageBuilder::new(RecordsQuery::new(Filter {
             attester: Some(did_key.did.clone()),
             ..Default::default()
-        };
+        }))
+        .build()
+        .expect("Failed to build message");
 
+        // Process the message.
         let reply = dwn
-            .message_store
-            .query(&did_key.did, filter)
+            .process_message(&did_key.did, message)
             .await
-            .expect("Failed to query");
-
-        // TODO: Replace with RecordsQuery message.
+            .expect("Failed to handle message");
 
         info!("RecordsQuery reply: {:#?}", reply);
     }
