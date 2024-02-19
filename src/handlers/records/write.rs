@@ -139,9 +139,10 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 #[cfg(test)]
 mod tests {
     use crate::{
+        handlers::Reply,
         message::{
             builder::MessageBuilder,
-            descriptor::{Filter, RecordsQuery, RecordsWrite},
+            descriptor::{Descriptor, Filter, RecordsQuery, RecordsWrite},
         },
         tests::create_dwn,
         util::DidKey,
@@ -200,23 +201,43 @@ mod tests {
             let reply = dwn.process_message(&did_key.did, message1.clone()).await;
             assert!(reply.is_ok());
 
+            // Ensure only initial entry exists
             let mut query = RecordsQuery::default();
             query.filter = Some(Filter {
-                record_id: Some(message1.record_id),
+                record_id: Some(message1.record_id.clone()),
                 ..Default::default()
             });
 
-            // let message2 = MessageBuilder::new(query)
-            //     .authorize(did_key.kid, &did_key.jwk)
-            //     .build()
-            //     .expect("Failed to build message");
-            //
-            // let messages = dwn.process_message(&did_key.did, message2).await;
-            // assert!(messages.is_ok());
-            //
-            // let reply = messages.unwrap();
+            let message2 = MessageBuilder::new(query)
+                .authorize(did_key.kid, &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
 
-            // TODO: Ensure only initial entry exists
+            let messages = dwn.process_message(&did_key.did, message2).await;
+            assert!(messages.is_ok());
+
+            let reply = match messages.unwrap() {
+                Reply::RecordsQuery(reply) => reply,
+                _ => panic!("Unexpected reply"),
+            };
+
+            assert_eq!(reply.entries.len(), 1);
+
+            let entry = &reply.entries[0];
+            let entry_descriptor = match &entry.descriptor {
+                Descriptor::RecordsWrite(desc) => desc,
+                _ => panic!("Unexpected descriptor"),
+            };
+
+            let descriptor1 = match &message1.descriptor {
+                Descriptor::RecordsWrite(desc) => desc,
+                _ => panic!("Unexpected descriptor"),
+            };
+
+            assert_eq!(
+                entry_descriptor.message_timestamp,
+                descriptor1.message_timestamp
+            );
         }
     }
 }

@@ -1,4 +1,7 @@
-use handlers::{records::write::RecordsWriteHandler, HandlerError, MethodHandler, Reply};
+use handlers::{
+    records::{query::RecordsQueryHandler, write::RecordsWriteHandler},
+    HandlerError, MethodHandler, Reply,
+};
 use message::{descriptor::Descriptor, Message};
 use store::{DataStore, MessageStore};
 use thiserror::Error;
@@ -30,6 +33,14 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         match &message.descriptor {
             Descriptor::RecordsWrite(_) => {
                 let handler = RecordsWriteHandler {
+                    data_store: &self.data_store,
+                    message_store: &self.message_store,
+                };
+                let reply = handler.handle(tenant, message).await?;
+                Ok(reply.into())
+            }
+            Descriptor::RecordsQuery(_) => {
+                let handler = RecordsQueryHandler {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
