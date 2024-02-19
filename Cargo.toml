@@ -17,6 +17,7 @@ surrealdb = ["dep:surrealdb", "dep:tokio"]
 
 [dependencies]
 anyhow = "1.0.79"
+async-recursion = "1.0.5"
 base64 = "0.21.5"
 did-method-key = "0.2.2"
 didkit = { version = "0.6.0", default-features = false, features = ["ed25519", "ring"] }
@@ -38,7 +39,6 @@ axum = { version = "0.7.2", optional = true }
 rust-s3 = { version = "0.33.0", optional = true }
 sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-rustls"], optional = true }
 tokio = { version = "1.35.0", features = ["full"], optional = true }
-async-recursion = "1.0.5"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 surrealdb = { version = "1.2.0", default-featuers = false, features = ["kv-mem", "kv-indxdb"], optional = true }
