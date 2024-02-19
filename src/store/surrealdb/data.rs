@@ -66,18 +66,3 @@ impl DataStore for SurrealDB {
         Ok(PutDataResults { size })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    async fn store() -> SurrealDB {
-        SurrealDB::new().await.expect("Failed to create SurrealDB")
-    }
-
-    #[tokio::test]
-    async fn test_compliance() {
-        let store = store().await;
-        crate::store::tests::data::test_data_store(store).await;
-    }
-}

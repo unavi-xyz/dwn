@@ -111,14 +111,70 @@ mod tests {
             .expect("Failed to generate DID")
     }
 
+    macro_rules! test_data_store {
+        ($($name:ident: $type:ty,)*) => {
+        $(
+            mod $name {
+                use super::*;
+
+                #[tokio::test]
+                async fn test_all_methods() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::data::test_all_methods(store).await;
+                }
+            }
+        )*
+        }
+    }
+
+    macro_rules! test_message_store {
+        ($($name:ident: $type:ty,)*) => {
+        $(
+            mod $name {
+                use super::*;
+
+                #[tokio::test]
+                async fn test_all_methods() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::message::test_all_methods(store).await;
+                }
+
+                #[tokio::test]
+                async fn test_get_missing() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::message::test_get_missing(store).await;
+                }
+
+                #[tokio::test]
+                async fn test_delete_missing() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::message::test_delete_missing(store).await;
+                }
+
+                #[tokio::test]
+                async fn test_delete_wrong_tenant() {
+                    let store = <$type>::new().await.expect("Failed to create store");
+                    super::message::test_delete_wrong_tenant(store).await;
+                }
+            }
+        )*
+        }
+    }
+
+    #[cfg(feature = "surrealdb")]
+    test_data_store! {
+        surrealdb_data: SurrealDB,
+    }
+
+    #[cfg(feature = "surrealdb")]
+    test_message_store! {
+        surrealdb_message: SurrealDB,
+    }
+
     pub mod data {
         use super::*;
 
-        pub async fn test_data_store(mut store: impl DataStore) {
-            test_all_methods(&mut store).await;
-        }
-
-        async fn test_all_methods(store: &mut impl DataStore) {
+        pub async fn test_all_methods(store: impl DataStore) {
             let cid = Cid::default();
             let data = vec![1, 2, 3, 4, 5];
 
@@ -153,14 +209,7 @@ mod tests {
             Data, Message,
         };
 
-        pub async fn test_message_store(mut store: impl MessageStore) {
-            test_all_methods(&mut store).await;
-            test_get_missing(&mut store).await;
-            test_delete_missing(&mut store).await;
-            test_delete_wrong_tenant(&mut store).await;
-        }
-
-        async fn test_all_methods(store: &mut impl MessageStore) {
+        pub async fn test_all_methods(store: impl MessageStore) {
             let data = Data::Base64("hello".to_string());
             let write = RecordsWrite::default();
 
@@ -212,7 +261,7 @@ mod tests {
             assert!(got.is_err());
         }
 
-        async fn test_get_missing(store: &mut impl MessageStore) {
+        pub async fn test_get_missing(store: impl MessageStore) {
             let did = &generate_did();
 
             let got = store.get(did, "missing").await;
@@ -220,14 +269,14 @@ mod tests {
             assert!(got.is_err());
         }
 
-        async fn test_delete_missing(store: &mut impl MessageStore) {
+        pub async fn test_delete_missing(store: impl MessageStore) {
             let did = &generate_did();
 
             let got = store.delete(did, "missing".to_string()).await;
-            assert!(got.is_ok());
+            assert!(got.is_err());
         }
 
-        async fn test_delete_wrong_tenant(store: &mut impl MessageStore) {
+        pub async fn test_delete_wrong_tenant(store: impl MessageStore) {
             let did = &generate_did();
 
             let data = Data::Base64("hello".to_string());

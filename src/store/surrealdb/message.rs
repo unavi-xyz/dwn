@@ -117,18 +117,3 @@ impl MessageStore for SurrealDB {
         Ok(messages)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    async fn store() -> SurrealDB {
-        SurrealDB::new().await.expect("Failed to create SurrealDB")
-    }
-
-    #[tokio::test]
-    async fn test_compliance() {
-        let store = store().await;
-        crate::store::tests::message::test_message_store(store).await;
-    }
-}
