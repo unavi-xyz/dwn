@@ -11,7 +11,7 @@ categories = ["dwn", "did"]
 [features]
 default = ["axum", "mysql", "s3", "surrealdb"]
 axum = ["dep:axum"]
-mysql = ["dep:sqlx"]
+mysql = ["dep:sqlx", "dep:tokio"]
 s3 = ["dep:rust-s3"]
 surrealdb = ["dep:surrealdb", "dep:tokio"]
 
