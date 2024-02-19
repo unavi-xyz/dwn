@@ -76,8 +76,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_all_methods() {
+    async fn test_compliance() {
         let store = store().await;
-        crate::store::tests::data::test_all_methods(store).await;
+        crate::store::tests::data::test_data_store(store).await;
     }
 }

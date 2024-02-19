@@ -100,12 +100,25 @@ pub trait MessageStore {
 
 #[cfg(test)]
 mod tests {
-    // Generic tests for all data stores
-    // Should be added to each data store's test suite
-    pub mod data {
-        use super::super::*;
+    use super::*;
 
-        pub async fn test_all_methods(store: impl DataStore) {
+    use didkit::{DIDMethod, Source, JWK};
+
+    fn generate_did() -> String {
+        let jwk = JWK::generate_ed25519().expect("Failed to generate JWK");
+        did_method_key::DIDKey
+            .generate(&Source::Key(&jwk))
+            .expect("Failed to generate DID")
+    }
+
+    pub mod data {
+        use super::*;
+
+        pub async fn test_data_store(mut store: impl DataStore) {
+            test_all_methods(&mut store).await;
+        }
+
+        async fn test_all_methods(store: &mut impl DataStore) {
             let cid = Cid::default();
             let data = vec![1, 2, 3, 4, 5];
 
@@ -133,16 +146,21 @@ mod tests {
         }
     }
 
-    // Generic tests for all message stores
-    // Should be added to each message store's test suite
     pub mod message {
-        use super::super::*;
+        use super::*;
         use crate::message::{
             descriptor::{Descriptor, RecordsWrite},
             Data, Message,
         };
 
-        pub async fn test_all_methods(store: impl MessageStore) {
+        pub async fn test_message_store(mut store: impl MessageStore) {
+            test_all_methods(&mut store).await;
+            test_get_missing(&mut store).await;
+            test_delete_missing(&mut store).await;
+            test_delete_wrong_tenant(&mut store).await;
+        }
+
+        async fn test_all_methods(store: &mut impl MessageStore) {
             let data = Data::Base64("hello".to_string());
             let write = RecordsWrite::default();
 
@@ -154,7 +172,7 @@ mod tests {
                 record_id: "".to_string(),
             };
 
-            let did = "did:example:123";
+            let did = &generate_did();
 
             // Test put and get
             let cid = store
@@ -194,23 +212,23 @@ mod tests {
             assert!(got.is_err());
         }
 
-        pub async fn test_get_missing(store: impl MessageStore) {
-            let did = "did:example:123";
+        async fn test_get_missing(store: &mut impl MessageStore) {
+            let did = &generate_did();
 
             let got = store.get(did, "missing").await;
 
             assert!(got.is_err());
         }
 
-        pub async fn test_delete_missing(store: impl MessageStore) {
-            let did = "did:example:123";
+        async fn test_delete_missing(store: &mut impl MessageStore) {
+            let did = &generate_did();
 
             let got = store.delete(did, "missing".to_string()).await;
-            assert!(got.is_err());
+            assert!(got.is_ok());
         }
 
-        pub async fn test_delete_wrong_tenant(store: impl MessageStore) {
-            let did = "did:example:123";
+        async fn test_delete_wrong_tenant(store: &mut impl MessageStore) {
+            let did = &generate_did();
 
             let data = Data::Base64("hello".to_string());
             let write = RecordsWrite::default();

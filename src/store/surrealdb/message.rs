@@ -15,13 +15,13 @@ impl MessageStore for SurrealDB {
     async fn delete(&self, tenant: &str, cid: String) -> Result<(), MessageStoreError> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
 
-        let encoded_message: Option<GetMessage> = self
+        let message: Option<GetMessage> = self
             .db
             .select(id.clone())
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        if let Some(msg) = encoded_message {
+        if let Some(msg) = message {
             if msg.tenant != tenant {
                 return Err(MessageStoreError::NotFound);
             }
@@ -127,26 +127,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_all_methods() {
+    async fn test_compliance() {
         let store = store().await;
-        crate::store::tests::message::test_all_methods(store).await;
-    }
-
-    #[tokio::test]
-    async fn test_get_missing() {
-        let store = store().await;
-        crate::store::tests::message::test_get_missing(store).await;
-    }
-
-    #[tokio::test]
-    async fn test_delete_missing() {
-        let store = store().await;
-        crate::store::tests::message::test_delete_missing(store).await;
-    }
-
-    #[tokio::test]
-    async fn test_delete_wrong_tenant() {
-        let store = store().await;
-        crate::store::tests::message::test_delete_wrong_tenant(store).await;
+        crate::store::tests::message::test_message_store(store).await;
     }
 }
