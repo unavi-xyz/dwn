@@ -59,7 +59,6 @@ impl DataStore for SurrealDB {
             .content(DbData {
                 cid: cid.to_string(),
                 data,
-                ref_count: 1,
             })
             .await
             .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
@@ -72,5 +71,4 @@ impl DataStore for SurrealDB {
 struct DbData {
     cid: String,
     data: Vec<u8>,
-    ref_count: usize,
 }
