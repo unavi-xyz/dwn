@@ -7,6 +7,7 @@ use thiserror::Error;
 use crate::{
     message::{Message, VerifyAuthError},
     store::{DataStoreError, MessageStoreError},
+    util::CborEncodeError,
 };
 
 pub mod records;
@@ -21,6 +22,8 @@ pub enum HandlerError {
     DataStoreError(#[from] DataStoreError),
     #[error("Failed to interact with message store: {0}")]
     MessageStoreError(#[from] MessageStoreError),
+    #[error("CBOR encoding error: {0}")]
+    CborEncode(#[from] CborEncodeError),
 }
 
 pub trait MethodHandler {

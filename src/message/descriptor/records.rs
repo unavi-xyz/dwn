@@ -61,8 +61,8 @@ pub struct Filter {
     pub parent_id: Option<String>,
     #[serde(rename = "contextId")]
     pub context_id: Option<String>,
-    #[serde(rename = "dateCreated")]
-    pub date_created: Option<FilterDateCreated>,
+    #[serde(rename = "messageTimestamp")]
+    pub message_timestamp: Option<FilterDateCreated>,
     pub protocol: Option<String>,
     #[serde(rename = "protocolVersion")]
     pub protocol_version: Option<String>,
@@ -105,8 +105,8 @@ pub struct RecordsWrite {
     pub schema: Option<String>,
     pub published: Option<bool>,
     pub encryption: Option<Encryption>,
-    #[serde(rename = "dateCreated", with = "time::serde::rfc3339")]
-    pub date_created: OffsetDateTime,
+    #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
+    pub message_timestamp: OffsetDateTime,
     #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
     pub date_published: Option<OffsetDateTime>,
 }
@@ -125,7 +125,7 @@ impl Default for RecordsWrite {
             schema: None,
             published: None,
             encryption: None,
-            date_created: time,
+            message_timestamp: time,
             date_published: Some(time),
         }
     }
@@ -137,8 +137,8 @@ pub struct RecordsCommit {
     method: Method,
     #[serde(rename = "parentId")]
     pub parent_id: String,
-    #[serde(rename = "dateCreated", with = "time::serde::rfc3339")]
-    pub date_created: OffsetDateTime,
+    #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
+    pub message_timestamp: OffsetDateTime,
 }
 
 impl Default for RecordsCommit {
@@ -147,7 +147,7 @@ impl Default for RecordsCommit {
             interface: Interface::Records,
             method: Method::Commit,
             parent_id: "".to_string(),
-            date_created: OffsetDateTime::now_utc(),
+            message_timestamp: OffsetDateTime::now_utc(),
         }
     }
 }

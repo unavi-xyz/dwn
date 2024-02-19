@@ -50,7 +50,11 @@ async fn main() {
             ..Default::default()
         };
 
-        let reply = dwn.message_store.query(&did_key.did, filter).await;
+        let reply = dwn
+            .message_store
+            .query(&did_key.did, filter)
+            .await
+            .expect("Failed to query");
 
         // TODO: Replace with RecordsQuery message.
 

@@ -66,7 +66,7 @@ impl MessageStore for SurrealDB {
         let record_id = message.record_id.clone();
 
         let date_created = match &message.descriptor {
-            Descriptor::RecordsWrite(desc) => Some(desc.date_created),
+            Descriptor::RecordsWrite(desc) => Some(desc.message_timestamp),
             _ => None,
         };
 
