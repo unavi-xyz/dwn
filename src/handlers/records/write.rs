@@ -22,6 +22,8 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
         self.message_store.put(tenant, message).await?;
 
+        // TODO: Store data
+
         Ok(MessageReply {
             status: Status::ok(),
         })
