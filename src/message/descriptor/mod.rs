@@ -1,11 +1,6 @@
-use libipld::{Block, DefaultParams};
-use libipld_cbor::DagCborCodec;
-use libipld_core::{multihash::Code, serde::to_ipld};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tracing::warn;
-
-use super::EncodeError;
 
 mod records;
 
@@ -49,15 +44,6 @@ pub enum Descriptor {
     RecordsWrite(records::RecordsWrite),
     RecordsCommit(records::RecordsCommit),
     RecordsDelete(records::RecordsDelete),
-}
-
-impl Descriptor {
-    /// Encodes the descriptor -> CBOR block
-    pub fn encode_block(&self) -> Result<Block<DefaultParams>, EncodeError> {
-        let ipld = to_ipld(self)?;
-        let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)?;
-        Ok(block)
-    }
 }
 
 impl From<records::RecordsRead> for Descriptor {
@@ -154,6 +140,8 @@ impl<'de> Deserialize<'de> for Descriptor {
 
 #[cfg(test)]
 mod tests {
+    use crate::util::encode_cbor;
+
     use super::*;
 
     fn default_descriptors() -> Vec<Descriptor> {
@@ -176,9 +164,9 @@ mod tests {
     }
 
     #[test]
-    fn test_cid() {
+    fn test_encode_cbor() {
         for desc in default_descriptors() {
-            desc.encode_block().expect("Failed to generate CBOR block");
+            encode_cbor(&desc).expect("Failed to generate CBOR block");
         }
     }
 }

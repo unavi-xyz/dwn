@@ -9,6 +9,7 @@ use crate::{
         Message,
     },
     store::{MessageStore, MessageStoreError},
+    util::encode_cbor,
 };
 
 use super::SurrealDB;
@@ -52,8 +53,8 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let block = message.encode_block()?;
-        let cid = block.cid();
+        let cbor = encode_cbor(&message)?;
+        let cid = cbor.cid();
 
         let id = Thing::from((
             Table::from(tenant.to_string()).to_string(),

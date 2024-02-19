@@ -4,7 +4,10 @@ use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::message::{descriptor::Filter, DecodeError, EncodeError, Message};
+use crate::{
+    message::{descriptor::Filter, DecodeError, Message},
+    util::CborEncodeError,
+};
 
 #[cfg(feature = "mysql")]
 mod mysql;
@@ -60,7 +63,7 @@ pub enum MessageStoreError {
     #[error("Message missing data")]
     MissingData,
     #[error("Failed to generate CID: {0}")]
-    MessageEncode(#[from] EncodeError),
+    MessageEncode(#[from] CborEncodeError),
     #[error("Failed to encode data: {0}")]
     DataEncodeError(#[from] libipld_core::error::SerdeError),
     #[error("Not found")]

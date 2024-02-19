@@ -6,6 +6,7 @@ use thiserror::Error;
 pub mod handlers;
 pub mod message;
 pub mod store;
+pub mod util;
 
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,
