@@ -4,7 +4,7 @@ use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::message::{DecodeError, EncodeError, Message};
+use crate::message::{descriptor::Filter, DecodeError, EncodeError, Message};
 
 #[cfg(feature = "mysql")]
 mod mysql;
@@ -91,6 +91,11 @@ pub trait MessageStore {
         tenant: &str,
         message: &Message,
     ) -> impl Future<Output = Result<Cid, MessageStoreError>>;
+    fn query(
+        &self,
+        tenant: &str,
+        filter: Filter,
+    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>>;
 }
 
 #[cfg(test)]
@@ -146,7 +151,7 @@ mod tests {
                 authorization: None,
                 data: Some(data),
                 descriptor: Descriptor::RecordsWrite(write),
-                record_id: None,
+                record_id: "".to_string(),
             };
 
             let did = "did:example:123";
@@ -163,6 +168,20 @@ mod tests {
                 .expect("Failed to get message");
 
             assert_eq!(message, got);
+
+            // Test query
+            let filter = Filter {
+                attester: Some(did.to_string()),
+                ..Default::default()
+            };
+
+            let got = store
+                .query(did, filter)
+                .await
+                .expect("Failed to query messages");
+
+            assert_eq!(1, got.len());
+            assert_eq!(got[0], message);
 
             // Test delete
             store
@@ -201,7 +220,7 @@ mod tests {
                 authorization: None,
                 data: Some(data),
                 descriptor: Descriptor::RecordsWrite(write),
-                record_id: None,
+                record_id: "".to_string(),
             };
 
             let cid = store

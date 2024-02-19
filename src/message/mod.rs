@@ -26,7 +26,7 @@ pub struct Message {
     pub data: Option<Data>,
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
-    pub record_id: Option<String>,
+    pub record_id: String,
 }
 
 #[derive(Error, Debug)]

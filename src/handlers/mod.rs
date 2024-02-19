@@ -15,6 +15,8 @@ pub mod records;
 pub enum HandlerError {
     #[error("Failed to verify message: {0}")]
     VerifyError(#[from] VerifyAuthError),
+    #[error("Invalid descriptor")]
+    InvalidDescriptor,
     #[error("Failed to interact with data store: {0}")]
     DataStoreError(#[from] DataStoreError),
     #[error("Failed to interact with message store: {0}")]

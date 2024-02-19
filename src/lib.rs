@@ -68,7 +68,7 @@ mod tests {
             authorization: None,
             data: None,
             descriptor: Descriptor::RecordsWrite(RecordsWrite::default()),
-            record_id: None,
+            record_id: "".to_string(),
         };
 
         let tenant = "did:example:123";

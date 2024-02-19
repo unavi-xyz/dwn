@@ -2,7 +2,7 @@ use libipld::{Block, Cid, DefaultParams};
 use surrealdb::sql::{Id, Table, Thing};
 
 use crate::{
-    message::Message,
+    message::{descriptor::Filter, Message},
     store::{MessageStore, MessageStoreError},
 };
 
@@ -78,6 +78,43 @@ impl MessageStore for SurrealDB {
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
         Ok(*cid)
+    }
+
+    async fn query(
+        &self,
+        tenant: &str,
+        _filter: Filter,
+    ) -> Result<Vec<Message>, MessageStoreError> {
+        let db = self
+            .message_db()
+            .await
+            .map_err(MessageStoreError::BackendError)?;
+
+        let query = "SELECT * FROM type::table($table);";
+
+        let mut res = db
+            .query(query)
+            .bind(("table", Table::from(tenant).to_string()))
+            .await
+            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+        let db_messages: Vec<GetMessage> = res
+            .take(0)
+            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+        let mut messages = Vec::new();
+
+        for db_message in db_messages {
+            let cid = Cid::try_from(db_message.cid.as_str())?;
+            let block = Block::<DefaultParams>::new(cid, db_message.message)
+                .map_err(MessageStoreError::CreateBlockError)?;
+
+            let message = Message::decode_block(block)?;
+
+            messages.push(message);
+        }
+
+        Ok(messages)
     }
 }
 
