@@ -44,10 +44,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        message::{
-            builder::MessageBuilder,
-            descriptor::{RecordsWrite},
-        },
+        message::{builder::MessageBuilder, descriptor::RecordsWrite},
         store::SurrealDB,
         util::DidKey,
         DWN,
