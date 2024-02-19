@@ -43,46 +43,13 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        message::{builder::MessageBuilder, descriptor::RecordsWrite},
-        store::SurrealDB,
-        util::DidKey,
-        DWN,
-    };
+    use crate::{store::SurrealDB, DWN};
 
-    async fn create_dwn() -> DWN<SurrealDB, SurrealDB> {
+    pub async fn create_dwn() -> DWN<SurrealDB, SurrealDB> {
         let db = SurrealDB::new().await.expect("Failed to create SurrealDB");
         DWN {
             data_store: db.clone(),
             message_store: db,
-        }
-    }
-
-    #[tokio::test]
-    async fn test_records_write() {
-        let dwn = create_dwn().await;
-
-        let did_key = DidKey::new().expect("Failed to generate DID key");
-
-        // Fails without authorization
-        {
-            let message = MessageBuilder::new(RecordsWrite::default())
-                .build()
-                .expect("Failed to build message");
-
-            let reply = dwn.process_message(&did_key.did, message).await;
-            assert!(reply.is_err());
-        }
-
-        // Succeeds with authorization
-        {
-            let message = MessageBuilder::new(RecordsWrite::default())
-                .authorize(did_key.kid, &did_key.jwk)
-                .build()
-                .expect("Failed to build message");
-
-            let reply = dwn.process_message(&did_key.did, message).await;
-            assert!(reply.is_ok());
         }
     }
 }

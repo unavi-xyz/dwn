@@ -131,3 +131,88 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        message::{
+            builder::MessageBuilder,
+            descriptor::{Filter, RecordsQuery, RecordsWrite},
+        },
+        tests::create_dwn,
+        util::DidKey,
+    };
+
+    #[tokio::test]
+    async fn require_auth() {
+        let dwn = create_dwn().await;
+        let did_key = DidKey::new().expect("Failed to generate DID key");
+
+        // Fails without authorization
+        {
+            let message = MessageBuilder::new(RecordsWrite::default())
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message).await;
+            assert!(reply.is_err());
+        }
+
+        // Succeeds with authorization
+        {
+            let message = MessageBuilder::new(RecordsWrite::default())
+                .authorize(did_key.kid, &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message).await;
+            assert!(reply.is_ok());
+        }
+    }
+
+    #[tokio::test]
+    async fn initial_entry() {
+        let dwn = create_dwn().await;
+        let did_key = DidKey::new().expect("Failed to generate DID key");
+
+        // Create initial entry
+        {
+            let message = MessageBuilder::new(RecordsWrite::default())
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message).await;
+            assert!(reply.is_ok());
+        }
+
+        // Succeeds with same entry, but doesn't write
+        {
+            let message1 = MessageBuilder::new(RecordsWrite::default())
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message1.clone()).await;
+            assert!(reply.is_ok());
+
+            let mut query = RecordsQuery::default();
+            query.filter = Some(Filter {
+                record_id: Some(message1.record_id),
+                ..Default::default()
+            });
+
+            let message2 = MessageBuilder::new(query)
+                .authorize(did_key.kid, &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let messages = dwn.process_message(&did_key.did, message2).await;
+            assert!(messages.is_ok());
+
+            let _reply = messages.unwrap();
+
+            // TODO: Ensure only initial entry exists
+        }
+    }
+}
