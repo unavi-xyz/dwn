@@ -12,8 +12,8 @@ pub struct RecordsReadHandler<'a, D: DataStore, M: MessageStore> {
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, M> {
     async fn handle(
         &self,
-        tenant: &str,
-        message: Message,
+        _tenant: &str,
+        _message: Message,
     ) -> Result<impl Into<Reply>, HandlerError> {
         Ok(StatusReply {
             status: Status::ok(),
