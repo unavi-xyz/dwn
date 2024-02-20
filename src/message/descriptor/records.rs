@@ -164,6 +164,15 @@ impl Default for RecordsCommit {
     }
 }
 
+impl RecordsCommit {
+    pub fn new(parent_id: String) -> Self {
+        RecordsCommit {
+            parent_id,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsDelete {
     interface: Interface,

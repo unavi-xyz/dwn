@@ -20,9 +20,15 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
         tenant: &str,
         message: Message,
     ) -> Result<impl Into<Reply>, HandlerError> {
+        message.verify_auth().await?;
+
         let descriptor = match &message.descriptor {
             Descriptor::RecordsCommit(desc) => desc,
-            _ => return Err(HandlerError::InvalidDescriptor),
+            _ => {
+                return Err(HandlerError::InvalidDescriptor(
+                    "Not a RecordsCommit message".to_string(),
+                ));
+            }
         };
 
         // Get currently active RecordsWrite message.
@@ -41,7 +47,9 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
         let active = messages
             .iter()
             .find(|m| matches!(m.descriptor, Descriptor::RecordsWrite(_)))
-            .ok_or(HandlerError::InvalidDescriptor)?;
+            .ok_or(HandlerError::InvalidDescriptor(
+                "No active RecordsWrite message found".to_string(),
+            ))?;
 
         // TODO: Ensure immutable values from inital entry are not changed.
 
@@ -58,23 +66,35 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
 
         // Parent id must match either the active message, or another RecordsCommit that descends from it.
         if !descends_from(&descriptor.parent_id, &active_entry_id, &entry_id_to_msg) {
-            return Err(HandlerError::InvalidDescriptor);
+            return Err(HandlerError::InvalidDescriptor(
+                "Parent message does not descend from active message".to_string(),
+            ));
         }
 
         let parent = match entry_id_to_msg.get(&descriptor.parent_id) {
             Some(m) => m,
-            None => return Err(HandlerError::InvalidDescriptor),
+            None => {
+                return Err(HandlerError::InvalidDescriptor(
+                    "Parent message not found".to_string(),
+                ));
+            }
         };
 
         let parent_timestamp = match &parent.descriptor {
             Descriptor::RecordsCommit(desc) => desc.message_timestamp,
             Descriptor::RecordsWrite(desc) => desc.message_timestamp,
-            _ => return Err(HandlerError::InvalidDescriptor),
+            _ => {
+                return Err(HandlerError::InvalidDescriptor(
+                    "Parent message is not a commit or write".to_string(),
+                ))
+            }
         };
 
         // Ensure message is not older than parent.
         if descriptor.message_timestamp < parent_timestamp {
-            return Err(HandlerError::InvalidDescriptor);
+            return Err(HandlerError::InvalidDescriptor(
+                "Message timestamp is older than parent".to_string(),
+            ));
         }
 
         // Store the message.
@@ -107,4 +127,55 @@ fn descends_from(
     };
 
     descends_from(&descriptor.parent_id, root_entry_id, messages)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        message::{
+            builder::MessageBuilder,
+            data::Data,
+            descriptor::{RecordsCommit, RecordsWrite},
+        },
+        tests::create_dwn,
+        util::DidKey,
+    };
+
+    #[tokio::test]
+    async fn require_auth() {
+        let dwn = create_dwn().await;
+        let did_key = DidKey::new().expect("Failed to generate DID key");
+
+        // Fails without authorization.
+        {
+            let message = MessageBuilder::new(RecordsCommit::default())
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message).await;
+            assert!(reply.is_err());
+        }
+
+        // Succeeds with authorization.
+        {
+            // Write a record.
+            let message1 = MessageBuilder::new(RecordsWrite::default())
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .data(Data::Base64("Hello, world!".to_string()))
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message1.clone()).await;
+            assert!(reply.is_ok());
+
+            // Commit the record.
+            let message2 = MessageBuilder::new(RecordsCommit::new(message1.record_id))
+                .authorize(did_key.kid, &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message2).await;
+            assert!(reply.is_ok());
+        }
+    }
 }

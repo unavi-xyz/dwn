@@ -17,7 +17,11 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsQueryHandler<'_, D,
     ) -> Result<impl Into<Reply>, HandlerError> {
         let filter = match message.descriptor {
             Descriptor::RecordsQuery(descriptor) => descriptor.filter,
-            _ => return Err(HandlerError::InvalidDescriptor),
+            _ => {
+                return Err(HandlerError::InvalidDescriptor(
+                    "Not a RecordsQuery message".to_string(),
+                ))
+            }
         };
 
         let entries = self

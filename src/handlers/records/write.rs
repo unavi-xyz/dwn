@@ -49,17 +49,23 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 self.message_store.put(tenant, message).await?;
             }
         } else {
-            let initial_entry = initial_entry.ok_or(HandlerError::InvalidDescriptor)?;
+            let initial_entry = initial_entry.ok_or(HandlerError::InvalidDescriptor(
+                "Initial entry not found".to_string(),
+            ))?;
 
             let descriptor = match &message.descriptor {
                 Descriptor::RecordsWrite(descriptor) => descriptor,
-                _ => return Err(HandlerError::InvalidDescriptor),
+                _ => {
+                    return Err(HandlerError::InvalidDescriptor(
+                        "Not a RecordsWrite message".to_string(),
+                    ))
+                }
             };
 
             let parent_id = descriptor
                 .parent_id
                 .as_ref()
-                .ok_or(HandlerError::InvalidDescriptor)?;
+                .ok_or(HandlerError::InvalidDescriptor("No parent id".to_string()))?;
 
             // TODO: Ensure immutable values remain unchanged.
 
@@ -72,18 +78,27 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
             // Ensure parent id matches the latest checkpoint entry.
             if *parent_id != checkpoint_entry_id {
-                return Err(HandlerError::InvalidDescriptor);
+                return Err(HandlerError::InvalidDescriptor(
+                    "Parent id does not match latest checkpoint entry".to_string(),
+                ));
             }
 
             let checkpoint_time = match &latest_checkpoint_entry.descriptor {
                 Descriptor::RecordsDelete(desc) => desc.message_timestamp,
                 Descriptor::RecordsWrite(desc) => desc.message_timestamp,
-                _ => return Err(HandlerError::InvalidDescriptor),
+                _ => {
+                    return Err(HandlerError::InvalidDescriptor(
+                        "Latest checkpoint is not a RecordsDelete or RecordsWrite message"
+                            .to_string(),
+                    ))
+                }
             };
 
             // Ensure message timestamp is greater than the latest checkpoint entry.
             if descriptor.message_timestamp <= checkpoint_time {
-                return Err(HandlerError::InvalidDescriptor);
+                return Err(HandlerError::InvalidDescriptor(
+                    "Message timestamp is not greater than the latest checkpoint entry".to_string(),
+                ));
             }
 
             let existing_writes = messages
