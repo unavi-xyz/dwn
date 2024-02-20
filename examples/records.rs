@@ -91,11 +91,11 @@ async fn main() {
             .expect("Failed to handle message");
 
         match reply {
-            Reply::RecordsQuery { entries, status } => {
+            Reply::RecordsQuery(reply) => {
                 info!(
                     "RecordsQuery status: {:?}, num entries: {:?}",
-                    status,
-                    entries.len()
+                    reply.status,
+                    reply.entries.len()
                 );
             }
             _ => panic!("Unexpected reply"),

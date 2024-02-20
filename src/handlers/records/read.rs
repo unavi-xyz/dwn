@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{HandlerError, MethodHandler, Reply, Status},
+    handlers::{HandlerError, MethodHandler, RecordsReadReply, Reply, Status},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
@@ -13,7 +13,11 @@ pub struct RecordsReadHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, M> {
-    async fn handle(&self, tenant: &str, message: Message) -> Result<Reply, HandlerError> {
+    async fn handle(
+        &self,
+        tenant: &str,
+        message: Message,
+    ) -> Result<impl Into<Reply>, HandlerError> {
         let messages = self
             .message_store
             .query(
@@ -44,7 +48,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, 
 
         // TODO: Get data from data store.
 
-        Ok(Reply::RecordsRead {
+        Ok(RecordsReadReply {
             data: Vec::new(),
             record: record.clone(),
             status: Status::ok(),

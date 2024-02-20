@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{HandlerError, MethodHandler, Reply, Status},
+    handlers::{HandlerError, MethodHandler, Reply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
@@ -14,7 +14,11 @@ pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D, M> {
-    async fn handle(&self, tenant: &str, message: Message) -> Result<Reply, HandlerError> {
+    async fn handle(
+        &self,
+        tenant: &str,
+        message: Message,
+    ) -> Result<impl Into<Reply>, HandlerError> {
         message.verify_auth().await?;
 
         let entry_id = message.generate_record_id()?;
@@ -37,7 +41,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
         if entry_id == message.record_id {
             if initial_entry.is_some() {
                 // Initial entry already exists, cease processing.
-                return Ok(Reply::Status {
+                return Ok(StatusReply {
                     status: Status::ok(),
                 });
             } else {
@@ -133,7 +137,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 self.message_store.put(tenant, message).await?;
             } else {
                 // Cease processing.
-                return Ok(Reply::Status {
+                return Ok(StatusReply {
                     status: Status::ok(),
                 });
             }
@@ -141,7 +145,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
         // TODO: Store data
 
-        Ok(Reply::Status {
+        Ok(StatusReply {
             status: Status::ok(),
         })
     }
@@ -219,7 +223,7 @@ mod tests {
         assert!(messages.is_ok());
 
         let entries = match messages.unwrap() {
-            Reply::RecordsQuery { entries, .. } => entries,
+            Reply::RecordsQuery(reply) => reply.entries,
             _ => panic!("Unexpected reply"),
         };
 

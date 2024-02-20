@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    handlers::{HandlerError, MethodHandler, Reply, Status},
+    handlers::{HandlerError, MethodHandler, Reply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
@@ -15,7 +15,11 @@ pub struct RecordsCommitHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D, M> {
-    async fn handle(&self, tenant: &str, message: Message) -> Result<Reply, HandlerError> {
+    async fn handle(
+        &self,
+        tenant: &str,
+        message: Message,
+    ) -> Result<impl Into<Reply>, HandlerError> {
         message.verify_auth().await?;
 
         let descriptor = match &message.descriptor {
@@ -96,7 +100,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
         // Store the message.
         self.message_store.put(tenant, message).await?;
 
-        Ok(Reply::Status {
+        Ok(StatusReply {
             status: Status::ok(),
         })
     }
