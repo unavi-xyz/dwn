@@ -38,7 +38,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
                 tenant,
                 Filter {
                     record_id: Some(message.record_id.clone()),
-                    date_sort: Some(FilterDateSort::PublishedDescending),
+                    date_sort: Some(FilterDateSort::CreatedDescending),
                     ..Default::default()
                 },
             )
@@ -48,7 +48,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
             .iter()
             .find(|m| matches!(m.descriptor, Descriptor::RecordsWrite(_)))
             .ok_or(HandlerError::InvalidDescriptor(
-                "No active RecordsWrite message found".to_string(),
+                "No active RecordsWrite message found for record".to_string(),
             ))?;
 
         // TODO: Ensure immutable values from inital entry are not changed.

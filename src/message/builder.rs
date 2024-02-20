@@ -4,12 +4,16 @@ use time::OffsetDateTime;
 
 use crate::util::EncodeError;
 
-use super::{descriptor::Descriptor, AuthError, Data, Message};
+use super::{
+    descriptor::{Descriptor, RecordsCommit},
+    AuthError, Data, Message,
+};
 
 pub struct MessageBuilder<'a> {
+    authorizer: Option<(String, &'a JWK)>,
     data: Option<Data>,
     descriptor: Descriptor,
-    authorizer: Option<(String, &'a JWK)>,
+    record_id: Option<String>,
 }
 
 #[derive(Debug, Error)]
@@ -26,12 +30,20 @@ impl<'a> MessageBuilder<'a> {
             authorizer: None,
             data: None,
             descriptor: descriptor.into(),
+            record_id: None,
         }
     }
 
-    pub fn data(mut self, data: Data) -> Self {
-        self.data = Some(data);
-        self
+    /// Create a new RecordsCommit message for a given parent message.
+    pub fn new_commit(parent: &Message) -> Result<Self, EncodeError> {
+        let entry_id = parent.generate_record_id()?;
+
+        Ok(MessageBuilder {
+            authorizer: None,
+            data: None,
+            descriptor: RecordsCommit::new(entry_id).into(),
+            record_id: Some(parent.record_id.clone()),
+        })
     }
 
     pub fn authorize(mut self, kid: String, jwk: &'a JWK) -> Self {
@@ -39,13 +51,25 @@ impl<'a> MessageBuilder<'a> {
         self
     }
 
+    pub fn data(mut self, data: Data) -> Self {
+        self.data = Some(data);
+        self
+    }
+
+    /// Sets the record ID for the message.
+    /// If None, the record ID will be automatically generated from the message.
+    pub fn record_id(mut self, record_id: Option<String>) -> Self {
+        self.record_id = record_id;
+        self
+    }
+
     pub fn build(self) -> Result<Message, MessageBuildError> {
         let mut msg = Message {
-            data: self.data,
-            descriptor: self.descriptor,
             attestation: None,
             authorization: None,
-            record_id: String::new(),
+            data: self.data,
+            descriptor: self.descriptor,
+            record_id: self.record_id.unwrap_or_default(),
         };
 
         let timestamp = OffsetDateTime::now_utc();
@@ -74,7 +98,9 @@ impl<'a> MessageBuilder<'a> {
             _ => {}
         }
 
-        msg.record_id = msg.generate_record_id()?;
+        if msg.record_id.is_empty() {
+            msg.record_id = msg.generate_record_id()?;
+        }
 
         if let Some((kid, jwk)) = self.authorizer {
             msg.authorize(kid, jwk)?;

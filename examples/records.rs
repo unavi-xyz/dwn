@@ -1,8 +1,9 @@
 use dwn::{
+    handlers::Reply,
     message::{
         builder::MessageBuilder,
         data::Data,
-        descriptor::{Filter, RecordsCommit, RecordsQuery, RecordsWrite},
+        descriptor::{Filter, RecordsQuery, RecordsWrite},
     },
     store::SurrealDB,
     util::DidKey,
@@ -39,7 +40,7 @@ async fn main() {
         .await
         .expect("Failed to handle message");
 
-    info!("RecordsWrite reply: {:?}", reply);
+    info!("RecordsWrite status: {:?}", reply.status());
 
     // Write to and update the record.
     {
@@ -49,28 +50,25 @@ async fn main() {
             .build()
             .expect("Failed to build message");
 
-        let entry_id = message2
-            .generate_record_id()
-            .expect("Failed to generate record ID");
+        let message3 = MessageBuilder::new_commit(&message2)
+            .expect("Failed to create commit message")
+            .authorize(did_key.kid.clone(), &did_key.jwk)
+            .build()
+            .expect("Failed to build message");
 
         let reply = dwn
             .process_message(&did_key.did, message2)
             .await
             .expect("Failed to handle message");
 
-        info!("RecordsWrite reply: {:?}", reply);
-
-        let message3 = MessageBuilder::new(RecordsCommit::new(entry_id))
-            .authorize(did_key.kid.clone(), &did_key.jwk)
-            .build()
-            .expect("Failed to build message");
+        info!("RecordsWrite status: {:?}", reply.status());
 
         let reply = dwn
             .process_message(&did_key.did, message3)
             .await
             .expect("Failed to handle message");
 
-        info!("RecordsCommit reply: {:?}", reply);
+        info!("RecordsCommit status: {:?}", reply.status());
     }
 
     // Read the record.
@@ -92,6 +90,15 @@ async fn main() {
             .await
             .expect("Failed to handle message");
 
-        info!("RecordsQuery reply: {:#?}", reply);
+        let reply = match reply {
+            Reply::RecordsQuery(reply) => reply,
+            _ => panic!("Unexpected reply"),
+        };
+
+        info!(
+            "RecordsQuery status: {:?}, num entries: {:?}",
+            reply.status,
+            reply.entries.len()
+        );
     }
 }
