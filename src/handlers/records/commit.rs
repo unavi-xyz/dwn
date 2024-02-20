@@ -179,4 +179,54 @@ mod tests {
             assert!(reply.is_ok());
         }
     }
+
+    #[tokio::test]
+    async fn requires_valid_parent() {
+        let dwn = create_dwn().await;
+        let did_key = DidKey::new().expect("Failed to generate DID key");
+
+        // Write a record.
+        let message1 = MessageBuilder::new(RecordsWrite::default())
+            .authorize(did_key.kid.clone(), &did_key.jwk)
+            .data(Data::Base64("Hello, world!".to_string()))
+            .build()
+            .expect("Failed to build message");
+
+        let reply = dwn.process_message(&did_key.did, message1.clone()).await;
+        assert!(reply.is_ok());
+
+        // Commit with missing parent.
+        {
+            let message2 = MessageBuilder::new(RecordsCommit::new("missing_parent".to_string()))
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message2).await;
+            assert!(reply.is_err());
+        }
+
+        // Commit with parent for different record.
+        {
+            let message2 = MessageBuilder::new(RecordsWrite::default())
+                .authorize(did_key.kid.clone(), &did_key.jwk)
+                .data(Data::Base64("Goodbye, world!".to_string()))
+                .build()
+                .expect("Failed to build message");
+
+            let reply = dwn.process_message(&did_key.did, message2.clone()).await;
+            assert!(reply.is_ok());
+
+            let mut message3 = MessageBuilder::new_commit(&message2)
+                .expect("Failed to create commit message")
+                .authorize(did_key.kid, &did_key.jwk)
+                .build()
+                .expect("Failed to build message");
+
+            message3.record_id = message1.record_id.clone();
+
+            let reply = dwn.process_message(&did_key.did, message3).await;
+            assert!(reply.is_err());
+        }
+    }
 }

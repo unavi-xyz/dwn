@@ -157,7 +157,7 @@ mod tests {
         handlers::Reply,
         message::{
             builder::MessageBuilder,
-            descriptor::{Descriptor, Filter, RecordsQuery, RecordsWrite},
+            descriptor::{Filter, RecordsQuery, RecordsWrite},
         },
         tests::create_dwn,
         util::DidKey,
@@ -191,68 +191,45 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn initial_entry() {
+    async fn duplicate_initial_entry() {
         let dwn = create_dwn().await;
         let did_key = DidKey::new().expect("Failed to generate DID key");
 
-        // Create initial entry
-        {
-            let message = MessageBuilder::new(RecordsWrite::default())
-                .authorize(did_key.kid.clone(), &did_key.jwk)
-                .build()
-                .expect("Failed to build message");
+        let message1 = MessageBuilder::new(RecordsWrite::default())
+            .authorize(did_key.kid.clone(), &did_key.jwk)
+            .build()
+            .expect("Failed to build message");
 
-            let reply = dwn.process_message(&did_key.did, message).await;
-            assert!(reply.is_ok());
-        }
+        // Create initial entry.
+        let reply = dwn.process_message(&did_key.did, message1.clone()).await;
+        assert!(reply.is_ok());
 
-        // Succeeds with same entry, but doesn't write
-        {
-            let message1 = MessageBuilder::new(RecordsWrite::default())
-                .authorize(did_key.kid.clone(), &did_key.jwk)
-                .build()
-                .expect("Failed to build message");
+        // Create duplicate entry.
+        let reply = dwn.process_message(&did_key.did, message1.clone()).await;
+        assert!(reply.is_ok());
 
-            let reply = dwn.process_message(&did_key.did, message1.clone()).await;
-            assert!(reply.is_ok());
+        // Ensure only one entry exists
+        let query = RecordsQuery::new(Filter {
+            record_id: Some(message1.record_id.clone()),
+            ..Default::default()
+        });
 
-            // Ensure only initial entry exists
-            let mut query = RecordsQuery::default();
-            query.filter = Some(Filter {
-                record_id: Some(message1.record_id.clone()),
-                ..Default::default()
-            });
+        let message2 = MessageBuilder::new(query)
+            .authorize(did_key.kid, &did_key.jwk)
+            .build()
+            .expect("Failed to build message");
 
-            let message2 = MessageBuilder::new(query)
-                .authorize(did_key.kid, &did_key.jwk)
-                .build()
-                .expect("Failed to build message");
+        let messages = dwn.process_message(&did_key.did, message2).await;
+        assert!(messages.is_ok());
 
-            let messages = dwn.process_message(&did_key.did, message2).await;
-            assert!(messages.is_ok());
+        let reply = match messages.unwrap() {
+            Reply::RecordsQuery(reply) => reply,
+            _ => panic!("Unexpected reply"),
+        };
 
-            let reply = match messages.unwrap() {
-                Reply::RecordsQuery(reply) => reply,
-                _ => panic!("Unexpected reply"),
-            };
+        assert_eq!(reply.entries.len(), 1);
 
-            assert_eq!(reply.entries.len(), 1);
-
-            let entry = &reply.entries[0];
-            let entry_descriptor = match &entry.descriptor {
-                Descriptor::RecordsWrite(desc) => desc,
-                _ => panic!("Unexpected descriptor"),
-            };
-
-            let descriptor1 = match &message1.descriptor {
-                Descriptor::RecordsWrite(desc) => desc,
-                _ => panic!("Unexpected descriptor"),
-            };
-
-            assert_eq!(
-                entry_descriptor.message_timestamp,
-                descriptor1.message_timestamp
-            );
-        }
+        let entry = &reply.entries[0];
+        assert_eq!(*entry, message1);
     }
 }
