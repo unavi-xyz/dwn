@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{HandlerError, MethodHandler, RecordsQueryReply, Reply, Status},
+    handlers::{HandlerError, MethodHandler, Reply, Status},
     message::{descriptor::Descriptor, Message},
     store::{DataStore, MessageStore},
 };
@@ -10,11 +10,7 @@ pub struct RecordsQueryHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsQueryHandler<'_, D, M> {
-    async fn handle(
-        &self,
-        tenant: &str,
-        message: Message,
-    ) -> Result<impl Into<Reply>, HandlerError> {
+    async fn handle(&self, tenant: &str, message: Message) -> Result<Reply, HandlerError> {
         let filter = match message.descriptor {
             Descriptor::RecordsQuery(descriptor) => descriptor.filter,
             _ => {
@@ -29,7 +25,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsQueryHandler<'_, D,
             .query(tenant, filter.unwrap_or_default())
             .await?;
 
-        Ok(RecordsQueryReply {
+        Ok(Reply::RecordsQuery {
             entries,
             status: Status::ok(),
         })
@@ -97,7 +93,7 @@ mod tests {
         assert_eq!(reply.status().code, 200);
 
         let entries = match reply {
-            Reply::RecordsQuery(reply) => reply.entries,
+            Reply::RecordsQuery { entries, .. } => entries,
             _ => panic!("Unexpected reply"),
         };
 
@@ -120,7 +116,7 @@ mod tests {
         assert_eq!(reply.status().code, 200);
 
         let entries = match reply {
-            Reply::RecordsQuery(reply) => reply.entries,
+            Reply::RecordsQuery { entries, .. } => entries,
             _ => panic!("Unexpected reply"),
         };
 

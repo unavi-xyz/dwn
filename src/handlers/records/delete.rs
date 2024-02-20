@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{HandlerError, MethodHandler, Reply, Status, StatusReply},
+    handlers::{HandlerError, MethodHandler, Reply, Status},
     message::Message,
     store::{DataStore, MessageStore},
 };
@@ -10,12 +10,8 @@ pub struct RecordsDeleteHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D, M> {
-    async fn handle(
-        &self,
-        _tenant: &str,
-        _message: Message,
-    ) -> Result<impl Into<Reply>, HandlerError> {
-        Ok(StatusReply {
+    async fn handle(&self, _tenant: &str, _message: Message) -> Result<Reply, HandlerError> {
+        Ok(Reply::Status {
             status: Status::ok(),
         })
     }

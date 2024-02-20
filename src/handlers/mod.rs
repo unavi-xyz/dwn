@@ -31,7 +31,7 @@ pub trait MethodHandler {
         &self,
         tenant: &str,
         message: Message,
-    ) -> impl Future<Output = Result<impl Into<Reply>, HandlerError>>;
+    ) -> impl Future<Output = Result<Reply, HandlerError>>;
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -58,38 +58,26 @@ impl Status {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Reply {
-    RecordsQuery(RecordsQueryReply),
-    StatusReply(StatusReply),
+    RecordsQuery {
+        entries: Vec<Message>,
+        status: Status,
+    },
+    RecordsRead {
+        data: Vec<u8>,
+        record: Message,
+        status: Status,
+    },
+    Status {
+        status: Status,
+    },
 }
 
 impl Reply {
     pub fn status(&self) -> &Status {
         match self {
-            Reply::RecordsQuery(reply) => &reply.status,
-            Reply::StatusReply(reply) => &reply.status,
+            Reply::RecordsQuery { status, .. } => status,
+            Reply::RecordsRead { status, .. } => status,
+            Reply::Status { status } => status,
         }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct StatusReply {
-    pub status: Status,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct RecordsQueryReply {
-    pub entries: Vec<Message>,
-    pub status: Status,
-}
-
-impl From<RecordsQueryReply> for Reply {
-    fn from(val: RecordsQueryReply) -> Self {
-        Reply::RecordsQuery(val)
-    }
-}
-
-impl From<StatusReply> for Reply {
-    fn from(val: StatusReply) -> Self {
-        Reply::StatusReply(val)
     }
 }

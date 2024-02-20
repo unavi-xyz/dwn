@@ -1,6 +1,9 @@
 use crate::{
-    handlers::{HandlerError, MethodHandler, Reply, Status, StatusReply},
-    message::Message,
+    handlers::{HandlerError, MethodHandler, Reply, Status},
+    message::{
+        descriptor::{Descriptor, Filter, FilterDateSort},
+        Message,
+    },
     store::{DataStore, MessageStore},
 };
 
@@ -10,12 +13,40 @@ pub struct RecordsReadHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, M> {
-    async fn handle(
-        &self,
-        _tenant: &str,
-        _message: Message,
-    ) -> Result<impl Into<Reply>, HandlerError> {
-        Ok(StatusReply {
+    async fn handle(&self, tenant: &str, message: Message) -> Result<Reply, HandlerError> {
+        let messages = self
+            .message_store
+            .query(
+                tenant,
+                Filter {
+                    record_id: Some(message.record_id),
+                    date_sort: Some(FilterDateSort::CreatedDescending),
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        // Get the latest commit or delete message.
+        let latest_commit_or_delete = messages.iter().find(|m| {
+            matches!(
+                m.descriptor,
+                Descriptor::RecordsCommit(_) | Descriptor::RecordsDelete(_)
+            )
+        });
+
+        // If no message was found, use the initial entry.
+        let record =
+            latest_commit_or_delete
+                .or(messages.last())
+                .ok_or(HandlerError::InvalidDescriptor(
+                    "Record not found".to_string(),
+                ))?;
+
+        // TODO: Get data from data store.
+
+        Ok(Reply::RecordsRead {
+            data: Vec::new(),
+            record: record.clone(),
             status: Status::ok(),
         })
     }

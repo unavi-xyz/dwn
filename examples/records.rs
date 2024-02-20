@@ -76,7 +76,7 @@ async fn main() {
         // TODO
     }
 
-    // Query messages.
+    // Query all messages.
     {
         let message4 = MessageBuilder::new(RecordsQuery::new(Filter {
             attester: Some(did_key.did.clone()),
@@ -90,15 +90,15 @@ async fn main() {
             .await
             .expect("Failed to handle message");
 
-        let reply = match reply {
-            Reply::RecordsQuery(reply) => reply,
+        match reply {
+            Reply::RecordsQuery { entries, status } => {
+                info!(
+                    "RecordsQuery status: {:?}, num entries: {:?}",
+                    status,
+                    entries.len()
+                );
+            }
             _ => panic!("Unexpected reply"),
         };
-
-        info!(
-            "RecordsQuery status: {:?}, num entries: {:?}",
-            reply.status,
-            reply.entries.len()
-        );
     }
 }
