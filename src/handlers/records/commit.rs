@@ -195,7 +195,7 @@ mod tests {
         let reply = dwn.process_message(&did_key.did, message1.clone()).await;
         assert!(reply.is_ok());
 
-        // Commit with missing parent.
+        // Fails with missing parent.
         {
             let message2 = MessageBuilder::new(RecordsCommit::new("missing_parent".to_string()))
                 .authorize(did_key.kid.clone(), &did_key.jwk)
@@ -206,7 +206,7 @@ mod tests {
             assert!(reply.is_err());
         }
 
-        // Commit with parent for different record.
+        // Fails with parent for different record.
         {
             let message2 = MessageBuilder::new(RecordsWrite::default())
                 .authorize(did_key.kid.clone(), &did_key.jwk)
