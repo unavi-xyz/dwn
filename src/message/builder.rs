@@ -71,6 +71,7 @@ impl<'a> MessageBuilder<'a> {
             Descriptor::RecordsQuery(desc) => {
                 desc.message_timestamp = timestamp;
             }
+            _ => {}
         }
 
         msg.record_id = msg.generate_record_id()?;

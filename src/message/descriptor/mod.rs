@@ -39,39 +39,45 @@ pub enum Encryption {
 #[derive(Clone, Debug, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum Descriptor {
-    RecordsRead(records::RecordsRead),
-    RecordsQuery(records::RecordsQuery),
-    RecordsWrite(records::RecordsWrite),
-    RecordsCommit(records::RecordsCommit),
-    RecordsDelete(records::RecordsDelete),
+    PermissionsGrant,
+    PermissionsQuery,
+    PermissionsRequest,
+    PermissionsRevoke,
+    ProtocolsConfigure,
+    ProtocolsQuery,
+    RecordsCommit(RecordsCommit),
+    RecordsDelete(RecordsDelete),
+    RecordsQuery(RecordsQuery),
+    RecordsRead(RecordsRead),
+    RecordsWrite(RecordsWrite),
 }
 
-impl From<records::RecordsRead> for Descriptor {
-    fn from(desc: records::RecordsRead) -> Self {
+impl From<RecordsRead> for Descriptor {
+    fn from(desc: RecordsRead) -> Self {
         Descriptor::RecordsRead(desc)
     }
 }
 
-impl From<records::RecordsQuery> for Descriptor {
-    fn from(desc: records::RecordsQuery) -> Self {
+impl From<RecordsQuery> for Descriptor {
+    fn from(desc: RecordsQuery) -> Self {
         Descriptor::RecordsQuery(desc)
     }
 }
 
-impl From<records::RecordsWrite> for Descriptor {
-    fn from(desc: records::RecordsWrite) -> Self {
+impl From<RecordsWrite> for Descriptor {
+    fn from(desc: RecordsWrite) -> Self {
         Descriptor::RecordsWrite(desc)
     }
 }
 
-impl From<records::RecordsCommit> for Descriptor {
-    fn from(desc: records::RecordsCommit) -> Self {
+impl From<RecordsCommit> for Descriptor {
+    fn from(desc: RecordsCommit) -> Self {
         Descriptor::RecordsCommit(desc)
     }
 }
 
-impl From<records::RecordsDelete> for Descriptor {
-    fn from(desc: records::RecordsDelete) -> Self {
+impl From<RecordsDelete> for Descriptor {
+    fn from(desc: RecordsDelete) -> Self {
         Descriptor::RecordsDelete(desc)
     }
 }
@@ -103,31 +109,31 @@ impl<'de> Deserialize<'de> for Descriptor {
             ("Records", "Read") => Ok(Descriptor::RecordsRead(
                 serde_json::from_value(json).unwrap_or_else(|e| {
                     warn!("Failed to deserialize RecordsRead: {}", e);
-                    records::RecordsRead::default()
+                    RecordsRead::default()
                 }),
             )),
             ("Records", "Query") => Ok(Descriptor::RecordsQuery(
                 serde_json::from_value(json).unwrap_or_else(|e| {
                     warn!("Failed to deserialize RecordsQuery: {}", e);
-                    records::RecordsQuery::default()
+                    RecordsQuery::default()
                 }),
             )),
             ("Records", "Write") => Ok(Descriptor::RecordsWrite(
                 serde_json::from_value(json).unwrap_or_else(|e| {
                     warn!("Failed to deserialize RecordsWrite: {}", e);
-                    records::RecordsWrite::default()
+                    RecordsWrite::default()
                 }),
             )),
             ("Records", "Commit") => Ok(Descriptor::RecordsCommit(
                 serde_json::from_value(json).unwrap_or_else(|e| {
                     warn!("Failed to deserialize RecordsCommit: {}", e);
-                    records::RecordsCommit::default()
+                    RecordsCommit::default()
                 }),
             )),
             ("Records", "Delete") => Ok(Descriptor::RecordsDelete(
                 serde_json::from_value(json).unwrap_or_else(|e| {
                     warn!("Failed to deserialize RecordsDelete: {}", e);
-                    records::RecordsDelete::default()
+                    RecordsDelete::default()
                 }),
             )),
             _ => {
@@ -146,11 +152,11 @@ mod tests {
 
     fn default_descriptors() -> Vec<Descriptor> {
         vec![
-            Descriptor::RecordsCommit(records::RecordsCommit::default()),
-            Descriptor::RecordsDelete(records::RecordsDelete::default()),
-            Descriptor::RecordsQuery(records::RecordsQuery::default()),
-            Descriptor::RecordsRead(records::RecordsRead::default()),
-            Descriptor::RecordsWrite(records::RecordsWrite::default()),
+            Descriptor::RecordsCommit(RecordsCommit::default()),
+            Descriptor::RecordsDelete(RecordsDelete::default()),
+            Descriptor::RecordsQuery(RecordsQuery::default()),
+            Descriptor::RecordsRead(RecordsRead::default()),
+            Descriptor::RecordsWrite(RecordsWrite::default()),
         ]
     }
 

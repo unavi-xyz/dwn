@@ -1,5 +1,8 @@
 use handlers::{
-    records::{query::RecordsQueryHandler, write::RecordsWriteHandler},
+    records::{
+        commit::RecordsCommitHandler, delete::RecordsDeleteHandler, query::RecordsQueryHandler,
+        read::RecordsReadHandler, write::RecordsWriteHandler,
+    },
     HandlerError, MethodHandler, Reply,
 };
 use message::{descriptor::Descriptor, Message};
@@ -31,8 +34,16 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         message: Message,
     ) -> Result<Reply, HandleMessageError> {
         match &message.descriptor {
-            Descriptor::RecordsWrite(_) => {
-                let handler = RecordsWriteHandler {
+            Descriptor::RecordsCommit(_) => {
+                let handler = RecordsCommitHandler {
+                    data_store: &self.data_store,
+                    message_store: &self.message_store,
+                };
+                let reply = handler.handle(tenant, message).await?;
+                Ok(reply.into())
+            }
+            Descriptor::RecordsDelete(_) => {
+                let handler = RecordsDeleteHandler {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
@@ -41,6 +52,22 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             }
             Descriptor::RecordsQuery(_) => {
                 let handler = RecordsQueryHandler {
+                    data_store: &self.data_store,
+                    message_store: &self.message_store,
+                };
+                let reply = handler.handle(tenant, message).await?;
+                Ok(reply.into())
+            }
+            Descriptor::RecordsRead(_) => {
+                let handler = RecordsReadHandler {
+                    data_store: &self.data_store,
+                    message_store: &self.message_store,
+                };
+                let reply = handler.handle(tenant, message).await?;
+                Ok(reply.into())
+            }
+            Descriptor::RecordsWrite(_) => {
+                let handler = RecordsWriteHandler {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
