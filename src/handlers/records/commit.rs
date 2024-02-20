@@ -169,7 +169,8 @@ mod tests {
             assert!(reply.is_ok());
 
             // Commit the record.
-            let message2 = MessageBuilder::new(RecordsCommit::new(message1.record_id))
+            let message2 = MessageBuilder::new_commit(&message1)
+                .expect("Failed to create commit message")
                 .authorize(did_key.kid, &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
