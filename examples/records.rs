@@ -1,7 +1,8 @@
 use dwn::{
     message::{
         builder::MessageBuilder,
-        descriptor::{Filter, RecordsQuery, RecordsWrite},
+        data::Data,
+        descriptor::{Filter, RecordsCommit, RecordsQuery, RecordsWrite},
     },
     store::SurrealDB,
     util::DidKey,
@@ -26,35 +27,68 @@ async fn main() {
     let did_key = DidKey::new().expect("Failed to generate DID key");
     info!("DID: {}", did_key.did);
 
-    // Write a record.
+    // Create a record.
+    let message1 = MessageBuilder::new(RecordsWrite::default())
+        .authorize(did_key.kid.clone(), &did_key.jwk)
+        .data(Data::Base64("Hello, world!".to_string()))
+        .build()
+        .expect("Failed to build message");
+
+    let reply = dwn
+        .process_message(&did_key.did, message1)
+        .await
+        .expect("Failed to handle message");
+
+    info!("RecordsWrite reply: {:?}", reply);
+
+    // Write to and update the record.
     {
-        let message = MessageBuilder::new(RecordsWrite::default())
-            .authorize(did_key.kid, &did_key.jwk)
+        let message2 = MessageBuilder::new(RecordsWrite::default())
+            .authorize(did_key.kid.clone(), &did_key.jwk)
+            .data(Data::Base64("Goodbye, world!".to_string()))
             .build()
             .expect("Failed to build message");
 
-        // Process the message.
+        let entry_id = message2
+            .generate_record_id()
+            .expect("Failed to generate record ID");
+
         let reply = dwn
-            .process_message(&did_key.did, message)
+            .process_message(&did_key.did, message2)
             .await
             .expect("Failed to handle message");
 
         info!("RecordsWrite reply: {:?}", reply);
+
+        let message3 = MessageBuilder::new(RecordsCommit::new(entry_id))
+            .authorize(did_key.kid.clone(), &did_key.jwk)
+            .build()
+            .expect("Failed to build message");
+
+        let reply = dwn
+            .process_message(&did_key.did, message3)
+            .await
+            .expect("Failed to handle message");
+
+        info!("RecordsCommit reply: {:?}", reply);
     }
 
-    // Query the records.
+    // Read the record.
     {
-        // Filter the query to only include records authored by our DID.
-        let message = MessageBuilder::new(RecordsQuery::new(Filter {
+        // TODO
+    }
+
+    // Query messages.
+    {
+        let message4 = MessageBuilder::new(RecordsQuery::new(Filter {
             attester: Some(did_key.did.clone()),
             ..Default::default()
         }))
         .build()
         .expect("Failed to build message");
 
-        // Process the message.
         let reply = dwn
-            .process_message(&did_key.did, message)
+            .process_message(&did_key.did, message4)
             .await
             .expect("Failed to handle message");
 
