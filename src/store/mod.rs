@@ -209,7 +209,10 @@ mod tests {
     pub mod message {
         use super::*;
         use crate::{
-            message::{builder::MessageBuilder, descriptor::RecordsWrite},
+            message::{
+                builder::MessageBuilder,
+                descriptor::{FilterDateSort, RecordsWrite},
+            },
             util::DidKey,
         };
 
@@ -377,6 +380,65 @@ mod tests {
 
                 assert_eq!(got.len(), 1);
                 assert_eq!(got[0], message1);
+            }
+
+            // Query sort filter
+            {
+                let filter = Filter {
+                    date_sort: Some(FilterDateSort::CreatedDescending),
+                    ..Default::default()
+                };
+
+                let got = store
+                    .query(&did_key.did, filter)
+                    .await
+                    .expect("Failed to query messages");
+
+                assert_eq!(got.len(), 2);
+                assert_eq!(got[0], message2);
+                assert_eq!(got[1], message1);
+
+                let filter = Filter {
+                    date_sort: Some(FilterDateSort::CreatedAscending),
+                    ..Default::default()
+                };
+
+                let got = store
+                    .query(&did_key.did, filter)
+                    .await
+                    .expect("Failed to query messages");
+
+                assert_eq!(got.len(), 2);
+                assert_eq!(got[0], message1);
+                assert_eq!(got[1], message2);
+
+                let filter = Filter {
+                    date_sort: Some(FilterDateSort::PublishedAscending),
+                    ..Default::default()
+                };
+
+                let got = store
+                    .query(&did_key.did, filter)
+                    .await
+                    .expect("Failed to query messages");
+
+                assert_eq!(got.len(), 2);
+                assert_eq!(got[0], message1);
+                assert_eq!(got[1], message2);
+
+                let filter = Filter {
+                    date_sort: Some(FilterDateSort::PublishedDescending),
+                    ..Default::default()
+                };
+
+                let got = store
+                    .query(&did_key.did, filter)
+                    .await
+                    .expect("Failed to query messages");
+
+                assert_eq!(got.len(), 2);
+                assert_eq!(got[0], message2);
+                assert_eq!(got[1], message1);
             }
         }
     }

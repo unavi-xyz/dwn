@@ -5,7 +5,7 @@ use time::OffsetDateTime;
 
 use crate::{
     message::{
-        descriptor::{Descriptor, Filter},
+        descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
     },
     store::{MessageStore, MessageStoreError},
@@ -66,14 +66,20 @@ impl MessageStore for SurrealDB {
         let record_id = message.record_id.clone();
 
         let date_created = match &message.descriptor {
+            Descriptor::RecordsCommit(desc) => Some(desc.message_timestamp),
+            Descriptor::RecordsDelete(desc) => Some(desc.message_timestamp),
             Descriptor::RecordsWrite(desc) => Some(desc.message_timestamp),
             _ => None,
         };
+
+        let date_created = date_created.unwrap_or_else(OffsetDateTime::now_utc);
 
         let date_published = match &message.descriptor {
             Descriptor::RecordsWrite(desc) => desc.date_published,
             _ => None,
         };
+
+        let date_published = date_published.unwrap_or_else(OffsetDateTime::now_utc);
 
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
@@ -115,9 +121,26 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        let db_messages: Vec<DbMessage> = res
+        let mut db_messages: Vec<DbMessage> = res
             .take(0)
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+        if let Some(sort) = filter.date_sort {
+            match sort {
+                FilterDateSort::CreatedAscending => {
+                    db_messages.sort_by(|a, b| a.date_created.cmp(&b.date_created));
+                }
+                FilterDateSort::CreatedDescending => {
+                    db_messages.sort_by(|a, b| b.date_created.cmp(&a.date_created));
+                }
+                FilterDateSort::PublishedAscending => {
+                    db_messages.sort_by(|a, b| a.date_published.cmp(&b.date_published));
+                }
+                FilterDateSort::PublishedDescending => {
+                    db_messages.sort_by(|a, b| b.date_published.cmp(&a.date_published));
+                }
+            }
+        }
 
         Ok(db_messages
             .into_iter()
@@ -128,8 +151,8 @@ impl MessageStore for SurrealDB {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
-    date_created: Option<OffsetDateTime>,
-    date_published: Option<OffsetDateTime>,
+    date_created: OffsetDateTime,
+    date_published: OffsetDateTime,
     message: Message,
     record_id: String,
 }
