@@ -58,6 +58,9 @@ impl<'a> MessageBuilder<'a> {
             Descriptor::RecordsWrite(desc) => desc.parent_id = Some(parent_id),
             _ => {}
         }
+
+        self.record_id = Some(parent.record_id.clone());
+
         self
     }
 
