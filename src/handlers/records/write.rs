@@ -46,7 +46,9 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 });
             } else {
                 // Store message as initial entry.
-                self.message_store.put(tenant, message).await?;
+                self.message_store
+                    .put(tenant, message, self.data_store)
+                    .await?;
             }
         } else {
             let initial_entry = initial_entry.ok_or(HandlerError::InvalidDescriptor(
@@ -109,7 +111,9 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
             if existing_writes.is_empty() {
                 // Store message as new entry.
-                self.message_store.put(tenant, message).await?;
+                self.message_store
+                    .put(tenant, message, self.data_store)
+                    .await?;
             } else if existing_writes.iter().all(|m| {
                 let m_timestamp = match &m.descriptor {
                     Descriptor::RecordsWrite(desc) => desc.message_timestamp,
@@ -129,12 +133,14 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 for m in existing_writes {
                     let cbor = encode_cbor(&m)?;
                     self.message_store
-                        .delete(tenant, cbor.cid().to_string())
+                        .delete(tenant, cbor.cid().to_string(), self.data_store)
                         .await?;
                 }
 
                 // Store message as new entry.
-                self.message_store.put(tenant, message).await?;
+                self.message_store
+                    .put(tenant, message, self.data_store)
+                    .await?;
             } else {
                 // Cease processing.
                 return Ok(StatusReply {

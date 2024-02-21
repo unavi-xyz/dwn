@@ -6,17 +6,18 @@ use crate::store::{DataStore, DataStoreError, GetDataResults, PutDataResults};
 
 use super::SurrealDB;
 
-const CID_TABLE_NAME: &str = "cid";
+const DATA_TABLE_NAME: &str = "data";
 
 impl DataStore for SurrealDB {
     async fn delete(&self, cid: &Cid) -> Result<(), DataStoreError> {
+        let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
+
         let id = Thing::from((
-            Table::from(CID_TABLE_NAME).to_string(),
+            Table::from(DATA_TABLE_NAME).to_string(),
             Id::String(cid.to_string()),
         ));
 
-        self.db
-            .delete::<Option<DbData>>(id)
+        db.delete::<Option<DbData>>(id)
             .await
             .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
 
@@ -24,13 +25,14 @@ impl DataStore for SurrealDB {
     }
 
     async fn get(&self, cid: &Cid) -> Result<Option<GetDataResults>, DataStoreError> {
+        let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
+
         let id = Thing::from((
-            Table::from(CID_TABLE_NAME).to_string(),
+            Table::from(DATA_TABLE_NAME).to_string(),
             Id::String(cid.to_string()),
         ));
 
-        let res: DbData = match self
-            .db
+        let res: DbData = match db
             .select(id)
             .await
             .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?
@@ -49,7 +51,7 @@ impl DataStore for SurrealDB {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
         let id = Thing::from((
-            Table::from(CID_TABLE_NAME).to_string(),
+            Table::from(DATA_TABLE_NAME).to_string(),
             Id::String(cid.to_string()),
         ));
 

@@ -8,33 +8,90 @@ use crate::{
         descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
     },
-    store::{MessageStore, MessageStoreError},
+    store::{DataStore, MessageStore, MessageStoreError},
     util::encode_cbor,
 };
 
 use super::SurrealDB;
 
+const DATA_REF_TABLE_NAME: &str = "data_cid_refs";
+
 impl MessageStore for SurrealDB {
-    async fn delete(&self, tenant: &str, cid: String) -> Result<(), MessageStoreError> {
+    async fn delete(
+        &self,
+        tenant: &str,
+        cid: String,
+        data_store: &impl DataStore,
+    ) -> Result<(), MessageStoreError> {
+        let db = self
+            .message_db()
+            .await
+            .map_err(MessageStoreError::BackendError)?;
+
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
 
-        let message: Option<DbMessage> = self
-            .db
+        let message: Option<DbMessage> = db
             .select(id.clone())
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        if message.is_some() {
-            self.db
-                .delete::<Option<DbMessage>>(id)
+        let message = match message {
+            Some(message) => message,
+            None => return Ok(()),
+        };
+
+        // Ensure the message belongs to the tenant.
+        if message.tenant != tenant {
+            return Err(MessageStoreError::NotFound);
+        }
+
+        // Delete the message.
+        db.delete::<Option<DbMessage>>(id)
+            .await
+            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+        if let Some(data) = message.message.data {
+            let data_cid = data.cid()?;
+
+            let id = Thing::from((
+                Table::from(DATA_REF_TABLE_NAME).to_string(),
+                Id::String(data_cid.to_string()),
+            ));
+
+            let db_data_ref: Option<DbDataCidRefs> = db
+                .select(id.clone())
                 .await
                 .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+            if let Some(db_data_ref) = db_data_ref {
+                if db_data_ref.ref_count > 1 {
+                    // Decrement the reference count for the data CID.
+                    db.update::<Option<DbDataCidRefs>>(id)
+                        .content(DbDataCidRefs {
+                            ref_count: db_data_ref.ref_count - 1,
+                        })
+                        .await
+                        .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                } else {
+                    // Delete the data.
+                    db.delete::<Option<DbDataCidRefs>>(id)
+                        .await
+                        .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+                    data_store.delete(&data_cid).await?;
+                }
+            }
         }
 
         Ok(())
     }
 
-    async fn get(&self, tenant: &str, cid: &str) -> Result<Message, MessageStoreError> {
+    async fn get(
+        &self,
+        tenant: &str,
+        cid: &str,
+        _data_store: &impl DataStore,
+    ) -> Result<Message, MessageStoreError> {
         let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid.to_string())));
 
         let db_message: DbMessage = self
@@ -47,21 +104,65 @@ impl MessageStore for SurrealDB {
         Ok(db_message.message)
     }
 
-    async fn put(&self, tenant: &str, mut message: Message) -> Result<Cid, MessageStoreError> {
+    async fn put(
+        &self,
+        tenant: &str,
+        mut message: Message,
+        data_store: &impl DataStore,
+    ) -> Result<Cid, MessageStoreError> {
+        let cbor = encode_cbor(&message)?;
+        let cid = cbor.cid();
+
+        // Store data.
+        if let Some(data) = message.data.take() {
+            let db = self
+                .message_db()
+                .await
+                .map_err(MessageStoreError::BackendError)?;
+
+            let data_cid = data.cid()?;
+
+            let id = Thing::from((
+                Table::from(DATA_REF_TABLE_NAME).to_string(),
+                Id::String(data_cid.to_string()),
+            ));
+
+            // Get the current data CID object.
+            let db_data_ref: Option<DbDataCidRefs> = db
+                .select(id.clone())
+                .await
+                .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+            if let Some(db_data_ref) = db_data_ref {
+                // Add one to the reference count.
+                db.update::<Option<DbDataCidRefs>>(id)
+                    .content(DbDataCidRefs {
+                        ref_count: db_data_ref.ref_count + 1,
+                    })
+                    .await
+                    .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+            } else {
+                // Create a new data CID object.
+                db.create::<Option<DbDataCidRefs>>(id)
+                    .content(DbDataCidRefs { ref_count: 1 })
+                    .await
+                    .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+
+                // Store data in the data store.
+                data_store.put(&data_cid, data.into()).await?;
+            }
+        }
+
         let db = self
             .message_db()
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let cbor = encode_cbor(&message)?;
-        let cid = cbor.cid();
-
+        // Store message.
         let id = Thing::from((
             Table::from(tenant.to_string()).to_string(),
             Id::String(cid.to_string()),
         ));
-
-        message.data = None;
 
         let record_id = message.record_id.clone();
 
@@ -87,6 +188,7 @@ impl MessageStore for SurrealDB {
                 date_published,
                 message,
                 record_id,
+                tenant: tenant.to_string(),
             })
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
@@ -150,9 +252,15 @@ impl MessageStore for SurrealDB {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct DbDataCidRefs {
+    ref_count: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
     date_created: OffsetDateTime,
     date_published: OffsetDateTime,
     message: Message,
     record_id: String,
+    tenant: String,
 }

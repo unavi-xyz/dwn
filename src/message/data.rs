@@ -30,6 +30,15 @@ impl Data {
     }
 }
 
+impl From<Data> for Vec<u8> {
+    fn from(data: Data) -> Vec<u8> {
+        match data {
+            Data::Base64(data) => data.as_bytes().to_vec(),
+            Data::Encrypted(_data) => todo!(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct EncryptedData {
     pub protected: String,

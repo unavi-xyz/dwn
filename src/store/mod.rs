@@ -76,6 +76,8 @@ pub enum MessageStoreError {
     CreateBlockError(anyhow::Error),
     #[error("Failed to interact with backend: {0}")]
     BackendError(anyhow::Error),
+    #[error("Failed to interact with data store: {0}")]
+    DataStoreError(#[from] DataStoreError),
 }
 
 pub trait MessageStore {
@@ -83,16 +85,19 @@ pub trait MessageStore {
         &self,
         tenant: &str,
         cid: String,
+        data_store: &impl DataStore,
     ) -> impl Future<Output = Result<(), MessageStoreError>>;
     fn get(
         &self,
         tenant: &str,
         cid: &str,
+        data_store: &impl DataStore,
     ) -> impl Future<Output = Result<Message, MessageStoreError>>;
     fn put(
         &self,
         tenant: &str,
         message: Message,
+        data_store: &impl DataStore,
     ) -> impl Future<Output = Result<Cid, MessageStoreError>>;
     fn query(
         &self,
@@ -217,6 +222,7 @@ mod tests {
         };
 
         pub async fn test_all_methods(store: impl MessageStore) {
+            let data_store = SurrealDB::new().await.expect("Failed to create data store");
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
             let message = MessageBuilder::new::<RecordsWrite>()
@@ -226,12 +232,12 @@ mod tests {
 
             // Test put and get
             let cid = store
-                .put(&did_key.did, message.clone())
+                .put(&did_key.did, message.clone(), &data_store)
                 .await
                 .expect("Failed to put message");
 
             let got = store
-                .get(&did_key.did, &cid.to_string())
+                .get(&did_key.did, &cid.to_string(), &data_store)
                 .await
                 .expect("Failed to get message");
 
@@ -253,31 +259,36 @@ mod tests {
 
             // Test delete
             store
-                .delete(&did_key.did, cid.to_string())
+                .delete(&did_key.did, cid.to_string(), &data_store)
                 .await
                 .expect("Failed to delete message");
 
-            let got = store.get(&did_key.did, &cid.to_string()).await;
+            let got = store.get(&did_key.did, &cid.to_string(), &data_store).await;
 
             assert!(got.is_err());
         }
 
         pub async fn test_get_missing(store: impl MessageStore) {
+            let data_store = SurrealDB::new().await.expect("Failed to create data store");
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let got = store.get(&did_key.did, "missing").await;
+            let got = store.get(&did_key.did, "missing", &data_store).await;
 
             assert!(got.is_err());
         }
 
         pub async fn test_delete_missing(store: impl MessageStore) {
+            let data_store = SurrealDB::new().await.expect("Failed to create data store");
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let got = store.delete(&did_key.did, "missing".to_string()).await;
-            assert!(got.is_err());
+            let got = store
+                .delete(&did_key.did, "missing".to_string(), &data_store)
+                .await;
+            assert!(got.is_ok());
         }
 
         pub async fn test_delete_wrong_tenant(store: impl MessageStore) {
+            let data_store = SurrealDB::new().await.expect("Failed to create data store");
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
             let message = MessageBuilder::new::<RecordsWrite>()
@@ -286,18 +297,18 @@ mod tests {
                 .expect("Failed to build message");
 
             let cid = store
-                .put(&did_key.did, message.clone())
+                .put(&did_key.did, message.clone(), &data_store)
                 .await
                 .expect("Failed to put message");
 
             // Delete returns OK, but message should not be deleted
             store
-                .delete("wrong", cid.to_string())
+                .delete("wrong", cid.to_string(), &data_store)
                 .await
                 .expect("Failed to delete message");
 
             let got = store
-                .get(&did_key.did, &cid.to_string())
+                .get(&did_key.did, &cid.to_string(), &data_store)
                 .await
                 .expect("Failed to get message");
 
@@ -305,6 +316,7 @@ mod tests {
         }
 
         pub async fn test_strip_data(store: impl MessageStore) {
+            let data_store = SurrealDB::new().await.expect("Failed to create data store");
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
             let mut message = MessageBuilder::new::<RecordsWrite>()
@@ -313,14 +325,14 @@ mod tests {
                 .expect("Failed to build message");
 
             let cid = store
-                .put(&did_key.did, message.clone())
+                .put(&did_key.did, message.clone(), &data_store)
                 .await
                 .expect("Failed to put message");
 
             message.data = None;
 
             let got = store
-                .get(&did_key.did, &cid.to_string())
+                .get(&did_key.did, &cid.to_string(), &data_store)
                 .await
                 .expect("Failed to get message");
 
@@ -328,6 +340,7 @@ mod tests {
         }
 
         pub async fn test_query(store: impl MessageStore) {
+            let data_store = SurrealDB::new().await.expect("Failed to create data store");
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
             let message1 = MessageBuilder::new::<RecordsWrite>()
@@ -343,12 +356,12 @@ mod tests {
             message2.record_id = "record2".to_string();
 
             store
-                .put(&did_key.did, message1.clone())
+                .put(&did_key.did, message1.clone(), &data_store)
                 .await
                 .expect("Failed to put message");
 
             store
-                .put(&did_key.did, message2.clone())
+                .put(&did_key.did, message2.clone(), &data_store)
                 .await
                 .expect("Failed to put message");
 

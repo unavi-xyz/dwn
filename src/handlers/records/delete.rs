@@ -70,12 +70,14 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D
         for m in messages {
             let block = encode_cbor(&m)?;
             self.message_store
-                .delete(tenant, block.cid().to_string())
+                .delete(tenant, block.cid().to_string(), self.data_store)
                 .await?;
         }
 
         // Store the message.
-        self.message_store.put(tenant, message).await?;
+        self.message_store
+            .put(tenant, message, self.data_store)
+            .await?;
 
         Ok(StatusReply {
             status: Status::ok(),
