@@ -200,11 +200,9 @@ mod tests {
 
             // Test delete
             store.delete(&cid).await.expect("Failed to delete data");
+            let got = store.get(&cid).await.expect("Failed to get data");
 
-            let got = store.get(&cid).await;
-
-            assert!(got.is_ok());
-            assert!(got.unwrap().is_none());
+            assert!(got.is_none());
         }
     }
 
@@ -218,7 +216,7 @@ mod tests {
         pub async fn test_all_methods(store: impl MessageStore) {
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let message = MessageBuilder::new(RecordsWrite::default())
+            let message = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
@@ -279,7 +277,7 @@ mod tests {
         pub async fn test_delete_wrong_tenant(store: impl MessageStore) {
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let message = MessageBuilder::new(RecordsWrite::default())
+            let message = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
@@ -290,8 +288,10 @@ mod tests {
                 .expect("Failed to put message");
 
             // Delete returns OK, but message should not be deleted
-            let res = store.delete("wrong", cid.to_string()).await;
-            assert!(res.is_ok());
+            store
+                .delete("wrong", cid.to_string())
+                .await
+                .expect("Failed to delete message");
 
             let got = store
                 .get(&did_key.did, &cid.to_string())
@@ -304,7 +304,7 @@ mod tests {
         pub async fn test_strip_data(store: impl MessageStore) {
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let mut message = MessageBuilder::new(RecordsWrite::default())
+            let mut message = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
@@ -327,12 +327,12 @@ mod tests {
         pub async fn test_query(store: impl MessageStore) {
             let did_key = DidKey::new().expect("Failed to generate DID key");
 
-            let message1 = MessageBuilder::new(RecordsWrite::default())
+            let message1 = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
 
-            let mut message2 = MessageBuilder::new(RecordsWrite::default())
+            let mut message2 = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .build()
                 .expect("Failed to build message");

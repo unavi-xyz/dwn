@@ -55,13 +55,13 @@ mod tests {
         let did_key = DidKey::new().expect("Failed to generate DID key");
 
         // Write some records.
-        let message1 = MessageBuilder::new(RecordsWrite::default())
+        let message1 = MessageBuilder::new::<RecordsWrite>()
             .data(Data::Base64("Hello, world!".to_string()))
             .authorize(did_key.kid.clone(), &did_key.jwk)
             .build()
             .expect("Failed to build message");
 
-        let message2 = MessageBuilder::new(RecordsWrite::default())
+        let message2 = MessageBuilder::new::<RecordsWrite>()
             .data(Data::Base64("Goodbye, world!".to_string()))
             .authorize(did_key.kid.clone(), &did_key.jwk)
             .build()
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(reply.status().code, 200);
 
         // Query the record id.
-        let message3 = MessageBuilder::new(RecordsQuery::new(Filter {
+        let message3 = MessageBuilder::from_descriptor(RecordsQuery::new(Filter {
             record_id: Some(message1.record_id.clone()),
             ..Default::default()
         }))
@@ -105,7 +105,7 @@ mod tests {
         assert_eq!(entries[0].record_id, message1.record_id);
 
         // Query the other record id.
-        let message4 = MessageBuilder::new(RecordsQuery::new(Filter {
+        let message4 = MessageBuilder::from_descriptor(RecordsQuery::new(Filter {
             record_id: Some(message2.record_id.clone()),
             ..Default::default()
         }))

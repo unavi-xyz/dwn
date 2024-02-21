@@ -170,7 +170,7 @@ mod tests {
 
         // Fails without authorization
         {
-            let message = MessageBuilder::new(RecordsWrite::default())
+            let message = MessageBuilder::new::<RecordsWrite>()
                 .build()
                 .expect("Failed to build message");
 
@@ -180,13 +180,16 @@ mod tests {
 
         // Succeeds with authorization
         {
-            let message = MessageBuilder::new(RecordsWrite::default())
+            let message = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid, &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
 
-            let reply = dwn.process_message(&did_key.did, message).await;
-            assert!(reply.is_ok());
+            let reply = dwn
+                .process_message(&did_key.did, message)
+                .await
+                .expect("Failed to process message");
+            assert!(reply.status().code == 200);
         }
     }
 
@@ -195,34 +198,41 @@ mod tests {
         let dwn = create_dwn().await;
         let did_key = DidKey::new().expect("Failed to generate DID key");
 
-        let message1 = MessageBuilder::new(RecordsWrite::default())
+        let message1 = MessageBuilder::new::<RecordsWrite>()
             .authorize(did_key.kid.clone(), &did_key.jwk)
             .build()
             .expect("Failed to build message");
 
         // Create initial entry.
-        let reply = dwn.process_message(&did_key.did, message1.clone()).await;
-        assert!(reply.is_ok());
+        let reply = dwn
+            .process_message(&did_key.did, message1.clone())
+            .await
+            .expect("Failed to process message");
+        assert!(reply.status().code == 200);
 
         // Create duplicate entry.
-        let reply = dwn.process_message(&did_key.did, message1.clone()).await;
-        assert!(reply.is_ok());
+        let reply = dwn
+            .process_message(&did_key.did, message1.clone())
+            .await
+            .expect("Failed to process message");
+        assert!(reply.status().code == 200);
 
         // Ensure only one entry exists
-        let query = RecordsQuery::new(Filter {
+        let message2 = MessageBuilder::from_descriptor(RecordsQuery::new(Filter {
             record_id: Some(message1.record_id.clone()),
             ..Default::default()
-        });
+        }))
+        .authorize(did_key.kid, &did_key.jwk)
+        .build()
+        .expect("Failed to build message");
 
-        let message2 = MessageBuilder::new(query)
-            .authorize(did_key.kid, &did_key.jwk)
-            .build()
-            .expect("Failed to build message");
+        let reply = dwn
+            .process_message(&did_key.did, message2)
+            .await
+            .expect("Failed to process message");
+        assert!(reply.status().code == 200);
 
-        let messages = dwn.process_message(&did_key.did, message2).await;
-        assert!(messages.is_ok());
-
-        let entries = match messages.unwrap() {
+        let entries = match reply {
             Reply::RecordsQuery(reply) => reply.entries,
             _ => panic!("Unexpected reply"),
         };

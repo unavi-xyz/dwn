@@ -135,7 +135,7 @@ mod tests {
         message::{
             builder::MessageBuilder,
             data::Data,
-            descriptor::{RecordsCommit, RecordsWrite},
+            descriptor::{Descriptor, RecordsCommit, RecordsWrite},
         },
         tests::create_dwn,
         util::DidKey,
@@ -148,7 +148,7 @@ mod tests {
 
         // Fails without authorization.
         {
-            let message = MessageBuilder::new(RecordsCommit::default())
+            let message = MessageBuilder::new::<RecordsCommit>()
                 .build()
                 .expect("Failed to build message");
 
@@ -159,24 +159,30 @@ mod tests {
         // Succeeds with authorization.
         {
             // Write a record.
-            let message1 = MessageBuilder::new(RecordsWrite::default())
+            let message1 = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .data(Data::Base64("Hello, world!".to_string()))
                 .build()
                 .expect("Failed to build message");
 
-            let reply = dwn.process_message(&did_key.did, message1.clone()).await;
-            assert!(reply.is_ok());
+            let reply = dwn
+                .process_message(&did_key.did, message1.clone())
+                .await
+                .expect("Failed to handle message");
+            assert!(reply.status().code == 200);
 
             // Commit the record.
-            let message2 = MessageBuilder::new_commit(&message1)
-                .expect("Failed to create commit message")
+            let message2 = MessageBuilder::new::<RecordsCommit>()
                 .authorize(did_key.kid, &did_key.jwk)
+                .parent(&message1)
                 .build()
                 .expect("Failed to build message");
 
-            let reply = dwn.process_message(&did_key.did, message2).await;
-            assert!(reply.is_ok());
+            let reply = dwn
+                .process_message(&did_key.did, message2)
+                .await
+                .expect("Failed to handle message");
+            assert!(reply.status().code == 200);
         }
     }
 
@@ -186,21 +192,31 @@ mod tests {
         let did_key = DidKey::new().expect("Failed to generate DID key");
 
         // Write a record.
-        let message1 = MessageBuilder::new(RecordsWrite::default())
+        let message1 = MessageBuilder::new::<RecordsWrite>()
             .authorize(did_key.kid.clone(), &did_key.jwk)
             .data(Data::Base64("Hello, world!".to_string()))
             .build()
             .expect("Failed to build message");
 
-        let reply = dwn.process_message(&did_key.did, message1.clone()).await;
-        assert!(reply.is_ok());
+        let reply = dwn
+            .process_message(&did_key.did, message1.clone())
+            .await
+            .expect("Failed to handle message");
+        assert!(reply.status().code == 200);
 
         // Fails with missing parent.
         {
-            let message2 = MessageBuilder::new(RecordsCommit::new("missing_parent".to_string()))
+            let mut message2 = MessageBuilder::new::<RecordsCommit>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .build()
                 .expect("Failed to build message");
+
+            match &mut message2.descriptor {
+                Descriptor::RecordsCommit(desc) => {
+                    desc.parent_id = "missing".to_string();
+                }
+                _ => panic!("Unexpected descriptor"),
+            }
 
             let reply = dwn.process_message(&did_key.did, message2).await;
             assert!(reply.is_err());
@@ -208,22 +224,25 @@ mod tests {
 
         // Fails with parent for different record.
         {
-            let message2 = MessageBuilder::new(RecordsWrite::default())
+            let message2 = MessageBuilder::new::<RecordsWrite>()
                 .authorize(did_key.kid.clone(), &did_key.jwk)
                 .data(Data::Base64("Goodbye, world!".to_string()))
                 .build()
                 .expect("Failed to build message");
 
-            let reply = dwn.process_message(&did_key.did, message2.clone()).await;
-            assert!(reply.is_ok());
-
-            let mut message3 = MessageBuilder::new_commit(&message2)
-                .expect("Failed to create commit message")
+            let mut message3 = MessageBuilder::new::<RecordsCommit>()
                 .authorize(did_key.kid, &did_key.jwk)
+                .parent(&message2)
                 .build()
                 .expect("Failed to build message");
 
             message3.record_id = message1.record_id.clone();
+
+            let reply = dwn
+                .process_message(&did_key.did, message2)
+                .await
+                .expect("Failed to handle message");
+            assert!(reply.status().code == 200);
 
             let reply = dwn.process_message(&did_key.did, message3).await;
             assert!(reply.is_err());

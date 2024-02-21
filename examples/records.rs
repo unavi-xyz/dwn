@@ -3,7 +3,9 @@ use dwn::{
     message::{
         builder::MessageBuilder,
         data::Data,
-        descriptor::{Filter, RecordsDelete, RecordsQuery, RecordsRead, RecordsWrite},
+        descriptor::{
+            Filter, RecordsCommit, RecordsDelete, RecordsQuery, RecordsRead, RecordsWrite,
+        },
     },
     store::SurrealDB,
     util::DidKey,
@@ -29,7 +31,7 @@ async fn main() {
     info!("DID: {}", did_key.did);
 
     // Create a record.
-    let message1 = MessageBuilder::new(RecordsWrite::default())
+    let message1 = MessageBuilder::new::<RecordsWrite>()
         .authorize(did_key.kid.clone(), &did_key.jwk)
         .data(Data::Base64("Hello, world!".to_string()))
         .build()
@@ -46,7 +48,7 @@ async fn main() {
 
     // Read the record.
     {
-        let message2 = MessageBuilder::new(RecordsRead::new(record_id.clone()))
+        let message2 = MessageBuilder::new::<RecordsRead>()
             .build()
             .expect("Failed to build message");
 
@@ -66,15 +68,15 @@ async fn main() {
 
     // Write to and update the record.
     {
-        let message2 = MessageBuilder::new(RecordsWrite::default())
+        let message2 = MessageBuilder::new::<RecordsWrite>()
             .authorize(did_key.kid.clone(), &did_key.jwk)
             .data(Data::Base64("Goodbye, world!".to_string()))
             .build()
             .expect("Failed to build message");
 
-        let message3 = MessageBuilder::new_commit(&message2)
-            .expect("Failed to create commit message")
+        let message3 = MessageBuilder::new::<RecordsCommit>()
             .authorize(did_key.kid.clone(), &did_key.jwk)
+            .parent(&message2)
             .build()
             .expect("Failed to build message");
 
@@ -95,7 +97,7 @@ async fn main() {
 
     // Query all messages.
     {
-        let message2 = MessageBuilder::new(RecordsQuery::new(Filter {
+        let message2 = MessageBuilder::from_descriptor(RecordsQuery::new(Filter {
             attester: Some(did_key.did.clone()),
             ..Default::default()
         }))
@@ -118,8 +120,9 @@ async fn main() {
 
     // Delete the record.
     {
-        let message2 = MessageBuilder::new(RecordsDelete::new(record_id))
+        let message2 = MessageBuilder::new::<RecordsDelete>()
             .authorize(did_key.kid.clone(), &did_key.jwk)
+            .record_id(Some(record_id.clone()))
             .build()
             .expect("Failed to build message");
 

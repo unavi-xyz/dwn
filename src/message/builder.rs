@@ -4,10 +4,7 @@ use time::OffsetDateTime;
 
 use crate::util::EncodeError;
 
-use super::{
-    descriptor::{Descriptor, RecordsCommit},
-    AuthError, Data, Message,
-};
+use super::{descriptor::Descriptor, AuthError, Data, Message};
 
 pub struct MessageBuilder<'a> {
     authorizer: Option<(String, &'a JWK)>,
@@ -25,25 +22,22 @@ pub enum MessageBuildError {
 }
 
 impl<'a> MessageBuilder<'a> {
-    pub fn new(descriptor: impl Into<Descriptor>) -> Self {
+    pub fn new<T: Default + Into<Descriptor>>() -> Self {
+        MessageBuilder {
+            authorizer: None,
+            data: None,
+            descriptor: T::default().into(),
+            record_id: None,
+        }
+    }
+
+    pub fn from_descriptor(descriptor: impl Into<Descriptor>) -> Self {
         MessageBuilder {
             authorizer: None,
             data: None,
             descriptor: descriptor.into(),
             record_id: None,
         }
-    }
-
-    /// Create a new RecordsCommit message for a given parent message.
-    pub fn new_commit(parent: &Message) -> Result<Self, EncodeError> {
-        let entry_id = parent.generate_record_id()?;
-
-        Ok(MessageBuilder {
-            authorizer: None,
-            data: None,
-            descriptor: RecordsCommit::new(entry_id).into(),
-            record_id: Some(parent.record_id.clone()),
-        })
     }
 
     pub fn authorize(mut self, kid: String, jwk: &'a JWK) -> Self {
@@ -53,6 +47,17 @@ impl<'a> MessageBuilder<'a> {
 
     pub fn data(mut self, data: Data) -> Self {
         self.data = Some(data);
+        self
+    }
+
+    pub fn parent(mut self, parent: &Message) -> Self {
+        let parent_id = parent.generate_record_id().unwrap();
+
+        match &mut self.descriptor {
+            Descriptor::RecordsCommit(desc) => desc.parent_id = parent_id,
+            Descriptor::RecordsWrite(desc) => desc.parent_id = Some(parent_id),
+            _ => {}
+        }
         self
     }
 
@@ -107,5 +112,16 @@ impl<'a> MessageBuilder<'a> {
         }
 
         Ok(msg)
+    }
+}
+
+impl From<Descriptor> for MessageBuilder<'_> {
+    fn from(descriptor: Descriptor) -> Self {
+        MessageBuilder {
+            authorizer: None,
+            data: None,
+            descriptor,
+            record_id: None,
+        }
     }
 }

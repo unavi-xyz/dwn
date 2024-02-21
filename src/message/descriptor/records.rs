@@ -173,15 +173,6 @@ impl Default for RecordsCommit {
     }
 }
 
-impl RecordsCommit {
-    pub fn new(parent_id: String) -> Self {
-        RecordsCommit {
-            parent_id,
-            ..Default::default()
-        }
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsDelete {
     interface: Interface,
@@ -199,15 +190,6 @@ impl Default for RecordsDelete {
             method: Method::Delete,
             record_id: "".to_string(),
             message_timestamp: OffsetDateTime::now_utc(),
-        }
-    }
-}
-
-impl RecordsDelete {
-    pub fn new(record_id: String) -> Self {
-        RecordsDelete {
-            record_id,
-            ..Default::default()
         }
     }
 }
