@@ -66,7 +66,7 @@ async fn main() {
         };
     }
 
-    // Write to and update the record.
+    // Update the record.
     {
         let message2 = MessageBuilder::new::<RecordsWrite>()
             .authorize(did_key.kid.clone(), &did_key.jwk)
