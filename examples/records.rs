@@ -48,7 +48,7 @@ async fn main() {
 
     // Read the record.
     {
-        let message2 = MessageBuilder::new::<RecordsRead>()
+        let message2 = MessageBuilder::from_descriptor(RecordsRead::new(record_id.clone()))
             .build()
             .expect("Failed to build message");
 
