@@ -16,6 +16,15 @@ pub struct RecordsRead {
     pub record_id: String,
 }
 
+impl RecordsRead {
+    pub fn new(record_id: String) -> Self {
+        RecordsRead {
+            record_id,
+            ..Default::default()
+        }
+    }
+}
+
 impl Default for RecordsRead {
     fn default() -> Self {
         RecordsRead {
@@ -190,6 +199,15 @@ impl Default for RecordsDelete {
             method: Method::Delete,
             record_id: "".to_string(),
             message_timestamp: OffsetDateTime::now_utc(),
+        }
+    }
+}
+
+impl RecordsDelete {
+    pub fn new(record_id: String) -> Self {
+        RecordsDelete {
+            record_id,
+            ..Default::default()
         }
     }
 }

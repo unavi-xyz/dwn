@@ -3,7 +3,7 @@ use dwn::{
     message::{
         builder::MessageBuilder,
         data::Data,
-        descriptor::{Filter, RecordsQuery, RecordsWrite},
+        descriptor::{Filter, RecordsDelete, RecordsQuery, RecordsRead, RecordsWrite},
     },
     store::SurrealDB,
     util::DidKey,
@@ -35,12 +35,34 @@ async fn main() {
         .build()
         .expect("Failed to build message");
 
+    let record_id = message1.record_id.clone();
+
     let reply = dwn
         .process_message(&did_key.did, message1)
         .await
         .expect("Failed to handle message");
 
     info!("RecordsWrite status: {:?}", reply.status());
+
+    // Read the record.
+    {
+        let message2 = MessageBuilder::new(RecordsRead::new(record_id.clone()))
+            .build()
+            .expect("Failed to build message");
+
+        let reply = dwn
+            .process_message(&did_key.did, message2)
+            .await
+            .expect("Failed to handle message");
+
+        match reply {
+            Reply::RecordsRead(reply) => {
+                info!("RecordsRead status: {:?}", reply.status);
+                info!("RecordsRead data: {:?}", reply.data);
+            }
+            _ => panic!("Unexpected reply"),
+        };
+    }
 
     // Write to and update the record.
     {
@@ -71,14 +93,9 @@ async fn main() {
         info!("RecordsCommit status: {:?}", reply.status());
     }
 
-    // Read the record.
-    {
-        // TODO
-    }
-
     // Query all messages.
     {
-        let message4 = MessageBuilder::new(RecordsQuery::new(Filter {
+        let message2 = MessageBuilder::new(RecordsQuery::new(Filter {
             attester: Some(did_key.did.clone()),
             ..Default::default()
         }))
@@ -86,19 +103,31 @@ async fn main() {
         .expect("Failed to build message");
 
         let reply = dwn
-            .process_message(&did_key.did, message4)
+            .process_message(&did_key.did, message2)
             .await
             .expect("Failed to handle message");
 
         match reply {
             Reply::RecordsQuery(reply) => {
-                info!(
-                    "RecordsQuery status: {:?}, num entries: {:?}",
-                    reply.status,
-                    reply.entries.len()
-                );
+                info!("RecordsQuery status: {:?}", reply.status);
+                info!("RecordsQuery number of entries: {:?}", reply.entries.len());
             }
             _ => panic!("Unexpected reply"),
         };
+    }
+
+    // Delete the record.
+    {
+        let message2 = MessageBuilder::new(RecordsDelete::new(record_id))
+            .authorize(did_key.kid.clone(), &did_key.jwk)
+            .build()
+            .expect("Failed to build message");
+
+        let reply = dwn
+            .process_message(&did_key.did, message2)
+            .await
+            .expect("Failed to handle message");
+
+        info!("RecordsDelete status: {:?}", reply.status());
     }
 }

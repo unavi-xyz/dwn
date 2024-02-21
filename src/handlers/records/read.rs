@@ -18,17 +18,28 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, 
         tenant: &str,
         message: Message,
     ) -> Result<impl Into<Reply>, HandlerError> {
+        let descriptor = match &message.descriptor {
+            Descriptor::RecordsRead(descriptor) => descriptor,
+            _ => {
+                return Err(HandlerError::InvalidDescriptor(
+                    "Not a RecordsRead message".to_string(),
+                ));
+            }
+        };
+
         let messages = self
             .message_store
             .query(
                 tenant,
                 Filter {
-                    record_id: Some(message.record_id),
+                    record_id: Some(descriptor.record_id.clone()),
                     date_sort: Some(FilterDateSort::CreatedDescending),
                     ..Default::default()
                 },
             )
             .await?;
+
+        tracing::info!("Messages: {:?}", messages);
 
         // Get the latest commit or delete message.
         let latest_commit_or_delete = messages.iter().find(|m| {
