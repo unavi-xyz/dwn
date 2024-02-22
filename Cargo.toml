@@ -5,7 +5,7 @@ version = "0.0.3"
 edition = "2021"
 repository = "https://github.com/unavi-xyz/dwn"
 license = "GPL-3.0-or-later"
-keywords = ["decentralized web node", "did", "dwn"]
+keywords = ["did", "dwn"]
 
 [features]
 default = ["axum", "mysql", "s3", "surrealdb"]
