@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use libipld::Cid;
+
 use crate::{
     handlers::{HandlerError, MethodHandler, RecordsReadReply, Reply, Status},
     message::{
@@ -6,6 +10,8 @@ use crate::{
     },
     store::{DataStore, MessageStore},
 };
+
+use super::util::create_entry_id_map;
 
 pub struct RecordsReadHandler<'a, D: DataStore, M: MessageStore> {
     pub data_store: &'a D,
@@ -55,13 +61,39 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, 
                     "Record not found".to_string(),
                 ))?;
 
-        // TODO: Get data from data store.
+        // Get the record that has the data.
+        let entry_id_map = create_entry_id_map(&messages)?;
+        let record_entry_id = record.generate_record_id()?;
+        let data_cid = get_data_cid(&record_entry_id, &entry_id_map);
+
+        let data = match data_cid {
+            Some(data_cid) => {
+                let data_cid = Cid::try_from(data_cid).map_err(|e| {
+                    HandlerError::InvalidDescriptor(format!("Invalid data CID: {}", e))
+                })?;
+                let res = self.data_store.get(data_cid.to_string()).await?;
+                res.map(|res| res.data)
+            }
+            None => None,
+        };
 
         Ok(RecordsReadReply {
-            data: Vec::new(),
-            record: record.clone(),
+            data,
+            record: record.to_owned(),
             status: Status::ok(),
         })
+    }
+}
+
+/// Get the data CID for a given entry ID.
+/// This will search up the chain of parent messages until it finds a RecordsWrite message.
+fn get_data_cid(entry_id: &str, messages: &HashMap<String, &Message>) -> Option<String> {
+    let entry = messages.get(entry_id)?;
+
+    match &entry.descriptor {
+        Descriptor::RecordsCommit(desc) => get_data_cid(&desc.parent_id, messages),
+        Descriptor::RecordsWrite(desc) => desc.data_cid.clone(),
+        _ => None,
     }
 }
 
@@ -113,8 +145,7 @@ mod tests {
 
                 assert_eq!(reply.status.code, 200);
                 assert_eq!(reply.record, message1_stripped);
-
-                // TODO: Check data.
+                assert_eq!(reply.data, Some(message1.data.unwrap().into()));
             }
             _ => panic!("Unexpected reply: {:?}", reply),
         }
@@ -150,7 +181,7 @@ mod tests {
             .build()
             .expect("Failed to build message");
 
-        dwn.process_message(&did_key.did, message2)
+        dwn.process_message(&did_key.did, message2.clone())
             .await
             .expect("Failed to handle message");
 
@@ -172,8 +203,7 @@ mod tests {
             Reply::RecordsRead(reply) => {
                 assert_eq!(reply.status.code, 200);
                 assert_eq!(reply.record, message3);
-
-                // TODO: Check data.
+                assert_eq!(reply.data, Some(message2.data.unwrap().into()));
             }
             _ => panic!("Unexpected reply: {:?}", reply),
         }

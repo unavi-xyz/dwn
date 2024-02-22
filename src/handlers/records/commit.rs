@@ -9,6 +9,8 @@ use crate::{
     store::{DataStore, MessageStore},
 };
 
+use super::util::create_entry_id_map;
+
 pub struct RecordsCommitHandler<'a, D: DataStore, M: MessageStore> {
     pub data_store: &'a D,
     pub message_store: &'a M,
@@ -53,25 +55,17 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsCommitHandler<'_, D
 
         // TODO: Ensure immutable values from inital entry are not changed.
 
-        let active_entry_id = active.generate_record_id()?;
-
-        let entry_id_to_msg =
-            messages
-                .iter()
-                .try_fold(HashMap::new(), |mut acc, m| -> Result<_, HandlerError> {
-                    let entry_id = m.generate_record_id()?;
-                    acc.insert(entry_id, m);
-                    Ok(acc)
-                })?;
-
         // Parent id must match either the active message, or another RecordsCommit that descends from it.
-        if !descends_from(&descriptor.parent_id, &active_entry_id, &entry_id_to_msg) {
+        let active_entry_id = active.generate_record_id()?;
+        let entry_id_map = create_entry_id_map(&messages)?;
+
+        if !descends_from(&descriptor.parent_id, &active_entry_id, &entry_id_map) {
             return Err(HandlerError::InvalidDescriptor(
                 "Parent message does not descend from active message".to_string(),
             ));
         }
 
-        let parent = match entry_id_to_msg.get(&descriptor.parent_id) {
+        let parent = match entry_id_map.get(&descriptor.parent_id) {
             Some(m) => m,
             None => {
                 return Err(HandlerError::InvalidDescriptor(

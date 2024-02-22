@@ -1,4 +1,3 @@
-use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::{Id, Table, Thing};
 
@@ -9,13 +8,10 @@ use super::SurrealDB;
 const DATA_TABLE_NAME: &str = "data";
 
 impl DataStore for SurrealDB {
-    async fn delete(&self, cid: &Cid) -> Result<(), DataStoreError> {
+    async fn delete(&self, cid: String) -> Result<(), DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
-        let id = Thing::from((
-            Table::from(DATA_TABLE_NAME).to_string(),
-            Id::String(cid.to_string()),
-        ));
+        let id = Thing::from((Table::from(DATA_TABLE_NAME).to_string(), Id::String(cid)));
 
         db.delete::<Option<DbData>>(id)
             .await
@@ -24,13 +20,10 @@ impl DataStore for SurrealDB {
         Ok(())
     }
 
-    async fn get(&self, cid: &Cid) -> Result<Option<GetDataResults>, DataStoreError> {
+    async fn get(&self, cid: String) -> Result<Option<GetDataResults>, DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
-        let id = Thing::from((
-            Table::from(DATA_TABLE_NAME).to_string(),
-            Id::String(cid.to_string()),
-        ));
+        let id = Thing::from((Table::from(DATA_TABLE_NAME).to_string(), Id::String(cid)));
 
         let res: DbData = match db
             .select(id)
@@ -47,21 +40,18 @@ impl DataStore for SurrealDB {
         }))
     }
 
-    async fn put(&self, cid: &Cid, data: Vec<u8>) -> Result<PutDataResults, DataStoreError> {
+    async fn put(&self, cid: String, data: Vec<u8>) -> Result<PutDataResults, DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
         let id = Thing::from((
             Table::from(DATA_TABLE_NAME).to_string(),
-            Id::String(cid.to_string()),
+            Id::String(cid.clone()),
         ));
 
         let size = data.len();
 
         db.create::<Option<DbData>>(id)
-            .content(DbData {
-                cid: cid.to_string(),
-                data,
-            })
+            .content(DbData { cid, data })
             .await
             .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
 

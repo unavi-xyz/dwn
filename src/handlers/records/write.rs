@@ -149,8 +149,6 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
             }
         }
 
-        // TODO: Store data
-
         Ok(StatusReply {
             status: Status::ok(),
         })

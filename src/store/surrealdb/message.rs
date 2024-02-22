@@ -50,9 +50,7 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        if let Some(data) = message.message.data {
-            let data_cid = data.cid()?;
-
+        if let Some(data_cid) = message.data_cid {
             let id = Thing::from((
                 Table::from(DATA_REF_TABLE_NAME).to_string(),
                 Id::String(data_cid.to_string()),
@@ -78,7 +76,7 @@ impl MessageStore for SurrealDB {
                         .await
                         .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-                    data_store.delete(&data_cid).await?;
+                    data_store.delete(data_cid).await?;
                 }
             }
         }
@@ -111,7 +109,9 @@ impl MessageStore for SurrealDB {
         data_store: &impl DataStore,
     ) -> Result<Cid, MessageStoreError> {
         let cbor = encode_cbor(&message)?;
-        let cid = cbor.cid();
+        let message_cid = cbor.cid();
+
+        let mut data_cid = None;
 
         // Store data.
         if let Some(data) = message.data.take() {
@@ -120,11 +120,11 @@ impl MessageStore for SurrealDB {
                 .await
                 .map_err(MessageStoreError::BackendError)?;
 
-            let data_cid = data.cid()?;
+            let cid = data.cid()?.to_string();
 
             let id = Thing::from((
                 Table::from(DATA_REF_TABLE_NAME).to_string(),
-                Id::String(data_cid.to_string()),
+                Id::String(cid.clone()),
             ));
 
             // Get the current data CID object.
@@ -149,8 +149,10 @@ impl MessageStore for SurrealDB {
                     .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
                 // Store data in the data store.
-                data_store.put(&data_cid, data.into()).await?;
+                data_store.put(cid.clone(), data.into()).await?;
             }
+
+            data_cid = Some(cid);
         }
 
         let db = self
@@ -161,7 +163,7 @@ impl MessageStore for SurrealDB {
         // Store message.
         let id = Thing::from((
             Table::from(tenant.to_string()).to_string(),
-            Id::String(cid.to_string()),
+            Id::String(message_cid.to_string()),
         ));
 
         let record_id = message.record_id.clone();
@@ -184,6 +186,7 @@ impl MessageStore for SurrealDB {
 
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
+                data_cid,
                 date_created,
                 date_published,
                 message,
@@ -193,7 +196,7 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
-        Ok(*cid)
+        Ok(*message_cid)
     }
 
     async fn query(&self, tenant: &str, filter: Filter) -> Result<Vec<Message>, MessageStoreError> {
@@ -258,6 +261,7 @@ struct DbDataCidRefs {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
+    data_cid: Option<String>,
     date_created: OffsetDateTime,
     date_published: OffsetDateTime,
     message: Message,

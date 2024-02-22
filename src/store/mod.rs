@@ -34,14 +34,14 @@ pub enum DataStoreError {
 }
 
 pub trait DataStore {
-    fn delete(&self, cid: &Cid) -> impl Future<Output = Result<(), DataStoreError>>;
+    fn delete(&self, cid: String) -> impl Future<Output = Result<(), DataStoreError>>;
     fn get(
         &self,
-        cid: &Cid,
+        cid: String,
     ) -> impl Future<Output = Result<Option<GetDataResults>, DataStoreError>>;
     fn put(
         &self,
-        cid: &Cid,
+        cid: String,
         value: Vec<u8>,
     ) -> impl Future<Output = Result<PutDataResults, DataStoreError>>;
 }
@@ -186,17 +186,17 @@ mod tests {
         use super::*;
 
         pub async fn test_all_methods(store: impl DataStore) {
-            let cid = Cid::default();
+            let cid = Cid::default().to_string();
             let data = vec![1, 2, 3, 4, 5];
 
             // Test put and get
             store
-                .put(&cid, data.clone())
+                .put(cid.clone(), data.clone())
                 .await
                 .expect("Failed to put data");
 
             let got = store
-                .get(&cid)
+                .get(cid.clone())
                 .await
                 .expect("Failed to get data")
                 .expect("No data found");
@@ -204,8 +204,11 @@ mod tests {
             assert_eq!(data, got.data);
 
             // Test delete
-            store.delete(&cid).await.expect("Failed to delete data");
-            let got = store.get(&cid).await.expect("Failed to get data");
+            store
+                .delete(cid.clone())
+                .await
+                .expect("Failed to delete data");
+            let got = store.get(cid).await.expect("Failed to get data");
 
             assert!(got.is_none());
         }

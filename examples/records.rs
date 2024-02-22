@@ -60,7 +60,9 @@ async fn main() {
         match reply {
             Reply::RecordsRead(reply) => {
                 info!("RecordsRead status: {:?}", reply.status);
-                info!("RecordsRead data: {:?}", reply.data);
+
+                let data = reply.data.map(|d| String::from_utf8_lossy(&d).to_string());
+                info!("RecordsRead data: {:?}", data);
             }
             _ => panic!("Unexpected reply"),
         };
