@@ -40,7 +40,7 @@ sqlx = { version = "0.7.3", features = ["mysql", "time", "runtime-tokio", "tls-r
 tokio = { version = "1.35.0", features = ["full"], optional = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-surrealdb = { version = "1.2.0", default-featuers = false, features = ["kv-mem", "kv-indxdb"], optional = true }
+surrealdb = { version = "1.2.2", default-featuers = false, features = ["kv-mem", "kv-indxdb"], optional = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 surrealdb = { version = "1.2.0", default-features = false, features = ["kv-mem", "kv-speedb"], optional = true }
