@@ -1,3 +1,5 @@
+//! Rust implementation of a [Decentralized Web Node](https://identity.foundation/decentralized-web-node/spec/).
+
 use handlers::{
     records::{
         commit::RecordsCommitHandler, delete::RecordsDeleteHandler, query::RecordsQueryHandler,

@@ -63,7 +63,7 @@
 
         commonShell = {
           checks = self.checks.${localSystem};
-          packages = with pkgs; [ cargo-watch rust-analyzer ];
+          packages = with pkgs; [ cargo-rdme cargo-watch rust-analyzer ];
 
           DATABASE_URL = "mysql://root@localhost/dwn";
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
@@ -99,6 +99,12 @@
           dwn = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "dwn" ''
               ${self.packages.${localSystem}.dwn}/bin/dwn
+            '';
+          };
+
+          generate-readme = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellScriptBin "generate-readme" ''
+              cargo rdme
             '';
           };
 
