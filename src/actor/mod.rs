@@ -41,6 +41,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         let mut msg = Message::new(RecordsCommit::new(parent_id));
         msg.record_id = msg.generate_record_id()?;
 
+        msg.authorize(self.kid.clone(), &self.jwk)?;
+
         let reply = self.dwn.process_message(&self.did, msg).await?;
 
         match reply {

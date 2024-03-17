@@ -34,19 +34,19 @@ pub enum AuthError {
     MissingAlgorithm,
     #[error("Missing public key")]
     MissingPublicKey,
-    #[error("Failed to encode descriptor: {0}")]
+    #[error(transparent)]
     Encode(#[from] EncodeError),
-    #[error("Failed to encode signature: {0}")]
+    #[error(transparent)]
     EncodeSignature(#[from] didkit::ssi::jws::Error),
-    #[error("Serialization error: {0}")]
+    #[error(transparent)]
     Serde(#[from] serde_json::Error),
 }
 
 #[derive(Error, Debug)]
 pub enum DecodeError {
-    #[error("Failed to serialize to IPLD: {0}")]
+    #[error(transparent)]
     Serde(#[from] SerdeError),
-    #[error("Failed to decode CBOR: {0}")]
+    #[error(transparent)]
     Decode(#[from] anyhow::Error),
 }
 
@@ -56,9 +56,9 @@ pub enum VerifyAuthError {
     AuthorizationMissing,
     #[error("Signature missing")]
     SignatureMissing,
-    #[error("Failed to verify signature: {0}")]
+    #[error(transparent)]
     SignatureVerify(#[from] SignatureVerifyError),
-    #[error("Serialization error: {0}")]
+    #[error(transparent)]
     Serde(#[from] serde_json::Error),
 }
 

@@ -39,9 +39,9 @@ pub struct SignatureEntry {
 
 #[derive(Debug, Error)]
 pub enum SignatureVerifyError {
-    #[error("DID error: {0}")]
+    #[error(transparent)]
     DidError(#[from] didkit::ssi::did::Error),
-    #[error("JWS error: {0}")]
+    #[error(transparent)]
     JwsError(#[from] didkit::ssi::jws::Error),
     #[error("Unsupported DID method: {0}")]
     UnsupportedDidMethod(&'static str),
@@ -51,7 +51,7 @@ pub enum SignatureVerifyError {
     DocumentNotFound,
     #[error("Verification method not found")]
     MethodNotFound,
-    #[error("Serialization error: {0}")]
+    #[error(transparent)]
     Serde(#[from] serde_json::Error),
 }
 

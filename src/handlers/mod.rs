@@ -14,15 +14,15 @@ pub mod records;
 
 #[derive(Debug, Error)]
 pub enum HandlerError {
-    #[error("Failed to verify message: {0}")]
+    #[error(transparent)]
     VerifyError(#[from] VerifyAuthError),
     #[error("Invalid descriptor")]
     InvalidDescriptor(String),
-    #[error("Failed to interact with data store: {0}")]
+    #[error(transparent)]
     DataStoreError(#[from] DataStoreError),
-    #[error("Failed to interact with message store: {0}")]
+    #[error(transparent)]
     MessageStoreError(#[from] MessageStoreError),
-    #[error("CBOR encoding error: {0}")]
+    #[error(transparent)]
     CborEncode(#[from] EncodeError),
 }
 

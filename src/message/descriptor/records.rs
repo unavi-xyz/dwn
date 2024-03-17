@@ -156,10 +156,11 @@ impl Default for RecordsWrite {
 pub struct RecordsCommit {
     interface: Interface,
     method: Method,
-    #[serde(rename = "parentId")]
-    pub parent_id: String,
+
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
+    #[serde(rename = "parentId")]
+    pub parent_id: String,
 }
 
 impl RecordsCommit {
@@ -176,8 +177,8 @@ impl Default for RecordsCommit {
         RecordsCommit {
             interface: Interface::Records,
             method: Method::Commit,
-            parent_id: "".to_string(),
             message_timestamp: OffsetDateTime::now_utc(),
+            parent_id: "".to_string(),
         }
     }
 }
