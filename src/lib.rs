@@ -23,7 +23,7 @@
 //!     };
 //!
 //!     // Create an actor to send messages.
-//!     // Here we generate a new `did:key`.
+//!     // Here we generate a new `did:key` for the actor's identity, but this could be any DID method.
 //!     let actor = Actor::new_did_key(dwn).unwrap();
 //!
 //!     // Write a new record.
