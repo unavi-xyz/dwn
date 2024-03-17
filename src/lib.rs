@@ -6,10 +6,10 @@
 //! use std::sync::Arc;
 //!
 //! use dwn::{
-//!     actor::Actor,
 //!     handlers::Status,
 //!     message::Data,
 //!     store::SurrealDB,
+//!     Actor,
 //!     DWN
 //! };
 //!
@@ -57,11 +57,13 @@ use message::{descriptor::Descriptor, Message};
 use store::{DataStore, MessageStore};
 use thiserror::Error;
 
-pub mod actor;
+mod actor;
 pub mod handlers;
 pub mod message;
 pub mod store;
 pub mod util;
+
+pub use actor::{Actor, MessageSendError};
 
 #[derive(Clone)]
 pub struct DWN<D: DataStore, M: MessageStore> {
