@@ -3,11 +3,13 @@
 //! ## Usage
 //!
 //! ```
+//! use std::sync::Arc;
+//!
 //! use dwn::{
+//!     actor::Actor,
 //!     handlers::Status,
-//!     message::{Data, MessageBuilder, descriptor::RecordsWrite},
+//!     message::Data,
 //!     store::SurrealDB,
-//!     util::DidKey,
 //!     DWN
 //! };
 //!
@@ -15,27 +17,31 @@
 //! async fn main() {
 //!     // Create a DWN, using an embedded SurrealDB instance as both the data and message store.
 //!     let db = SurrealDB::new().await.unwrap();
-//!     let dwn = DWN {
+//!     let dwn = Arc::new(DWN {
 //!         data_store: db.clone(),
 //!         message_store: db,
-//!     };
+//!     });
 //!
-//!     // Generate a DID.
-//!     let did_key = DidKey::new().unwrap();
+//!     // Create an actor with a new DID key.
+//!     let actor = Actor::new_did_key(dwn).unwrap();
 //!
-//!     // Store a record in the DWN.
-//!     let message = MessageBuilder::new::<RecordsWrite>()
-//!         .authorize(did_key.kid.clone(), &did_key.jwk)
-//!         .data(Data::Base64("Hello, world!".to_string()))
-//!         .build()
-//!         .unwrap();
+//!     // Write a new record.
+//!     let data = Data::Base64("Hello, world!".to_string());
 //!
-//!     let reply = dwn
-//!         .process_message(&did_key.did, message)
+//!     let res = actor
+//!         .write()
+//!         .data(data.clone())
+//!         .send()
 //!         .await
 //!         .unwrap();
 //!
-//!     assert_eq!(reply.status().code, 200);
+//!     assert_eq!(res.reply.status.code, 200);
+//!
+//!     // Read the record.
+//!     let reply = actor.read(res.record_id).await.unwrap();
+//!
+//!     assert_eq!(reply.status.code, 200);
+//!     assert_eq!(reply.data, Some(data.into()));
 //! }
 //! ```
 
@@ -50,6 +56,7 @@ use message::{descriptor::Descriptor, Message};
 use store::{DataStore, MessageStore};
 use thiserror::Error;
 
+pub mod actor;
 pub mod handlers;
 pub mod message;
 pub mod store;
@@ -116,19 +123,6 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                 Ok(reply.into())
             }
             _ => Err(HandleMessageError::UnsupportedInterface),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{store::SurrealDB, DWN};
-
-    pub async fn create_dwn() -> DWN<SurrealDB, SurrealDB> {
-        let db = SurrealDB::new().await.expect("Failed to create SurrealDB");
-        DWN {
-            data_store: db.clone(),
-            message_store: db,
         }
     }
 }

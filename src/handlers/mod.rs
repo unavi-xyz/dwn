@@ -58,9 +58,9 @@ impl Status {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Reply {
-    RecordsQuery(RecordsQueryReply),
-    RecordsRead(RecordsReadReply),
-    StatusReply(StatusReply),
+    RecordsQuery(Box<RecordsQueryReply>),
+    RecordsRead(Box<RecordsReadReply>),
+    Status(StatusReply),
 }
 
 impl Reply {
@@ -68,7 +68,7 @@ impl Reply {
         match self {
             Reply::RecordsQuery(reply) => &reply.status,
             Reply::RecordsRead(reply) => &reply.status,
-            Reply::StatusReply(reply) => &reply.status,
+            Reply::Status(reply) => &reply.status,
         }
     }
 }
@@ -93,18 +93,18 @@ pub struct StatusReply {
 
 impl From<RecordsQueryReply> for Reply {
     fn from(val: RecordsQueryReply) -> Self {
-        Reply::RecordsQuery(val)
+        Reply::RecordsQuery(Box::new(val))
     }
 }
 
 impl From<RecordsReadReply> for Reply {
     fn from(val: RecordsReadReply) -> Self {
-        Reply::RecordsRead(val)
+        Reply::RecordsRead(Box::new(val))
     }
 }
 
 impl From<StatusReply> for Reply {
     fn from(val: StatusReply) -> Self {
-        Reply::StatusReply(val)
+        Reply::Status(val)
     }
 }

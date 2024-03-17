@@ -8,7 +8,7 @@ license = "GPL-3.0-or-later"
 keywords = ["did", "dwn"]
 
 [features]
-default = ["axum", "mysql", "s3", "surrealdb"]
+default = ["surrealdb"]
 axum = ["dep:axum"]
 mysql = ["dep:sqlx", "dep:tokio"]
 s3 = ["dep:rust-s3"]

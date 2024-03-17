@@ -12,12 +12,10 @@ use crate::{
 use self::{auth::SignatureVerifyError, descriptor::Descriptor};
 
 pub mod auth;
-mod builder;
 mod data;
 pub mod descriptor;
 
-pub use builder::*;
-pub use data::*;
+pub use data::{Data, EncryptedData};
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -65,6 +63,16 @@ pub enum VerifyAuthError {
 }
 
 impl Message {
+    pub fn new(descriptor: impl Into<Descriptor>) -> Self {
+        Self {
+            attestation: None,
+            authorization: None,
+            data: None,
+            descriptor: descriptor.into(),
+            record_id: "".to_string(),
+        }
+    }
+
     pub fn authorize(&mut self, kid: String, jwk: &JWK) -> Result<(), AuthError> {
         let descriptor_cid = encode_cbor(&self.descriptor)?.cid().to_string();
 

@@ -72,23 +72,23 @@ impl RecordsQuery {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct Filter {
     pub attester: Option<String>,
-    pub recepient: Option<String>,
-    pub schema: Option<String>,
-    #[serde(rename = "recordId")]
-    pub record_id: Option<String>,
-    #[serde(rename = "parentId")]
-    pub parent_id: Option<String>,
     #[serde(rename = "contextId")]
     pub context_id: Option<String>,
-    #[serde(rename = "messageTimestamp")]
-    pub message_timestamp: Option<FilterDateCreated>,
-    pub protocol: Option<String>,
-    #[serde(rename = "protocolVersion")]
-    pub protocol_version: Option<String>,
     #[serde(rename = "dataFormat")]
     pub data_format: Option<MediaType>,
     #[serde(rename = "dateSort")]
     pub date_sort: Option<FilterDateSort>,
+    #[serde(rename = "messageTimestamp")]
+    pub message_timestamp: Option<FilterDateCreated>,
+    #[serde(rename = "parentId")]
+    pub parent_id: Option<String>,
+    pub protocol: Option<String>,
+    #[serde(rename = "protocolVersion")]
+    pub protocol_version: Option<String>,
+    pub recipient: Option<String>,
+    #[serde(rename = "recordId")]
+    pub record_id: Option<String>,
+    pub schema: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -160,6 +160,15 @@ pub struct RecordsCommit {
     pub parent_id: String,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
+}
+
+impl RecordsCommit {
+    pub fn new(parent_id: String) -> Self {
+        RecordsCommit {
+            parent_id,
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for RecordsCommit {
