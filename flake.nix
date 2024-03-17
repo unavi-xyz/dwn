@@ -193,6 +193,8 @@
               }
 
               trap finish EXIT
+
+              $SHELL
             '';
           });
         };
