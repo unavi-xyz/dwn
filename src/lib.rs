@@ -17,12 +17,13 @@
 //! async fn main() {
 //!     // Create a DWN, using an embedded SurrealDB instance as both the data and message store.
 //!     let db = SurrealDB::new().await.unwrap();
-//!     let dwn = Arc::new(DWN {
+//!     let dwn = DWN {
 //!         data_store: db.clone(),
 //!         message_store: db,
-//!     });
+//!     };
 //!
-//!     // Create an actor with a new DID key.
+//!     // Create an actor to send messages.
+//!     // Here we generate a new `did:key`.
 //!     let actor = Actor::new_did_key(dwn).unwrap();
 //!
 //!     // Write a new record.
@@ -62,6 +63,7 @@ pub mod message;
 pub mod store;
 pub mod util;
 
+#[derive(Clone)]
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,
     pub message_store: M,

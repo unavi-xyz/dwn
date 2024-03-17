@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use didkit::JWK;
 use thiserror::Error;
 
@@ -22,14 +20,14 @@ mod write;
 
 pub struct Actor<D: DataStore, M: MessageStore> {
     pub did: String,
-    pub dwn: Arc<DWN<D, M>>,
+    pub dwn: DWN<D, M>,
     pub jwk: JWK,
     // VC DID URL for the JWK.
     pub kid: String,
 }
 
 impl<D: DataStore, M: MessageStore> Actor<D, M> {
-    pub fn new_did_key(dwn: Arc<DWN<D, M>>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
+    pub fn new_did_key(dwn: DWN<D, M>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
         let did_key = did_key::DidKey::new()?;
         Ok(Actor {
             did: did_key.did,
