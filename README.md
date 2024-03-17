@@ -21,12 +21,13 @@ use dwn::{
 async fn main() {
     // Create a DWN, using an embedded SurrealDB instance as both the data and message store.
     let db = SurrealDB::new().await.unwrap();
-    let dwn = Arc::new(DWN {
+    let dwn = DWN {
         data_store: db.clone(),
         message_store: db,
-    });
+    };
 
-    // Create an actor with a new DID key.
+    // Create an actor to send messages.
+    // Here we generate a new `did:key` for the actor's identity, but this could be any DID method.
     let actor = Actor::new_did_key(dwn).unwrap();
 
     // Write a new record.
