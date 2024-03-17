@@ -139,3 +139,32 @@ impl RecordIdGenerator {
         encode_cbor(&generator).map(|block| block.cid().to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    use super::*;
+
+    #[test]
+    fn test_message_serialization() {
+        let message = Message {
+            attestation: None,
+            authorization: None,
+            data: Some(Data::Base64("hello".to_string())),
+            descriptor: Descriptor::RecordsWrite(Default::default()),
+            record_id: "world".to_string(),
+        };
+
+        let serialized = serde_json::to_string(&message).unwrap();
+
+        let value: Value = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(value["data"], "hello");
+        assert_eq!(value["descriptor"]["interface"], "Records");
+        assert_eq!(value["descriptor"]["method"], "Write");
+        assert_eq!(value["recordId"], "world");
+
+        let deserialized: Message = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(message, deserialized);
+    }
+}

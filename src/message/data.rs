@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::util::EncodeError;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(untagged)]
 pub enum Data {
     Base64(String),
     Encrypted(EncryptedData),
