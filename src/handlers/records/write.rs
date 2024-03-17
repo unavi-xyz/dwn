@@ -44,12 +44,12 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 return Ok(StatusReply {
                     status: Status::ok(),
                 });
-            } else {
-                // Store message as initial entry.
-                self.message_store
-                    .put(tenant, message, self.data_store)
-                    .await?;
             }
+
+            // Store message as initial entry.
+            self.message_store
+                .put(tenant, message, self.data_store)
+                .await?;
         } else {
             let initial_entry = initial_entry.ok_or(HandlerError::InvalidDescriptor(
                 "Initial entry not found".to_string(),

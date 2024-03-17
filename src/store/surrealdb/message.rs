@@ -1,12 +1,14 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::{Id, Table, Thing};
 use time::OffsetDateTime;
+use tracing::warn;
 
 use crate::{
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Message,
+        Data, Message,
     },
     store::{DataStore, MessageStore, MessageStoreError},
     util::encode_cbor,
@@ -71,7 +73,7 @@ impl MessageStore for SurrealDB {
                         .await
                         .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
                 } else {
-                    // Delete the data.
+                    // Delete the data if this is the only reference.
                     db.delete::<Option<DbDataCidRefs>>(id)
                         .await
                         .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
@@ -148,8 +150,19 @@ impl MessageStore for SurrealDB {
                     .await
                     .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
 
+                let bytes = match data {
+                    Data::Base64(data) => match URL_SAFE_NO_PAD.decode(data.as_bytes()) {
+                        Ok(bytes) => bytes,
+                        Err(err) => {
+                            warn!("Failed to decode base64 data: {}", err);
+                            data.into()
+                        }
+                    },
+                    data => data.into(),
+                };
+
                 // Store data in the data store.
-                data_store.put(cid.clone(), data.into()).await?;
+                data_store.put(cid.clone(), bytes).await?;
             }
 
             data_cid = Some(cid);

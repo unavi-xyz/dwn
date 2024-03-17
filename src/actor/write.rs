@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use time::OffsetDateTime;
 
 use crate::{
@@ -10,7 +11,7 @@ use super::{Actor, MessageSendError};
 
 pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
-    data: Option<Data>,
+    data: Option<Vec<u8>>,
     record_id: Option<String>,
     store: bool,
 }
@@ -26,7 +27,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
     }
 
     /// Data to be written.
-    pub fn data(mut self, data: Data) -> Self {
+    pub fn data(mut self, data: Vec<u8>) -> Self {
         self.data = Some(data);
         self
     }
@@ -50,7 +51,12 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         let mut descriptor = RecordsWrite::default();
         descriptor.message_timestamp = OffsetDateTime::now_utc();
 
-        if let Some(data) = &self.data {
+        let data = self.data.map(|data| {
+            let encoded = URL_SAFE_NO_PAD.encode(data);
+            Data::Base64(encoded)
+        });
+
+        if let Some(data) = &data {
             let cid = data.cid()?;
             descriptor.data_cid = Some(cid.to_string());
         }
@@ -58,7 +64,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         let mut msg = Message {
             attestation: None,
             authorization: None,
-            data: self.data,
+            data,
             descriptor: descriptor.into(),
             record_id: self.record_id.unwrap_or_default(),
         };
