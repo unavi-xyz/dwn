@@ -218,8 +218,8 @@ mod tests {
         use super::*;
         use crate::{
             message::{
-                builder::MessageBuilder,
                 descriptor::{FilterDateSort, RecordsWrite},
+                MessageBuilder,
             },
             util::DidKey,
         };

@@ -102,9 +102,8 @@ mod tests {
     use crate::{
         handlers::Reply,
         message::{
-            builder::MessageBuilder,
-            data::Data,
             descriptor::{RecordsCommit, RecordsRead, RecordsWrite},
+            Data, MessageBuilder,
         },
         tests::create_dwn,
         util::DidKey,

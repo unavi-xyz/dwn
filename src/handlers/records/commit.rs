@@ -129,9 +129,8 @@ fn descends_from(
 mod tests {
     use crate::{
         message::{
-            builder::MessageBuilder,
-            data::Data,
             descriptor::{Descriptor, RecordsCommit, RecordsWrite},
+            Data, MessageBuilder,
         },
         tests::create_dwn,
         util::DidKey,

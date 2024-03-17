@@ -160,8 +160,8 @@ mod tests {
     use crate::{
         handlers::Reply,
         message::{
-            builder::MessageBuilder,
             descriptor::{Filter, RecordsQuery, RecordsWrite},
+            MessageBuilder,
         },
         tests::create_dwn,
         util::DidKey,

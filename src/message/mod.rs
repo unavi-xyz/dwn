@@ -9,12 +9,15 @@ use crate::{
     util::{encode_cbor, EncodeError},
 };
 
-use self::{auth::SignatureVerifyError, data::Data, descriptor::Descriptor};
+use self::{auth::SignatureVerifyError, descriptor::Descriptor};
 
 pub mod auth;
-pub mod builder;
-pub mod data;
+mod builder;
+mod data;
 pub mod descriptor;
+
+pub use builder::*;
+pub use data::*;
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

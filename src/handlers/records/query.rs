@@ -41,9 +41,8 @@ mod tests {
     use crate::{
         handlers::Reply,
         message::{
-            builder::MessageBuilder,
-            data::Data,
             descriptor::{Filter, RecordsQuery, RecordsWrite},
+            Data, MessageBuilder,
         },
         tests::create_dwn,
         util::DidKey,
