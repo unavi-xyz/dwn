@@ -77,4 +77,16 @@ async fn test_records() {
     let reply = actor.read(record_id.clone()).await.unwrap();
     assert_eq!(reply.status.code, 200);
     assert_eq!(reply.data, Some(new_data));
+
+    // Query the record.
+    // Only the update message should be returned.
+    let query = actor
+        .query()
+        .record_id(record_id.clone())
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+    assert_eq!(query.entries[0].record_id, record_id);
 }
