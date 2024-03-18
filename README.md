@@ -19,7 +19,7 @@ use dwn::{
 
 #[tokio::main]
 async fn main() {
-    // Create a DWN, using embedded SurrealDB for both the data and message store.
+    // Create a DWN, using an embedded SurrealDB for both the data and message store.
     let db = SurrealDB::new().await.unwrap();
     let dwn = DWN {
         data_store: db.clone(),
