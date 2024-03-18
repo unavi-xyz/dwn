@@ -41,10 +41,10 @@ impl Data {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct EncryptedData {
-    pub protected: Protected,
-    pub recipients: Vec<String>,
     pub ciphertext: String,
     pub iv: String,
+    pub protected: Protected,
+    pub recipients: Vec<String>,
     pub tag: String,
 }
 
