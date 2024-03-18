@@ -34,20 +34,20 @@ async fn main() {
     // Write a new record.
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 
-    let res = actor
+    let write = actor
         .write()
         .data(data.clone())
         .send()
         .await
         .unwrap();
 
-    assert_eq!(res.reply.status.code, 200);
+    assert_eq!(write.reply.status.code, 200);
 
     // Read the record.
-    let reply = actor.read(res.record_id).await.unwrap();
+    let read = actor.read(write.entry_id).await.unwrap();
 
-    assert_eq!(reply.status.code, 200);
-    assert_eq!(reply.data, Some(data));
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.data, Some(data));
 }
 ```
 
