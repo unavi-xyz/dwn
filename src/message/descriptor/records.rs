@@ -153,37 +153,6 @@ impl Default for RecordsWrite {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RecordsCommit {
-    interface: Interface,
-    method: Method,
-
-    #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
-    pub message_timestamp: OffsetDateTime,
-    #[serde(rename = "parentId")]
-    pub parent_id: String,
-}
-
-impl RecordsCommit {
-    pub fn new(parent_id: String) -> Self {
-        RecordsCommit {
-            parent_id,
-            ..Default::default()
-        }
-    }
-}
-
-impl Default for RecordsCommit {
-    fn default() -> Self {
-        RecordsCommit {
-            interface: Interface::Records,
-            method: Method::Commit,
-            message_timestamp: OffsetDateTime::now_utc(),
-            parent_id: "".to_string(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsDelete {
     interface: Interface,
     method: Method,
@@ -191,6 +160,15 @@ pub struct RecordsDelete {
     pub record_id: String,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
+}
+
+impl RecordsDelete {
+    pub fn new(record_id: String) -> Self {
+        RecordsDelete {
+            record_id,
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for RecordsDelete {

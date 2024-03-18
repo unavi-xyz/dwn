@@ -4,7 +4,7 @@ use thiserror::Error;
 use crate::{
     handlers::{RecordsReadReply, Reply, StatusReply},
     message::{
-        descriptor::{RecordsCommit, RecordsRead},
+        descriptor::{RecordsDelete, RecordsRead},
         AuthError, Message,
     },
     store::{DataStore, MessageStore},
@@ -37,8 +37,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         })
     }
 
-    pub async fn commit(&self, parent_id: String) -> Result<StatusReply, MessageSendError> {
-        let mut msg = Message::new(RecordsCommit::new(parent_id));
+    pub async fn delete(&self, record_id: String) -> Result<StatusReply, MessageSendError> {
+        let mut msg = Message::new(RecordsDelete::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
         msg.authorize(self.kid.clone(), &self.jwk)?;

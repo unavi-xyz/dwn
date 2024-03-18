@@ -47,6 +47,7 @@ surrealdb = { version = "1.2.0", default-features = false, features = ["kv-mem",
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
+tracing-test = "0.2.4"
 
 [profile.release]
 lto = true

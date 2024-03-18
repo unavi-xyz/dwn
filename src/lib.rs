@@ -30,27 +30,27 @@
 //!     // Write a new record.
 //!     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 //!
-//!     let res = actor
+//!     let write = actor
 //!         .write()
 //!         .data(data.clone())
 //!         .send()
 //!         .await
 //!         .unwrap();
 //!
-//!     assert_eq!(res.reply.status.code, 200);
+//!     assert_eq!(write.reply.status.code, 200);
 //!
 //!     // Read the record.
-//!     let reply = actor.read(res.record_id).await.unwrap();
+//!     let read = actor.read(write.entry_id).await.unwrap();
 //!
-//!     assert_eq!(reply.status.code, 200);
-//!     assert_eq!(reply.data, Some(data));
+//!     assert_eq!(read.status.code, 200);
+//!     assert_eq!(read.data, Some(data));
 //! }
 //! ```
 
 use handlers::{
     records::{
-        commit::RecordsCommitHandler, delete::RecordsDeleteHandler, query::RecordsQueryHandler,
-        read::RecordsReadHandler, write::RecordsWriteHandler,
+        delete::RecordsDeleteHandler, query::RecordsQueryHandler, read::RecordsReadHandler,
+        write::RecordsWriteHandler,
     },
     HandlerError, MethodHandler, Reply,
 };
@@ -87,14 +87,6 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         message: Message,
     ) -> Result<Reply, HandleMessageError> {
         match &message.descriptor {
-            Descriptor::RecordsCommit(_) => {
-                let handler = RecordsCommitHandler {
-                    data_store: &self.data_store,
-                    message_store: &self.message_store,
-                };
-                let reply = handler.handle(tenant, message).await?;
-                Ok(reply.into())
-            }
             Descriptor::RecordsDelete(_) => {
                 let handler = RecordsDeleteHandler {
                     data_store: &self.data_store,

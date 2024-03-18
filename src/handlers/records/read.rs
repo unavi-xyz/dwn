@@ -45,25 +45,17 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, 
             )
             .await?;
 
-        // Get the latest commit or delete message.
-        let latest_commit_or_delete = messages.iter().find(|m| {
-            matches!(
-                m.descriptor,
-                Descriptor::RecordsCommit(_) | Descriptor::RecordsDelete(_)
-            )
-        });
-
-        // If no message was found, use the initial entry.
-        let record =
-            latest_commit_or_delete
-                .or(messages.last())
-                .ok_or(HandlerError::InvalidDescriptor(
-                    "Record not found".to_string(),
-                ))?;
+        let latest_checkpoint = messages
+            .iter()
+            .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
+            .or(messages.last())
+            .ok_or(HandlerError::InvalidDescriptor(
+                "Record not found".to_string(),
+            ))?;
 
         // Get the record that has the data.
         let entry_id_map = create_entry_id_map(&messages)?;
-        let record_entry_id = record.generate_record_id()?;
+        let record_entry_id = latest_checkpoint.generate_record_id()?;
         let data_cid = get_data_cid(&record_entry_id, &entry_id_map);
 
         let data = match data_cid {
@@ -79,7 +71,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, 
 
         Ok(RecordsReadReply {
             data,
-            record: record.to_owned(),
+            record: latest_checkpoint.to_owned(),
             status: Status::ok(),
         })
     }
@@ -91,7 +83,6 @@ fn get_data_cid(entry_id: &str, messages: &HashMap<String, &Message>) -> Option<
     let entry = messages.get(entry_id)?;
 
     match &entry.descriptor {
-        Descriptor::RecordsCommit(desc) => get_data_cid(&desc.parent_id, messages),
         Descriptor::RecordsWrite(desc) => desc.data_cid.clone(),
         _ => None,
     }

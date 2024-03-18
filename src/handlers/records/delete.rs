@@ -37,7 +37,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D
             .query(
                 tenant,
                 Filter {
-                    record_id: Some(message.record_id.clone()),
+                    record_id: Some(descriptor.record_id.clone()),
                     date_sort: Some(FilterDateSort::CreatedDescending),
                     ..Default::default()
                 },

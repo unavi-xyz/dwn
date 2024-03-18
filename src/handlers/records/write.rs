@@ -71,12 +71,12 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
             // TODO: Ensure immutable values remain unchanged.
 
-            let latest_checkpoint_entry = messages
+            let checkpoint_entry = messages
                 .iter()
                 .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
                 .unwrap_or(initial_entry);
 
-            let checkpoint_entry_id = latest_checkpoint_entry.generate_record_id()?;
+            let checkpoint_entry_id = checkpoint_entry.generate_record_id()?;
 
             // Ensure parent id matches the latest checkpoint entry.
             if *parent_id != checkpoint_entry_id {
@@ -85,7 +85,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 ));
             }
 
-            let checkpoint_time = match &latest_checkpoint_entry.descriptor {
+            let checkpoint_time = match &checkpoint_entry.descriptor {
                 Descriptor::RecordsDelete(desc) => desc.message_timestamp,
                 Descriptor::RecordsWrite(desc) => desc.message_timestamp,
                 _ => {
@@ -141,11 +141,6 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 self.message_store
                     .put(tenant, message, self.data_store)
                     .await?;
-            } else {
-                // Cease processing.
-                return Ok(StatusReply {
-                    status: Status::ok(),
-                });
             }
         }
 

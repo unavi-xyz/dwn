@@ -15,7 +15,6 @@ pub enum Interface {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Method {
-    Commit,
     Configure,
     Delete,
     Grant,
@@ -45,7 +44,6 @@ pub enum Descriptor {
     PermissionsRevoke,
     ProtocolsConfigure,
     ProtocolsQuery,
-    RecordsCommit(RecordsCommit),
     RecordsDelete(RecordsDelete),
     RecordsQuery(RecordsQuery),
     RecordsRead(RecordsRead),
@@ -67,12 +65,6 @@ impl From<RecordsQuery> for Descriptor {
 impl From<RecordsWrite> for Descriptor {
     fn from(desc: RecordsWrite) -> Self {
         Descriptor::RecordsWrite(desc)
-    }
-}
-
-impl From<RecordsCommit> for Descriptor {
-    fn from(desc: RecordsCommit) -> Self {
-        Descriptor::RecordsCommit(desc)
     }
 }
 
@@ -124,12 +116,6 @@ impl<'de> Deserialize<'de> for Descriptor {
                     RecordsWrite::default()
                 }),
             )),
-            ("Records", "Commit") => Ok(Descriptor::RecordsCommit(
-                serde_json::from_value(json).unwrap_or_else(|e| {
-                    warn!("Failed to deserialize RecordsCommit: {}", e);
-                    RecordsCommit::default()
-                }),
-            )),
             ("Records", "Delete") => Ok(Descriptor::RecordsDelete(
                 serde_json::from_value(json).unwrap_or_else(|e| {
                     warn!("Failed to deserialize RecordsDelete: {}", e);
@@ -152,7 +138,6 @@ mod tests {
 
     fn default_descriptors() -> Vec<Descriptor> {
         vec![
-            Descriptor::RecordsCommit(RecordsCommit::default()),
             Descriptor::RecordsDelete(RecordsDelete::default()),
             Descriptor::RecordsQuery(RecordsQuery::default()),
             Descriptor::RecordsRead(RecordsRead::default()),

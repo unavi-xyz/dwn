@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ impl MessageStore for SurrealDB {
         let message: Option<DbMessage> = db
             .select(id.clone())
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
         let message = match message {
             Some(message) => message,
@@ -50,7 +51,7 @@ impl MessageStore for SurrealDB {
         // Delete the message.
         db.delete::<Option<DbMessage>>(id)
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
         if let Some(data_cid) = message.data_cid {
             let id = Thing::from((
@@ -61,7 +62,7 @@ impl MessageStore for SurrealDB {
             let db_data_ref: Option<DbDataCidRefs> = db
                 .select(id.clone())
                 .await
-                .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 if db_data_ref.ref_count > 1 {
@@ -71,12 +72,12 @@ impl MessageStore for SurrealDB {
                             ref_count: db_data_ref.ref_count - 1,
                         })
                         .await
-                        .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
                 } else {
                     // Delete the data if this is the only reference.
                     db.delete::<Option<DbDataCidRefs>>(id)
                         .await
-                        .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
                     data_store.delete(data_cid).await?;
                 }
@@ -98,7 +99,7 @@ impl MessageStore for SurrealDB {
             .db
             .select(id)
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?
             .ok_or_else(|| MessageStoreError::NotFound)?;
 
         Ok(db_message.message)
@@ -110,12 +111,8 @@ impl MessageStore for SurrealDB {
         mut message: Message,
         data_store: &impl DataStore,
     ) -> Result<Cid, MessageStoreError> {
-        let cbor = encode_cbor(&message)?;
-        let message_cid = cbor.cid();
-
         let mut data_cid = None;
 
-        // Store data.
         if let Some(data) = message.data.take() {
             let db = self
                 .message_db()
@@ -133,7 +130,7 @@ impl MessageStore for SurrealDB {
             let db_data_ref: Option<DbDataCidRefs> = db
                 .select(id.clone())
                 .await
-                .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 // Add one to the reference count.
@@ -142,13 +139,13 @@ impl MessageStore for SurrealDB {
                         ref_count: db_data_ref.ref_count + 1,
                     })
                     .await
-                    .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                    .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
             } else {
                 // Create a new data CID object.
                 db.create::<Option<DbDataCidRefs>>(id)
                     .content(DbDataCidRefs { ref_count: 1 })
                     .await
-                    .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+                    .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
                 let bytes = match data {
                     Data::Base64(data) => match URL_SAFE_NO_PAD.decode(data.as_bytes()) {
@@ -168,12 +165,15 @@ impl MessageStore for SurrealDB {
             data_cid = Some(cid);
         }
 
+        let cbor = encode_cbor(&message)?;
+        let message_cid = cbor.cid();
+
         let db = self
             .message_db()
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        // Store message.
+        // Store the message.
         let id = Thing::from((
             Table::from(tenant.to_string()).to_string(),
             Id::String(message_cid.to_string()),
@@ -182,7 +182,6 @@ impl MessageStore for SurrealDB {
         let record_id = message.record_id.clone();
 
         let date_created = match &message.descriptor {
-            Descriptor::RecordsCommit(desc) => Some(desc.message_timestamp),
             Descriptor::RecordsDelete(desc) => Some(desc.message_timestamp),
             Descriptor::RecordsWrite(desc) => Some(desc.message_timestamp),
             _ => None,
@@ -207,7 +206,7 @@ impl MessageStore for SurrealDB {
                 tenant: tenant.to_string(),
             })
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
         Ok(*message_cid)
     }
@@ -237,11 +236,11 @@ impl MessageStore for SurrealDB {
             .bind(("table", Table::from(tenant).to_string()))
             .bind(("record_id", filter.record_id))
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
         let mut db_messages: Vec<DbMessage> = res
             .take(0)
-            .map_err(|err| MessageStoreError::BackendError(anyhow::anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
         if let Some(sort) = filter.date_sort {
             match sort {
