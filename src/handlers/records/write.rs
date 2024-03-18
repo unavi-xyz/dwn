@@ -48,7 +48,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
             // Store message as initial entry.
             self.message_store
-                .put(tenant, message, self.data_store)
+                .put(tenant.to_string(), message, self.data_store)
                 .await?;
         } else {
             let initial_entry = initial_entry.ok_or(HandlerError::InvalidDescriptor(
@@ -112,7 +112,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
             if existing_writes.is_empty() {
                 // Store message as new entry.
                 self.message_store
-                    .put(tenant, message, self.data_store)
+                    .put(tenant.to_string(), message, self.data_store)
                     .await?;
             } else if existing_writes.iter().all(|m| {
                 let m_timestamp = match &m.descriptor {
@@ -139,7 +139,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
                 // Store message as new entry.
                 self.message_store
-                    .put(tenant, message, self.data_store)
+                    .put(tenant.to_string(), message, self.data_store)
                     .await?;
             }
         }

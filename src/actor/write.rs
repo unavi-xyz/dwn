@@ -13,6 +13,7 @@ pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
     data: Option<Vec<u8>>,
     parent_id: Option<String>,
+    published: bool,
     record_id: Option<String>,
     store: bool,
 }
@@ -23,6 +24,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             actor,
             data: None,
             parent_id: None,
+            published: false,
             record_id: None,
             store: true,
         }
@@ -35,8 +37,17 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
     }
 
     /// Parent record ID.
+    /// Must be set when updating a record.
     pub fn parent_id(mut self, parent_id: String) -> Self {
         self.parent_id = Some(parent_id);
+        self
+    }
+
+    /// Whether the record should be published.
+    /// This makes the record public for anyone to read.
+    /// Defaults to false.
+    pub fn published(mut self, published: bool) -> Self {
+        self.published = published;
         self
     }
 
@@ -59,6 +70,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         let mut descriptor = RecordsWrite::default();
         descriptor.message_timestamp = OffsetDateTime::now_utc();
         descriptor.parent_id = self.parent_id.clone();
+        descriptor.published = Some(self.published);
 
         let data = self.data.map(|data| {
             let encoded = URL_SAFE_NO_PAD.encode(data);

@@ -87,15 +87,9 @@ pub trait MessageStore {
         cid: String,
         data_store: &impl DataStore,
     ) -> impl Future<Output = Result<(), MessageStoreError>>;
-    fn get(
-        &self,
-        tenant: &str,
-        cid: &str,
-        data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<Message, MessageStoreError>>;
     fn put(
         &self,
-        tenant: &str,
+        tenant: String,
         message: Message,
         data_store: &impl DataStore,
     ) -> impl Future<Output = Result<Cid, MessageStoreError>>;

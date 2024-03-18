@@ -18,6 +18,7 @@ use crate::{
 use super::SurrealDB;
 
 const DATA_REF_TABLE_NAME: &str = "data_cid_refs";
+const MESSAGE_TABLE_NAME: &str = "messages";
 
 impl MessageStore for SurrealDB {
     async fn delete(
@@ -31,7 +32,10 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid)));
+        let id = Thing::from((
+            Table::from(MESSAGE_TABLE_NAME.to_string()).to_string(),
+            Id::String(cid),
+        ));
 
         let message: Option<DbMessage> = db
             .select(id.clone())
@@ -87,27 +91,9 @@ impl MessageStore for SurrealDB {
         Ok(())
     }
 
-    async fn get(
-        &self,
-        tenant: &str,
-        cid: &str,
-        _data_store: &impl DataStore,
-    ) -> Result<Message, MessageStoreError> {
-        let id = Thing::from((Table::from(tenant).to_string(), Id::String(cid.to_string())));
-
-        let db_message: DbMessage = self
-            .db
-            .select(id)
-            .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?
-            .ok_or_else(|| MessageStoreError::NotFound)?;
-
-        Ok(db_message.message)
-    }
-
     async fn put(
         &self,
-        tenant: &str,
+        tenant: String,
         mut message: Message,
         data_store: &impl DataStore,
     ) -> Result<Cid, MessageStoreError> {
@@ -175,7 +161,7 @@ impl MessageStore for SurrealDB {
 
         // Store the message.
         let id = Thing::from((
-            Table::from(tenant.to_string()).to_string(),
+            Table::from(MESSAGE_TABLE_NAME.to_string()).to_string(),
             Id::String(message_cid.to_string()),
         ));
 
@@ -203,7 +189,7 @@ impl MessageStore for SurrealDB {
                 date_published,
                 message,
                 record_id,
-                tenant: tenant.to_string(),
+                tenant,
             })
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
@@ -217,7 +203,7 @@ impl MessageStore for SurrealDB {
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let mut conditions = Vec::new();
+        let mut conditions = vec!["(tenant = $tenant OR message.descriptor.published = true)"];
 
         if filter.record_id.is_some() {
             conditions.push("record_id = $record_id");
@@ -233,7 +219,8 @@ impl MessageStore for SurrealDB {
 
         let mut res = db
             .query(query)
-            .bind(("table", Table::from(tenant).to_string()))
+            .bind(("table", Table::from(MESSAGE_TABLE_NAME.to_string())))
+            .bind(("tenant", tenant))
             .bind(("record_id", filter.record_id))
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
