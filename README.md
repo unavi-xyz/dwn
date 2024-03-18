@@ -9,13 +9,7 @@ Rust implementation of a [Decentralized Web Node](https://identity.foundation/de
 ```rust
 use std::sync::Arc;
 
-use dwn::{
-    handlers::Status,
-    message::Data,
-    store::SurrealDB,
-    Actor,
-    DWN
-};
+use dwn::{store::SurrealDB, Actor, DWN};
 
 #[tokio::main]
 async fn main() {
