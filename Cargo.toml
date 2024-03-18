@@ -25,6 +25,7 @@ iana-media-types = "0.1.2"
 libipld = { version = "0.16.0", features = ["serde-codec"] }
 libipld-cbor = "0.16.0"
 libipld-core = { version = "0.16.0", features = ["serde", "serde-codec", "multibase"] }
+openssl = "0.10.64"
 ring = "0.17.7"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_ipld_dagcbor = "0.4.2"

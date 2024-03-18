@@ -1982,6 +1982,7 @@ dependencies = [
  "libipld 0.16.0",
  "libipld-cbor 0.16.0",
  "libipld-core 0.16.0",
+ "openssl",
  "ring 0.17.8",
  "rust-s3",
  "serde",

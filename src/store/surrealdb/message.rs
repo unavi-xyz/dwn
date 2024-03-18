@@ -8,8 +8,9 @@ use tracing::warn;
 
 use crate::{
     message::{
+        data::Data,
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Data, Message,
+        Message,
     },
     store::{DataStore, MessageStore, MessageStoreError},
     util::encode_cbor,
@@ -141,7 +142,12 @@ impl MessageStore for SurrealDB {
                             data.into()
                         }
                     },
-                    data => data.into(),
+                    Data::Encrypted(data) => serde_json::to_vec(&data).map_err(|err| {
+                        MessageStoreError::BackendError(anyhow!(
+                            "Failed to serialize encrypted data: {}",
+                            err
+                        ))
+                    })?,
                 };
 
                 // Store data in the data store.

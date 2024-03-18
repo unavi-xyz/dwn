@@ -98,7 +98,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsQueryBuilder<'a, D, M> {
             msg.record_id = msg.generate_record_id()?;
         }
 
-        msg.authorize(self.actor.kid.clone(), &self.actor.jwk)?;
+        msg.authorize(self.actor.auth.kid.clone(), &self.actor.auth.jwk)?;
 
         let reply = self.actor.dwn.process_message(&self.actor.did, msg).await?;
 

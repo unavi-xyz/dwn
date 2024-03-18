@@ -1,4 +1,5 @@
 use didkit::JWK;
+use openssl::error::ErrorStack;
 use thiserror::Error;
 
 use crate::{
@@ -19,10 +20,13 @@ mod query;
 mod write;
 
 pub struct Actor<D: DataStore, M: MessageStore> {
+    pub auth: VerifiableCredential,
     pub did: String,
     pub dwn: DWN<D, M>,
+}
+
+pub struct VerifiableCredential {
     pub jwk: JWK,
-    // VC DID URL for the JWK.
     pub kid: String,
 }
 
@@ -32,8 +36,10 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         Ok(Actor {
             did: did_key.did,
             dwn,
-            jwk: did_key.jwk,
-            kid: did_key.kid,
+            auth: VerifiableCredential {
+                jwk: did_key.jwk,
+                kid: did_key.kid,
+            },
         })
     }
 
@@ -41,7 +47,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         let mut msg = Message::new(RecordsDelete::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
-        msg.authorize(self.kid.clone(), &self.jwk)?;
+        msg.authorize(self.auth.kid.clone(), &self.auth.jwk)?;
 
         let reply = self.dwn.process_message(&self.did, msg).await?;
 
@@ -82,4 +88,6 @@ pub enum MessageSendError {
     Handler(#[from] HandleMessageError),
     #[error("Invalid reply: {:?}", 0)]
     InvalidReply(Reply),
+    #[error(transparent)]
+    OpenSSL(#[from] ErrorStack),
 }

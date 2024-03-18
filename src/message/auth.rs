@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
 use async_recursion::async_recursion;
-use base64::engine::{general_purpose::URL_SAFE_NO_PAD, Engine};
 use didkit::{
     ssi::{
         did::{VerificationMethod, VerificationMethodMap},
         jwk::Algorithm,
+        jws::Header,
     },
     Document, ResolutionInputMetadata, VerificationRelationship, DIDURL, DID_METHODS,
 };
@@ -57,11 +57,11 @@ pub enum SignatureVerifyError {
 
 impl SignatureEntry {
     pub async fn verify(&self, payload: &[u8]) -> Result<(), SignatureVerifyError> {
-        // Resolve DID URL
-        let did_url = DIDURL::from_str(&self.protected.kid)?;
+        // Resolve the key.
+        let did_url = DIDURL::from_str(&self.protected.key_id)?;
         let verification_method = resolve_authentication_method(&did_url).await?;
 
-        // Verify signature
+        // Verify signature.
         let jwk = verification_method.get_jwk()?;
         let (_, decoded) = didkit::ssi::jws::decode_verify(&self.signature, &jwk)?;
 
@@ -148,15 +148,9 @@ async fn resolve_did_url_document(did_url: &DIDURL) -> Result<Document, Signatur
 #[derive(Clone, Debug, PartialEq)]
 pub struct Protected {
     /// Algorithm used to verify the signature
-    pub alg: Algorithm,
-    /// DID URL of the key used to verify the signature
-    pub kid: String,
-}
-
-#[derive(Deserialize, Serialize)]
-struct ProtectedJson {
-    pub alg: Algorithm,
-    pub kid: String,
+    pub algorithm: Algorithm,
+    /// DID URL of the VC used to verify the signature
+    pub key_id: String,
 }
 
 impl<'de> Deserialize<'de> for Protected {
@@ -164,15 +158,13 @@ impl<'de> Deserialize<'de> for Protected {
     where
         D: Deserializer<'de>,
     {
-        let encoded = String::deserialize(deserializer)?;
-        let decoded = URL_SAFE_NO_PAD
-            .decode(encoded)
-            .map_err(serde::de::Error::custom)?;
-        let json =
-            serde_json::from_slice::<ProtectedJson>(&decoded).map_err(serde::de::Error::custom)?;
+        let header = Header::deserialize(deserializer)?;
+        let key_id = header
+            .key_id
+            .ok_or(serde::de::Error::custom("key id is required"))?;
         Ok(Protected {
-            alg: json.alg,
-            kid: json.kid,
+            algorithm: header.algorithm,
+            key_id,
         })
     }
 }
@@ -182,12 +174,11 @@ impl Serialize for Protected {
     where
         S: Serializer,
     {
-        let json = ProtectedJson {
-            alg: self.alg,
-            kid: self.kid.clone(),
+        let header = Header {
+            algorithm: self.algorithm,
+            key_id: Some(self.key_id.clone()),
+            ..Default::default()
         };
-        let json_string = serde_json::to_string(&json).map_err(serde::ser::Error::custom)?;
-        let encoded = URL_SAFE_NO_PAD.encode(json_string);
-        serializer.serialize_str(&encoded)
+        header.serialize(serializer)
     }
 }

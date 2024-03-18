@@ -9,13 +9,11 @@ use crate::{
     util::{encode_cbor, EncodeError},
 };
 
-use self::{auth::SignatureVerifyError, descriptor::Descriptor};
+use self::{auth::SignatureVerifyError, data::Data, descriptor::Descriptor};
 
 pub mod auth;
-mod data;
+pub mod data;
 pub mod descriptor;
-
-pub use data::{Data, EncryptedData};
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -73,7 +71,7 @@ impl Message {
         }
     }
 
-    pub fn authorize(&mut self, kid: String, jwk: &JWK) -> Result<(), AuthError> {
+    pub fn authorize(&mut self, key_id: String, jwk: &JWK) -> Result<(), AuthError> {
         let descriptor_cid = encode_cbor(&self.descriptor)?.cid().to_string();
 
         let payload = AuthPayload {
@@ -83,14 +81,14 @@ impl Message {
         };
         let payload_ser = serde_json::to_string(&payload)?;
 
-        let alg = jwk.algorithm.ok_or(AuthError::MissingAlgorithm)?;
+        let algorithm = jwk.algorithm.ok_or(AuthError::MissingAlgorithm)?;
 
-        let signature = didkit::ssi::jws::encode_sign(alg, &payload_ser, jwk)?;
+        let signature = didkit::ssi::jws::encode_sign(algorithm, &payload_ser, jwk)?;
 
         let jws = JWS {
             payload,
             signatures: vec![SignatureEntry {
-                protected: Protected { alg, kid },
+                protected: Protected { algorithm, key_id },
                 signature,
             }],
         };

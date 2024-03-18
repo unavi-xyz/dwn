@@ -16,7 +16,7 @@ pub struct DidKey {
 }
 
 impl DidKey {
-    /// Generates a did:key.
+    /// Generates a new did:key.
     pub fn new() -> Result<Self, DidKeygenError> {
         let mut jwk = JWK::generate_ed25519()?;
         jwk.algorithm = Some(Algorithm::EdDSA);

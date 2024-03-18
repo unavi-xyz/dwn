@@ -3,7 +3,11 @@ use time::OffsetDateTime;
 
 use crate::{
     handlers::{Reply, StatusReply},
-    message::{descriptor::RecordsWrite, Data, Message},
+    message::{
+        data::{Data, EncryptedData},
+        descriptor::RecordsWrite,
+        Message,
+    },
     store::{DataStore, MessageStore},
 };
 
@@ -12,6 +16,7 @@ use super::{Actor, MessageSendError};
 pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
     data: Option<Vec<u8>>,
+    encrypted: bool,
     parent_id: Option<String>,
     published: bool,
     record_id: Option<String>,
@@ -23,6 +28,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         RecordsWriteBuilder {
             actor,
             data: None,
+            encrypted: false,
             parent_id: None,
             published: false,
             record_id: None,
@@ -33,6 +39,14 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
     /// Data to be written.
     pub fn data(mut self, data: Vec<u8>) -> Self {
         self.data = Some(data);
+        self
+    }
+
+    /// Whether the data should be encrypted.
+    /// Defaults to false.
+    /// If set to true, the data will be encrypted using a generated key.
+    pub fn encrypt(mut self, encrypt: bool) -> Self {
+        self.encrypted = encrypt;
         self
     }
 
@@ -72,10 +86,19 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         descriptor.parent_id = self.parent_id.clone();
         descriptor.published = Some(self.published);
 
-        let data = self.data.map(|data| {
-            let encoded = URL_SAFE_NO_PAD.encode(data);
-            Data::Base64(encoded)
-        });
+        let mut data = None;
+        let mut encryption_key = None;
+
+        if let Some(bytes) = self.data {
+            if self.encrypted {
+                let encrypted = EncryptedData::encrypt_aes(&bytes)?;
+                data = Some(Data::Encrypted(encrypted.data));
+                encryption_key = Some(encrypted.key);
+            } else {
+                let encoded = URL_SAFE_NO_PAD.encode(bytes);
+                data = Some(Data::Base64(encoded));
+            }
+        }
 
         if let Some(data) = &data {
             let cid = data.cid()?;
@@ -96,18 +119,24 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             msg.record_id = entry_id.clone();
         }
 
-        msg.authorize(self.actor.kid.clone(), &self.actor.jwk)?;
+        msg.authorize(self.actor.auth.kid.clone(), &self.actor.auth.jwk)?;
 
         let reply = self.actor.dwn.process_message(&self.actor.did, msg).await?;
 
         match reply {
-            Reply::Status(reply) => Ok(WriteResult { entry_id, reply }),
+            Reply::Status(reply) => Ok(WriteResult {
+                encryption_key,
+                entry_id,
+                reply,
+            }),
             _ => Err(MessageSendError::InvalidReply(reply)),
         }
     }
 }
 
 pub struct WriteResult {
+    /// If the data was encrypted, this is the generated encryption key.
+    pub encryption_key: Option<Vec<u8>>,
     pub entry_id: String,
     pub reply: StatusReply,
 }

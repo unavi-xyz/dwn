@@ -10,9 +10,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum EncodeError {
-    #[error("Failed to serialize/deserialize IPLD: {0}")]
+    #[error(transparent)]
     Serde(#[from] SerdeError),
-    #[error("Failed to encode/decode CBOR: {0}")]
+    #[error(transparent)]
     Encode(#[from] anyhow::Error),
 }
 
