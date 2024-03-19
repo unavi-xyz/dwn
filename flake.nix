@@ -85,11 +85,13 @@
         dwn = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           pname = "dwn";
+          cargoExtraArgs = "-p dwn";
         });
 
         dwn-server = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           pname = "dwn-server";
+          cargoExtraArgs = "-p dwn-server";
         });
       in {
         checks = { inherit dwn cargoClippy cargoDoc; };
