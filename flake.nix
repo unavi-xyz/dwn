@@ -82,19 +82,13 @@
           pname = "doc";
         });
 
-        dwn = craneLib.buildPackage (commonArgs // {
-          inherit cargoArtifacts;
-          pname = "dwn";
-          cargoExtraArgs = "-p dwn";
-        });
-
         dwn-server = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           pname = "dwn-server";
           cargoExtraArgs = "-p dwn-server";
         });
       in {
-        checks = { inherit dwn cargoClippy cargoDoc; };
+        checks = { inherit dwn-server cargoClippy cargoDoc; };
 
         apps = rec {
           reset = flake-utils.lib.mkApp {
@@ -103,9 +97,9 @@
             '';
           };
 
-          dwn = flake-utils.lib.mkApp {
-            drv = pkgs.writeScriptBin "dwn" ''
-              ${self.packages.${localSystem}.dwn}/bin/dwn
+          dwn-server = flake-utils.lib.mkApp {
+            drv = pkgs.writeScriptBin "dwn-server" ''
+              ${self.packages.${localSystem}.dwn-server}/bin/dwn-server
             '';
           };
 
@@ -119,11 +113,10 @@
             '';
           };
 
-          default = dwn;
+          default = dwn-server;
         };
 
         packages = {
-          dwn = dwn;
           dwn-server = dwn-server;
           default = dwn-server;
         };

@@ -17,4 +17,5 @@ s3 = ["dwn/s3"]
 axum = "0.7.2"
 dwn.workspace = true
 tokio.workspace = true
+tracing-subscriber.workspace = true
 tracing.workspace = true

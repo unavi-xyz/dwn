@@ -43,5 +43,5 @@ surrealdb = { version = "1.2.2", default-features = false, features = ["kv-mem",
 surrealdb = { version = "1.2.0", default-features = false, features = ["kv-mem", "kv-speedb"], optional = true }
 
 [dev-dependencies]
-tracing-subscriber = "0.3.18"
+tracing-subscriber.workspace = true
 tracing-test = "0.2.4"

@@ -2018,6 +2018,7 @@ dependencies = [
  "dwn",
  "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
