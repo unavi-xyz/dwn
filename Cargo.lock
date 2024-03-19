@@ -207,7 +207,7 @@ dependencies = [
  "async-task",
  "concurrent-queue",
  "fastrand 2.0.1",
- "futures-lite 2.2.0",
+ "futures-lite 2.3.0",
  "slab",
 ]
 
@@ -222,7 +222,7 @@ dependencies = [
  "async-io 2.3.2",
  "async-lock 3.3.0",
  "blocking",
- "futures-lite 2.2.0",
+ "futures-lite 2.3.0",
  "once_cell",
 ]
 
@@ -256,7 +256,7 @@ dependencies = [
  "cfg-if",
  "concurrent-queue",
  "futures-io",
- "futures-lite 2.2.0",
+ "futures-lite 2.3.0",
  "parking",
  "polling 3.5.0",
  "rustix 0.38.31",
@@ -774,7 +774,7 @@ dependencies = [
  "async-task",
  "fastrand 2.0.1",
  "futures-io",
- "futures-lite 2.2.0",
+ "futures-lite 2.3.0",
  "piper",
  "tracing",
 ]
@@ -1987,17 +1987,14 @@ version = "0.0.3"
 dependencies = [
  "anyhow",
  "async-recursion",
- "axum",
  "base64 0.22.0",
  "did-method-key",
  "didkit",
- "dotenvy",
  "iana-media-types",
  "libipld 0.16.0",
  "libipld-cbor 0.16.0",
  "libipld-core 0.16.0",
  "openssl",
- "ring 0.17.8",
  "rust-s3",
  "serde",
  "serde_ipld_dagcbor",
@@ -2011,6 +2008,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-test",
+]
+
+[[package]]
+name = "dwn-server"
+version = "0.0.3"
+dependencies = [
+ "axum",
+ "dwn",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2477,9 +2484,9 @@ dependencies = [
 
 [[package]]
 name = "futures-lite"
-version = "2.2.0"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "445ba825b27408685aaecefd65178908c36c6e96aaf6d8599419d46e624192ba"
+checksum = "52527eb5074e35e9339c6b4e8d12600c7128b68fb25dcb9fa9dec18f7c25f3a5"
 dependencies = [
  "fastrand 2.0.1",
  "futures-core",
@@ -6495,7 +6502,6 @@ dependencies = [
  "digest 0.9.0",
  "k256 0.13.3",
  "keccak-hash",
- "ring 0.16.20",
  "ripemd160",
  "sha2 0.10.8",
  "thiserror",
@@ -6570,7 +6576,6 @@ dependencies = [
  "num-traits",
  "p256",
  "rand",
- "ring 0.16.20",
  "rsa 0.6.1",
  "serde",
  "simple_asn1 0.5.4",
@@ -6593,7 +6598,6 @@ dependencies = [
  "k256 0.13.3",
  "p256",
  "rand",
- "ring 0.16.20",
  "rsa 0.6.1",
  "serde",
  "serde_json",

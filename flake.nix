@@ -86,6 +86,11 @@
           inherit cargoArtifacts;
           pname = "dwn";
         });
+
+        dwn-server = craneLib.buildPackage (commonArgs // {
+          inherit cargoArtifacts;
+          pname = "dwn-server";
+        });
       in {
         checks = { inherit dwn cargoClippy cargoDoc; };
 
@@ -104,7 +109,11 @@
 
           generate-readme = flake-utils.lib.mkApp {
             drv = pkgs.writeShellScriptBin "generate-readme" ''
-              cargo rdme
+              cd crates
+
+              for folder in */; do
+                (cd $folder && cargo rdme)
+              done
             '';
           };
 
@@ -113,13 +122,14 @@
 
         packages = {
           dwn = dwn;
-          default = dwn;
+          dwn-server = dwn-server;
+          default = dwn-server;
         };
 
         devShells = {
           default = craneLib.devShell commonShell;
 
-          server = craneLib.devShell (commonShell // {
+          backend = craneLib.devShell (commonShell // {
             shellHook = ''
               MYSQL_BASEDIR=${pkgs.mariadb}
               MYSQL_HOME=$PWD/mysql
