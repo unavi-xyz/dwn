@@ -33,7 +33,7 @@ jobs:
 
       - run: nix develop -c sqlx migrate run
 
-      - run: nix develop -c cargo sqlx prepare -- --all-features --all-targets --tests
+      - run: nix develop -c cargo sqlx prepare --workspace -- --all-features --all-targets --tests
       - uses: EndBug/add-and-commit@v9
         with:
           message: "chore: sqlx prepare"
