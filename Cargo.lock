@@ -2017,7 +2017,6 @@ version = "0.0.3"
 dependencies = [
  "axum",
  "dwn",
- "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
