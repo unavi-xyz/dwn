@@ -20,12 +20,7 @@ pub struct RecordsReadHandler<'a, D: DataStore, M: MessageStore> {
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, M> {
     async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
-        let mut tenant = None;
-
-        if message.attestation.is_some() && message.authorization.is_some() {
-            let dids = message.verify_attestation().await.unwrap();
-            tenant = dids.first().map(|d| d.to_string());
-        }
+        let tenant = message.tenant().await?;
 
         let descriptor = match &message.descriptor {
             Descriptor::RecordsRead(descriptor) => descriptor,

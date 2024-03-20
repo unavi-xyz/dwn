@@ -27,7 +27,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D
             ));
         }
 
-        let tenant = message.verify_attestation().await.unwrap()[0].to_string();
+        let tenant = message.tenant().await?.unwrap();
 
         let descriptor = match &message.descriptor {
             Descriptor::RecordsDelete(desc) => desc,

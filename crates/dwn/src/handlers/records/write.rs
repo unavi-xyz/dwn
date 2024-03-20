@@ -15,19 +15,13 @@ pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D, M> {
     async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
-        if message.attestation.is_none() {
-            return Err(HandlerError::InvalidDescriptor(
-                "No attestation".to_string(),
-            ));
-        }
-
         if message.authorization.is_none() {
             return Err(HandlerError::InvalidDescriptor(
                 "No authorization".to_string(),
             ));
         }
 
-        let tenant = message.verify_attestation().await.unwrap()[0].to_string();
+        let tenant = message.tenant().await?.unwrap();
 
         let entry_id = message.generate_record_id()?;
 

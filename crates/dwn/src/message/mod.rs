@@ -146,6 +146,20 @@ impl Message {
         Ok(())
     }
 
+    pub async fn tenant(&self) -> Result<Option<String>, VerifyError> {
+        if self.attestation.is_some() {
+            let dids = self.verify_attestation().await?;
+            return Ok(dids.first().cloned());
+        }
+
+        if self.authorization.is_some() {
+            let dids = self.verify_auth().await?;
+            return Ok(dids.first().cloned());
+        }
+
+        Ok(None)
+    }
+
     /// Verifies all signatures on the message.
     pub async fn verify(&self) -> Result<(), VerifyError> {
         let mut attested_dids = Vec::new();

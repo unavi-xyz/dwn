@@ -5,7 +5,7 @@ use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
-    message::Message,
+    message::{Message, VerifyError},
     store::{DataStoreError, MessageStoreError},
     util::EncodeError,
 };
@@ -22,6 +22,8 @@ pub enum HandlerError {
     MessageStoreError(#[from] MessageStoreError),
     #[error(transparent)]
     CborEncode(#[from] EncodeError),
+    #[error(transparent)]
+    VerifyError(#[from] VerifyError),
 }
 
 pub trait MethodHandler {
