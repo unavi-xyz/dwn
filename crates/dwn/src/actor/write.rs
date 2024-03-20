@@ -121,7 +121,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
 
         msg.authorize(self.actor.auth.kid.clone(), &self.actor.auth.jwk)?;
 
-        let reply = self.actor.dwn.process_message(&self.actor.did, msg).await?;
+        let reply = self.actor.dwn.process_message(msg).await?;
 
         match reply {
             Reply::Status(reply) => Ok(WriteResult {

@@ -56,7 +56,9 @@ pub enum SignatureVerifyError {
 }
 
 impl SignatureEntry {
-    pub async fn verify(&self, payload: &[u8]) -> Result<(), SignatureVerifyError> {
+    /// Verify the signature of the payload.
+    /// Returns the DID of the key used to sign the payload.
+    pub async fn verify(&self, payload: &[u8]) -> Result<String, SignatureVerifyError> {
         // Resolve the key.
         let did_url = DIDURL::from_str(&self.protected.key_id)?;
         let verification_method = resolve_authentication_method(&did_url).await?;
@@ -71,7 +73,7 @@ impl SignatureEntry {
             ));
         }
 
-        Ok(())
+        Ok(did_url.did)
     }
 }
 

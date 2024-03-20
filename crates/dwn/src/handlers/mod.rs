@@ -29,7 +29,6 @@ pub enum HandlerError {
 pub trait MethodHandler {
     fn handle(
         &self,
-        tenant: &str,
         message: Message,
     ) -> impl Future<Output = Result<impl Into<Reply>, HandlerError>>;
 }

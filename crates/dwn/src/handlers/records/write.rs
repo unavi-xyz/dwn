@@ -14,12 +14,14 @@ pub struct RecordsWriteHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D, M> {
-    async fn handle(
-        &self,
-        tenant: &str,
-        message: Message,
-    ) -> Result<impl Into<Reply>, HandlerError> {
-        message.verify_auth().await?;
+    async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
+        let dids = message.verify_auth().await?;
+        let tenant = dids
+            .first()
+            .map(|d| d.to_string())
+            .ok_or(HandlerError::InvalidDescriptor(
+                "No tenant in message".to_string(),
+            ))?;
 
         let entry_id = message.generate_record_id()?;
 
@@ -27,7 +29,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
         let messages = self
             .message_store
             .query(
-                tenant,
+                Some(tenant.clone()),
                 Filter {
                     record_id: Some(message.record_id.clone()),
                     date_sort: Some(FilterDateSort::CreatedDescending),
@@ -48,7 +50,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
 
             // Store message as initial entry.
             self.message_store
-                .put(tenant.to_string(), message, self.data_store)
+                .put(tenant.clone(), message, self.data_store)
                 .await?;
         } else {
             let initial_entry = initial_entry.ok_or(HandlerError::InvalidDescriptor(
@@ -112,7 +114,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
             if existing_writes.is_empty() {
                 // Store message as new entry.
                 self.message_store
-                    .put(tenant.to_string(), message, self.data_store)
+                    .put(tenant.clone(), message, self.data_store)
                     .await?;
             } else if existing_writes.iter().all(|m| {
                 let m_timestamp = match &m.descriptor {
@@ -133,13 +135,13 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsWriteHandler<'_, D,
                 for m in existing_writes {
                     let cbor = encode_cbor(&m)?;
                     self.message_store
-                        .delete(tenant, cbor.cid().to_string(), self.data_store)
+                        .delete(&tenant, cbor.cid().to_string(), self.data_store)
                         .await?;
                 }
 
                 // Store message as new entry.
                 self.message_store
-                    .put(tenant.to_string(), message, self.data_store)
+                    .put(tenant, message, self.data_store)
                     .await?;
             }
         }

@@ -107,7 +107,21 @@ impl Message {
         RecordIdGenerator::generate(&self.descriptor)
     }
 
-    pub async fn verify_auth(&self) -> Result<(), VerifyAuthError> {
+    /// Returns the first DID in the authorization JWS.
+    pub async fn tenant(&self) -> Option<String> {
+        match self
+            .verify_auth()
+            .await
+            .map(|dids| dids.first().map(|did| did.to_string()))
+        {
+            Ok(t) => t,
+            _ => None,
+        }
+    }
+
+    /// Verifies the authorization JWS.
+    /// Returns the DIDs of the keys used to sign the payload.
+    pub async fn verify_auth(&self) -> Result<Vec<String>, VerifyAuthError> {
         let auth = self
             .authorization
             .as_ref()
@@ -120,11 +134,14 @@ impl Message {
         let payload = serde_json::to_string(&auth.payload)?;
         let payload = payload.as_bytes();
 
+        let mut dids = Vec::new();
+
         for entry in &auth.signatures {
-            entry.verify(payload).await?;
+            let did = entry.verify(payload).await?;
+            dids.push(did);
         }
 
-        Ok(())
+        Ok(dids)
     }
 }
 

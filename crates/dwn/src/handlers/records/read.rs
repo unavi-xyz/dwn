@@ -19,11 +19,9 @@ pub struct RecordsReadHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, M> {
-    async fn handle(
-        &self,
-        tenant: &str,
-        message: Message,
-    ) -> Result<impl Into<Reply>, HandlerError> {
+    async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
+        let tenant = message.tenant().await;
+
         let descriptor = match &message.descriptor {
             Descriptor::RecordsRead(descriptor) => descriptor,
             _ => {
@@ -54,6 +52,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsReadHandler<'_, D, 
             ))?;
 
         // Get the record that has the data.
+        // TODO: Simplify this, without RecordsCommit this is not needed
         let entry_id_map = create_entry_id_map(&messages)?;
         let record_entry_id = latest_checkpoint.generate_record_id()?;
         let data_cid = get_data_cid(&record_entry_id, &entry_id_map);

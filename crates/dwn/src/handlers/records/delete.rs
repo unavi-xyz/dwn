@@ -14,12 +14,14 @@ pub struct RecordsDeleteHandler<'a, D: DataStore, M: MessageStore> {
 }
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D, M> {
-    async fn handle(
-        &self,
-        tenant: &str,
-        message: Message,
-    ) -> Result<impl Into<Reply>, HandlerError> {
-        message.verify_auth().await?;
+    async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
+        let dids = message.verify_auth().await?;
+        let tenant = dids
+            .first()
+            .map(|d| d.to_string())
+            .ok_or(HandlerError::InvalidDescriptor(
+                "No tenant in message".to_string(),
+            ))?;
 
         let descriptor = match &message.descriptor {
             Descriptor::RecordsDelete(desc) => desc,
@@ -35,7 +37,7 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D
         let messages = self
             .message_store
             .query(
-                tenant,
+                Some(tenant.clone()),
                 Filter {
                     record_id: Some(descriptor.record_id.clone()),
                     date_sort: Some(FilterDateSort::CreatedDescending),
@@ -70,13 +72,13 @@ impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D
         for m in messages {
             let block = encode_cbor(&m)?;
             self.message_store
-                .delete(tenant, block.cid().to_string(), self.data_store)
+                .delete(&tenant, block.cid().to_string(), self.data_store)
                 .await?;
         }
 
         // Store the message.
         self.message_store
-            .put(tenant.to_string(), message, self.data_store)
+            .put(tenant, message, self.data_store)
             .await?;
 
         Ok(StatusReply {

@@ -49,7 +49,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
 
         msg.authorize(self.auth.kid.clone(), &self.auth.jwk)?;
 
-        let reply = self.dwn.process_message(&self.did, msg).await?;
+        let reply = self.dwn.process_message(msg).await?;
 
         match reply {
             Reply::Status(reply) => Ok(reply),
@@ -61,7 +61,9 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         let mut msg = Message::new(RecordsRead::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
-        let reply = self.dwn.process_message(&self.did, msg).await?;
+        msg.authorize(self.auth.kid.clone(), &self.auth.jwk)?;
+
+        let reply = self.dwn.process_message(msg).await?;
 
         match reply {
             Reply::RecordsRead(reply) => Ok(reply),

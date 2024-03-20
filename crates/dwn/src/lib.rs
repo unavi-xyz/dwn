@@ -82,7 +82,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         let mut replies = Vec::new();
 
         for message in payload.messages {
-            match self.process_message("tenant", message).await {
+            match self.process_message(message).await {
                 Ok(reply) => replies.push(reply),
                 Err(err) => {
                     warn!("Failed to process message: {}", err);
@@ -102,18 +102,14 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         }
     }
 
-    pub async fn process_message(
-        &self,
-        tenant: &str,
-        message: Message,
-    ) -> Result<Reply, HandleMessageError> {
+    pub async fn process_message(&self, message: Message) -> Result<Reply, HandleMessageError> {
         match &message.descriptor {
             Descriptor::RecordsDelete(_) => {
                 let handler = RecordsDeleteHandler {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
-                let reply = handler.handle(tenant, message).await?;
+                let reply = handler.handle(message).await?;
                 Ok(reply.into())
             }
             Descriptor::RecordsQuery(_) => {
@@ -121,7 +117,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
-                let reply = handler.handle(tenant, message).await?;
+                let reply = handler.handle(message).await?;
                 Ok(reply.into())
             }
             Descriptor::RecordsRead(_) => {
@@ -129,7 +125,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
-                let reply = handler.handle(tenant, message).await?;
+                let reply = handler.handle(message).await?;
                 Ok(reply.into())
             }
             Descriptor::RecordsWrite(_) => {
@@ -137,7 +133,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                     data_store: &self.data_store,
                     message_store: &self.message_store,
                 };
-                let reply = handler.handle(tenant, message).await?;
+                let reply = handler.handle(message).await?;
                 Ok(reply.into())
             }
             _ => Err(HandleMessageError::UnsupportedInterface),

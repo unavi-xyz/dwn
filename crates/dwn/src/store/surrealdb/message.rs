@@ -203,13 +203,23 @@ impl MessageStore for SurrealDB {
         Ok(*message_cid)
     }
 
-    async fn query(&self, tenant: &str, filter: Filter) -> Result<Vec<Message>, MessageStoreError> {
+    async fn query(
+        &self,
+        tenant: Option<String>,
+        filter: Filter,
+    ) -> Result<Vec<Message>, MessageStoreError> {
         let db = self
             .message_db()
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let mut conditions = vec!["(tenant = $tenant OR message.descriptor.published = true)"];
+        let mut conditions = vec![];
+
+        if tenant.is_some() {
+            conditions.push("(tenant = $tenant OR message.descriptor.published = true)");
+        } else {
+            conditions.push("message.descriptor.published = true");
+        }
 
         if filter.record_id.is_some() {
             conditions.push("record_id = $record_id");
@@ -221,13 +231,19 @@ impl MessageStore for SurrealDB {
             format!(" WHERE {}", conditions.join(" AND "))
         };
 
-        let query = format!("SELECT * FROM type::table($table){}", condition_statement);
-
-        let mut res = db
-            .query(query)
+        let mut query = db
+            .query(format!(
+                "SELECT * FROM type::table($table){}",
+                condition_statement
+            ))
             .bind(("table", Table::from(MESSAGE_TABLE_NAME.to_string())))
-            .bind(("tenant", tenant))
-            .bind(("record_id", filter.record_id))
+            .bind(("record_id", filter.record_id));
+
+        if let Some(tenant) = tenant {
+            query = query.bind(("tenant", tenant));
+        }
+
+        let mut res = query
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
