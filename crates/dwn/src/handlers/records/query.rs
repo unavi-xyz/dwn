@@ -11,7 +11,12 @@ pub struct RecordsQueryHandler<'a, D: DataStore, M: MessageStore> {
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsQueryHandler<'_, D, M> {
     async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
-        let tenant = message.tenant().await;
+        let mut tenant = None;
+
+        if message.attestation.is_some() && message.authorization.is_some() {
+            let dids = message.verify_attestation().await.unwrap();
+            tenant = dids.first().map(|d| d.to_string());
+        }
 
         let filter = match message.descriptor {
             Descriptor::RecordsQuery(descriptor) => descriptor.filter,

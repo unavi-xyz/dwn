@@ -46,6 +46,16 @@ pub enum AuthError {
 }
 
 #[derive(Error, Debug)]
+pub enum SignError {
+    #[error("Missing JWK algorithm")]
+    MissingAlgorithm,
+    #[error(transparent)]
+    Encode(#[from] EncodeError),
+    #[error(transparent)]
+    EncodeSignature(#[from] didkit::ssi::jws::Error),
+}
+
+#[derive(Error, Debug)]
 pub enum DecodeError {
     #[error(transparent)]
     Serde(#[from] SerdeError),
@@ -54,15 +64,19 @@ pub enum DecodeError {
 }
 
 #[derive(Error, Debug)]
-pub enum VerifyAuthError {
-    #[error("Authorization JWS missing")]
-    AuthorizationMissing,
+pub enum VerifyError {
+    #[error("JWS missing")]
+    JwsMissing,
     #[error("Signature missing")]
     SignatureMissing,
     #[error(transparent)]
     SignatureVerify(#[from] SignatureVerifyError),
     #[error(transparent)]
     Serde(#[from] serde_json::Error),
+    #[error("Invalid signature")]
+    InvalidSignature,
+    #[error(transparent)]
+    Encode(#[from] EncodeError),
 }
 
 impl Message {
@@ -79,8 +93,14 @@ impl Message {
     pub fn authorize(&mut self, key_id: String, jwk: &JWK) -> Result<(), AuthError> {
         let descriptor_cid = encode_cbor(&self.descriptor)?.cid().to_string();
 
+        let mut attestation_cid = None;
+
+        if let Some(attestation) = &self.attestation {
+            attestation_cid = Some(encode_cbor(&attestation.payload)?.cid().to_string());
+        }
+
         let payload = AuthPayload {
-            attestation_cid: None,
+            attestation_cid,
             descriptor_cid,
             permissions_grant_cid: None,
         };
@@ -107,42 +127,115 @@ impl Message {
         RecordIdGenerator::generate(&self.descriptor)
     }
 
-    /// Returns the first DID in the authorization JWS.
-    pub async fn tenant(&self) -> Option<String> {
-        match self
-            .verify_auth()
-            .await
-            .map(|dids| dids.first().map(|did| did.to_string()))
-        {
-            Ok(t) => t,
-            _ => None,
-        }
+    pub fn sign(&mut self, key_id: String, jwk: &JWK) -> Result<(), SignError> {
+        let payload = encode_cbor(&self.descriptor)?.cid().to_string();
+        let algorithm = jwk.algorithm.ok_or(SignError::MissingAlgorithm)?;
+
+        let signature = didkit::ssi::jws::encode_sign(algorithm, &payload, jwk)?;
+
+        let jws = JWS {
+            payload,
+            signatures: vec![SignatureEntry {
+                protected: Protected { algorithm, key_id },
+                signature,
+            }],
+        };
+
+        self.attestation = Some(jws);
+
+        Ok(())
     }
 
-    /// Verifies the authorization JWS.
-    /// Returns the DIDs of the keys used to sign the payload.
-    pub async fn verify_auth(&self) -> Result<Vec<String>, VerifyAuthError> {
-        let auth = self
-            .authorization
-            .as_ref()
-            .ok_or(VerifyAuthError::AuthorizationMissing)?;
+    /// Verifies all signatures on the message.
+    pub async fn verify(&self) -> Result<(), VerifyError> {
+        let mut attested_dids = Vec::new();
 
-        if auth.signatures.is_empty() {
-            return Err(VerifyAuthError::SignatureMissing);
+        if self.attestation.is_some() {
+            attested_dids = self.verify_attestation().await?;
+            attested_dids.sort();
         }
 
-        let payload = serde_json::to_string(&auth.payload)?;
+        if self.authorization.is_some() {
+            let mut authorized_dids = self.verify_auth().await?;
+            authorized_dids.sort();
+
+            if self.attestation.is_some() && attested_dids != authorized_dids {
+                return Err(VerifyError::InvalidSignature);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Verifies the message is authorized.
+    /// Returns the authorizing DIDs.
+    pub async fn verify_auth(&self) -> Result<Vec<String>, VerifyError> {
+        let jws = self.authorization.as_ref().ok_or(VerifyError::JwsMissing)?;
+
+        if jws.signatures.is_empty() {
+            return Err(VerifyError::SignatureMissing);
+        }
+
+        // Verify attestation CID matches
+        if let Some(cid) = jws.payload.attestation_cid.as_ref() {
+            let attestation = self
+                .attestation
+                .as_ref()
+                .ok_or(VerifyError::InvalidSignature)?;
+
+            let attestation_cid = encode_cbor(&attestation.payload)?.cid().to_string();
+
+            if cid != &attestation_cid {
+                return Err(VerifyError::InvalidSignature);
+            }
+        } else if self.attestation.is_some() {
+            return Err(VerifyError::InvalidSignature);
+        }
+
+        // Verify descriptor CID matches
+        let descriptor_cid = encode_cbor(&self.descriptor)?.cid().to_string();
+
+        if jws.payload.descriptor_cid != descriptor_cid {
+            return Err(VerifyError::InvalidSignature);
+        }
+
+        // Verify payload signature
+        let payload = serde_json::to_string(&jws.payload)?;
         let payload = payload.as_bytes();
 
-        let mut dids = Vec::new();
+        verify_signature(jws, payload).await
+    }
 
-        for entry in &auth.signatures {
-            let did = entry.verify(payload).await?;
-            dids.push(did);
+    /// Verifies the message is signed.
+    /// Returns the attesting DIDs.
+    pub async fn verify_attestation(&self) -> Result<Vec<String>, VerifyError> {
+        let jws = self.attestation.as_ref().ok_or(VerifyError::JwsMissing)?;
+
+        if jws.signatures.is_empty() {
+            return Err(VerifyError::SignatureMissing);
         }
 
-        Ok(dids)
+        let payload = jws.payload.as_bytes();
+
+        verify_signature(jws, payload).await
     }
+}
+
+/// Verifies a JWS.
+/// Returns the DIDs of the keys used to sign the payload.
+async fn verify_signature<T>(jws: &JWS<T>, payload: &[u8]) -> Result<Vec<String>, VerifyError> {
+    if jws.signatures.is_empty() {
+        return Err(VerifyError::SignatureMissing);
+    }
+
+    let mut dids = Vec::new();
+
+    for entry in &jws.signatures {
+        let did = entry.verify(payload).await?;
+        dids.push(did);
+    }
+
+    Ok(dids)
 }
 
 #[derive(Serialize)]

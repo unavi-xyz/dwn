@@ -48,7 +48,7 @@ use handlers::{
     },
     HandlerError, MethodHandler, Reply, Response, Status,
 };
-use message::{descriptor::Descriptor, Message, Request};
+use message::{descriptor::Descriptor, Message, Request, VerifyError};
 use store::{DataStore, MessageStore};
 use thiserror::Error;
 
@@ -75,6 +75,8 @@ pub enum HandleMessageError {
     UnsupportedInterface,
     #[error(transparent)]
     HandlerError(#[from] HandlerError),
+    #[error(transparent)]
+    VerifyError(#[from] VerifyError),
 }
 
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
@@ -103,6 +105,8 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
     }
 
     pub async fn process_message(&self, message: Message) -> Result<Reply, HandleMessageError> {
+        message.verify().await?;
+
         match &message.descriptor {
             Descriptor::RecordsDelete(_) => {
                 let handler = RecordsDeleteHandler {

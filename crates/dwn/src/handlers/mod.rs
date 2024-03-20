@@ -5,7 +5,7 @@ use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
-    message::{Message, VerifyAuthError},
+    message::Message,
     store::{DataStoreError, MessageStoreError},
     util::EncodeError,
 };
@@ -14,8 +14,6 @@ pub mod records;
 
 #[derive(Debug, Error)]
 pub enum HandlerError {
-    #[error(transparent)]
-    VerifyError(#[from] VerifyAuthError),
     #[error("Invalid descriptor")]
     InvalidDescriptor(String),
     #[error(transparent)]

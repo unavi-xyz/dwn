@@ -15,13 +15,19 @@ pub struct RecordsDeleteHandler<'a, D: DataStore, M: MessageStore> {
 
 impl<D: DataStore, M: MessageStore> MethodHandler for RecordsDeleteHandler<'_, D, M> {
     async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
-        let dids = message.verify_auth().await?;
-        let tenant = dids
-            .first()
-            .map(|d| d.to_string())
-            .ok_or(HandlerError::InvalidDescriptor(
-                "No tenant in message".to_string(),
-            ))?;
+        if message.attestation.is_none() {
+            return Err(HandlerError::InvalidDescriptor(
+                "No attestation".to_string(),
+            ));
+        }
+
+        if message.authorization.is_none() {
+            return Err(HandlerError::InvalidDescriptor(
+                "No authorization".to_string(),
+            ));
+        }
+
+        let tenant = message.verify_attestation().await.unwrap()[0].to_string();
 
         let descriptor = match &message.descriptor {
             Descriptor::RecordsDelete(desc) => desc,

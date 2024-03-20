@@ -6,7 +6,7 @@ use crate::{
     handlers::{RecordsReadReply, Reply, StatusReply},
     message::{
         descriptor::{RecordsDelete, RecordsRead},
-        AuthError, Message,
+        AuthError, Message, SignError,
     },
     store::{DataStore, MessageStore},
     util::EncodeError,
@@ -20,7 +20,8 @@ mod query;
 mod write;
 
 pub struct Actor<D: DataStore, M: MessageStore> {
-    pub auth: VerifiableCredential,
+    pub attestation: VerifiableCredential,
+    pub authorization: VerifiableCredential,
     pub did: String,
     pub dwn: DWN<D, M>,
 }
@@ -34,12 +35,16 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     pub fn new_did_key(dwn: DWN<D, M>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
         let did_key = did_key::DidKey::new()?;
         Ok(Actor {
-            did: did_key.did,
-            dwn,
-            auth: VerifiableCredential {
+            attestation: VerifiableCredential {
+                jwk: did_key.jwk.clone(),
+                kid: did_key.kid.clone(),
+            },
+            authorization: VerifiableCredential {
                 jwk: did_key.jwk,
                 kid: did_key.kid,
             },
+            did: did_key.did,
+            dwn,
         })
     }
 
@@ -47,7 +52,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         let mut msg = Message::new(RecordsDelete::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
-        msg.authorize(self.auth.kid.clone(), &self.auth.jwk)?;
+        msg.sign(self.attestation.kid.clone(), &self.attestation.jwk)?;
+        msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
 
         let reply = self.dwn.process_message(msg).await?;
 
@@ -61,7 +67,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         let mut msg = Message::new(RecordsRead::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
-        msg.authorize(self.auth.kid.clone(), &self.auth.jwk)?;
+        msg.sign(self.attestation.kid.clone(), &self.attestation.jwk)?;
+        msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
 
         let reply = self.dwn.process_message(msg).await?;
 
@@ -83,7 +90,9 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
 #[derive(Debug, Error)]
 pub enum MessageSendError {
     #[error(transparent)]
-    Auth(#[from] AuthError),
+    MessageSign(#[from] SignError),
+    #[error(transparent)]
+    MessageAuth(#[from] AuthError),
     #[error(transparent)]
     Encode(#[from] EncodeError),
     #[error(transparent)]
