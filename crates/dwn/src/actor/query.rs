@@ -91,7 +91,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsQueryBuilder<'a, D, M> {
     }
 
     /// Send the message to the DWN.
-    pub async fn send(self) -> Result<Box<RecordsQueryReply>, MessageSendError> {
+    pub async fn send(self) -> Result<RecordsQueryReply, MessageSendError> {
         let mut msg = Message::new(RecordsQuery::new(self.filter));
 
         if msg.record_id.is_empty() {

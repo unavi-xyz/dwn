@@ -1987,6 +1987,7 @@ version = "0.0.3"
 dependencies = [
  "anyhow",
  "async-recursion",
+ "async-trait",
  "base64 0.22.0",
  "did-method-key",
  "didkit",
@@ -2016,6 +2017,7 @@ version = "0.0.3"
 dependencies = [
  "axum",
  "dwn",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

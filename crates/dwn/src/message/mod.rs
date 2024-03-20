@@ -15,6 +15,11 @@ pub mod auth;
 pub mod data;
 pub mod descriptor;
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct Request {
+    pub messages: Vec<Message>,
+}
+
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Message {

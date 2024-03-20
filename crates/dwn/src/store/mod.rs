@@ -25,25 +25,24 @@ pub use surrealdb::SurrealDB;
 
 #[derive(Error, Debug)]
 pub enum DataStoreError {
-    #[error("Failed to write data: {0}")]
-    WriteError(#[from] std::io::Error),
     #[error("No data found for CID")]
     NotFound,
     #[error("Failed to interact with backend: {0}")]
     BackendError(anyhow::Error),
 }
 
-pub trait DataStore {
-    fn delete(&self, cid: String) -> impl Future<Output = Result<(), DataStoreError>>;
+pub trait DataStore: Send + Sync {
+    fn delete(&self, cid: String)
+        -> impl Future<Output = Result<(), DataStoreError>> + Send + Sync;
     fn get(
         &self,
         cid: String,
-    ) -> impl Future<Output = Result<Option<GetDataResults>, DataStoreError>>;
+    ) -> impl Future<Output = Result<Option<GetDataResults>, DataStoreError>> + Send + Sync;
     fn put(
         &self,
         cid: String,
         value: Vec<u8>,
-    ) -> impl Future<Output = Result<PutDataResults, DataStoreError>>;
+    ) -> impl Future<Output = Result<PutDataResults, DataStoreError>> + Send + Sync;
 }
 
 #[derive(Debug)]
@@ -62,40 +61,40 @@ pub struct PutDataResults {
 pub enum MessageStoreError {
     #[error("Message missing data")]
     MissingData,
-    #[error("Failed to generate CID: {0}")]
+    #[error(transparent)]
     MessageEncode(#[from] EncodeError),
-    #[error("Failed to encode data: {0}")]
+    #[error(transparent)]
     DataEncodeError(#[from] libipld_core::error::SerdeError),
     #[error("Not found")]
     NotFound,
-    #[error("Failed to decode message: {0}")]
+    #[error(transparent)]
     MessageDecodeError(#[from] DecodeError),
-    #[error("Failed to generate CID: {0}")]
+    #[error(transparent)]
     Cid(#[from] libipld::cid::Error),
     #[error("Failed to create block {0}")]
     CreateBlockError(anyhow::Error),
     #[error("Failed to interact with backend: {0}")]
     BackendError(anyhow::Error),
-    #[error("Failed to interact with data store: {0}")]
+    #[error(transparent)]
     DataStoreError(#[from] DataStoreError),
 }
 
-pub trait MessageStore {
+pub trait MessageStore: Send + Sync {
     fn delete(
         &self,
         tenant: &str,
         cid: String,
         data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<(), MessageStoreError>>;
+    ) -> impl Future<Output = Result<(), MessageStoreError>> + Send + Sync;
     fn put(
         &self,
         tenant: String,
         message: Message,
         data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<Cid, MessageStoreError>>;
+    ) -> impl Future<Output = Result<Cid, MessageStoreError>> + Send + Sync;
     fn query(
         &self,
         tenant: &str,
         filter: Filter,
-    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>>;
+    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
 }

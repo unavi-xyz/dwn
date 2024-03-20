@@ -46,9 +46,9 @@ use handlers::{
         delete::RecordsDeleteHandler, query::RecordsQueryHandler, read::RecordsReadHandler,
         write::RecordsWriteHandler,
     },
-    HandlerError, MethodHandler, Reply,
+    HandlerError, MethodHandler, Reply, Response, Status,
 };
-use message::{descriptor::Descriptor, Message};
+use message::{descriptor::Descriptor, Message, Request};
 use store::{DataStore, MessageStore};
 use thiserror::Error;
 
@@ -59,6 +59,9 @@ pub mod store;
 pub mod util;
 
 pub use actor::{Actor, MessageSendError};
+use tracing::warn;
+
+use crate::handlers::StatusReply;
 
 #[derive(Clone)]
 pub struct DWN<D: DataStore, M: MessageStore> {
@@ -66,15 +69,39 @@ pub struct DWN<D: DataStore, M: MessageStore> {
     pub message_store: M,
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 pub enum HandleMessageError {
     #[error("Unsupported interface")]
     UnsupportedInterface,
-    #[error("Failed to handle message: {0}")]
+    #[error(transparent)]
     HandlerError(#[from] HandlerError),
 }
 
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
+    pub async fn process_request(&self, payload: Request) -> Response {
+        let mut replies = Vec::new();
+
+        for message in payload.messages {
+            match self.process_message("tenant", message).await {
+                Ok(reply) => replies.push(reply),
+                Err(err) => {
+                    warn!("Failed to process message: {}", err);
+                    replies.push(Reply::Status(StatusReply {
+                        status: Status {
+                            code: 500,
+                            detail: Some(err.to_string()),
+                        },
+                    }));
+                }
+            }
+        }
+
+        Response {
+            status: Some(Status::ok()),
+            replies,
+        }
+    }
+
     pub async fn process_message(
         &self,
         tenant: &str,

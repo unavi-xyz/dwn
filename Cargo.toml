@@ -11,6 +11,7 @@ keywords = ["did", "dwn"]
 
 [workspace.dependencies]
 dwn = { path = "crates/dwn", version = "0.0.3", default-features = false }
+serde_json = "1.0.114"
 tokio = { version = "1.35.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"

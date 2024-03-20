@@ -48,7 +48,7 @@ pub struct Status {
 }
 
 impl Status {
-    fn ok() -> Self {
+    pub fn ok() -> Self {
         Status {
             code: 200,
             detail: Some(String::from("OK")),
@@ -58,7 +58,7 @@ impl Status {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Reply {
-    RecordsQuery(Box<RecordsQueryReply>),
+    RecordsQuery(RecordsQueryReply),
     RecordsRead(Box<RecordsReadReply>),
     Status(StatusReply),
 }
@@ -93,7 +93,7 @@ pub struct StatusReply {
 
 impl From<RecordsQueryReply> for Reply {
     fn from(val: RecordsQueryReply) -> Self {
-        Reply::RecordsQuery(Box::new(val))
+        Reply::RecordsQuery(val)
     }
 }
 

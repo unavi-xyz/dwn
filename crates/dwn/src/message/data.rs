@@ -142,7 +142,9 @@ impl EncryptedData {
 /// Returns the CID of the given IPLD after DAG-PB encoding.
 fn dag_pb_cid(ipld: Ipld) -> Result<Cid, EncodeError> {
     let ipld = make_pb_compatible(ipld)?;
-    let bytes = DagPbCodec.encode(&ipld)?;
+
+    let bytes = DagPbCodec.encode(&ipld).map_err(EncodeError::Encode)?;
+
     let hash = Code::Sha2_256.digest(&bytes);
     Ok(Cid::new_v1(DagPbCodec.into(), hash))
 }
@@ -177,7 +179,7 @@ fn make_pb_compatible(ipld: Ipld) -> Result<Ipld, EncodeError> {
                 }));
             }
         }
-        _ => data = Some(DagCborCodec.encode(&ipld)?),
+        _ => data = Some(DagCborCodec.encode(&ipld).map_err(EncodeError::Encode)?),
     };
 
     match data {
