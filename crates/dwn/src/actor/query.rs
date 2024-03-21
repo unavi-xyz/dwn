@@ -4,7 +4,7 @@ use crate::{
     handlers::{RecordsQueryReply, Reply},
     message::{
         descriptor::{Filter, FilterDateCreated, FilterDateSort, RecordsQuery},
-        Message,
+        RawMessage,
     },
     store::{DataStore, MessageStore},
 };
@@ -92,7 +92,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsQueryBuilder<'a, D, M> {
 
     /// Send the message to the DWN.
     pub async fn send(self) -> Result<RecordsQueryReply, MessageSendError> {
-        let mut msg = Message::new(RecordsQuery::new(self.filter));
+        let mut msg = RawMessage::new(RecordsQuery::new(self.filter));
 
         if msg.record_id.is_empty() {
             msg.record_id = msg.generate_record_id()?;

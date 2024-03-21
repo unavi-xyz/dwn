@@ -1,37 +1,9 @@
-use std::future::Future;
-
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use thiserror::Error;
 
-use crate::{
-    message::{Message, VerifyError},
-    store::{DataStoreError, MessageStoreError},
-    util::EncodeError,
-};
+use crate::message::RawMessage;
 
 pub mod records;
-
-#[derive(Debug, Error)]
-pub enum HandlerError {
-    #[error("Invalid descriptor")]
-    InvalidDescriptor(String),
-    #[error(transparent)]
-    DataStoreError(#[from] DataStoreError),
-    #[error(transparent)]
-    MessageStoreError(#[from] MessageStoreError),
-    #[error(transparent)]
-    CborEncode(#[from] EncodeError),
-    #[error(transparent)]
-    VerifyError(#[from] VerifyError),
-}
-
-pub trait MethodHandler {
-    fn handle(
-        &self,
-        message: Message,
-    ) -> impl Future<Output = Result<impl Into<Reply>, HandlerError>>;
-}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Response {
@@ -74,14 +46,14 @@ impl Reply {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RecordsQueryReply {
-    pub entries: Vec<Message>,
+    pub entries: Vec<RawMessage>,
     pub status: Status,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RecordsReadReply {
     pub data: Option<Vec<u8>>,
-    pub record: Message,
+    pub record: RawMessage,
     pub status: Status,
 }
 

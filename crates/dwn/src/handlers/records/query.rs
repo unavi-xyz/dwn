@@ -1,35 +1,32 @@
 use crate::{
-    handlers::{HandlerError, MethodHandler, RecordsQueryReply, Reply, Status},
-    message::{descriptor::Descriptor, Message},
-    store::{DataStore, MessageStore},
+    handlers::{RecordsQueryReply, Reply, Status},
+    message::{descriptor::Descriptor, Message, ValidatedMessage},
+    store::MessageStore,
+    HandleMessageError,
 };
 
-pub struct RecordsQueryHandler<'a, D: DataStore, M: MessageStore> {
-    pub data_store: &'a D,
-    pub message_store: &'a M,
-}
+pub async fn handle_records_query(
+    message_store: &impl MessageStore,
+    message: ValidatedMessage,
+) -> Result<Reply, HandleMessageError> {
+    let tenant = message.tenant();
 
-impl<D: DataStore, M: MessageStore> MethodHandler for RecordsQueryHandler<'_, D, M> {
-    async fn handle(&self, message: Message) -> Result<impl Into<Reply>, HandlerError> {
-        let tenant = message.tenant().await?;
+    let filter = match message.into_inner().descriptor {
+        Descriptor::RecordsQuery(descriptor) => descriptor.filter,
+        _ => {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Not a RecordsQuery message".to_string(),
+            ))
+        }
+    };
 
-        let filter = match message.descriptor {
-            Descriptor::RecordsQuery(descriptor) => descriptor.filter,
-            _ => {
-                return Err(HandlerError::InvalidDescriptor(
-                    "Not a RecordsQuery message".to_string(),
-                ))
-            }
-        };
+    let entries = message_store
+        .query(tenant, filter.unwrap_or_default())
+        .await?;
 
-        let entries = self
-            .message_store
-            .query(tenant, filter.unwrap_or_default())
-            .await?;
-
-        Ok(RecordsQueryReply {
-            entries,
-            status: Status::ok(),
-        })
+    Ok(RecordsQueryReply {
+        entries,
+        status: Status::ok(),
     }
+    .into())
 }

@@ -6,7 +6,7 @@ use crate::{
     message::{
         data::{Data, EncryptedData},
         descriptor::RecordsWrite,
-        Message,
+        RawMessage,
     },
     store::{DataStore, MessageStore},
 };
@@ -15,11 +15,13 @@ use super::{Actor, MessageSendError};
 
 pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
+    authorized: bool,
     data: Option<Vec<u8>>,
     encrypted: bool,
     parent_id: Option<String>,
     published: bool,
     record_id: Option<String>,
+    signed: bool,
     store: bool,
 }
 
@@ -33,7 +35,16 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             published: false,
             record_id: None,
             store: true,
+            authorized: true,
+            signed: true,
         }
+    }
+
+    /// Whether the message should be authorized.
+    /// Defaults to true.
+    pub fn authorized(mut self, authorized: bool) -> Self {
+        self.authorized = authorized;
+        self
     }
 
     /// Data to be written.
@@ -79,6 +90,13 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         self
     }
 
+    /// Whether the message should be signed.
+    /// Defaults to true.
+    pub fn signed(mut self, signed: bool) -> Self {
+        self.signed = signed;
+        self
+    }
+
     /// Send the message to the DWN.
     pub async fn send(self) -> Result<WriteResult, MessageSendError> {
         let mut descriptor = RecordsWrite::default();
@@ -105,7 +123,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             descriptor.data_cid = Some(cid.to_string());
         }
 
-        let mut msg = Message {
+        let mut msg = RawMessage {
             attestation: None,
             authorization: None,
             data,
@@ -119,14 +137,19 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             msg.record_id = entry_id.clone();
         }
 
-        msg.sign(
-            self.actor.attestation.kid.clone(),
-            &self.actor.attestation.jwk,
-        )?;
-        msg.authorize(
-            self.actor.authorization.kid.clone(),
-            &self.actor.authorization.jwk,
-        )?;
+        if self.signed {
+            msg.sign(
+                self.actor.attestation.kid.clone(),
+                &self.actor.attestation.jwk,
+            )?;
+        }
+
+        if self.authorized {
+            msg.authorize(
+                self.actor.authorization.kid.clone(),
+                &self.actor.authorization.jwk,
+            )?;
+        }
 
         let reply = self.actor.dwn.process_message(msg).await?;
 

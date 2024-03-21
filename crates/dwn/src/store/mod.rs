@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    message::{descriptor::Filter, DecodeError, Message},
+    message::{descriptor::Filter, DecodeError, RawMessage},
     util::EncodeError,
 };
 
@@ -85,12 +85,12 @@ pub trait MessageStore: Send + Sync {
     fn put(
         &self,
         tenant: String,
-        message: Message,
+        message: RawMessage,
         data_store: &impl DataStore,
     ) -> impl Future<Output = Result<Cid, MessageStoreError>> + Send + Sync;
     fn query(
         &self,
         tenant: Option<String>,
         filter: Filter,
-    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
+    ) -> impl Future<Output = Result<Vec<RawMessage>, MessageStoreError>> + Send + Sync;
 }

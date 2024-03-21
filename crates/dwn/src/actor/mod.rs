@@ -6,7 +6,7 @@ use crate::{
     handlers::{RecordsReadReply, Reply, StatusReply},
     message::{
         descriptor::{RecordsDelete, RecordsRead},
-        AuthError, Message, SignError,
+        AuthError, RawMessage, SignError,
     },
     store::{DataStore, MessageStore},
     util::EncodeError,
@@ -49,7 +49,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     pub async fn delete(&self, record_id: String) -> Result<StatusReply, MessageSendError> {
-        let mut msg = Message::new(RecordsDelete::new(record_id));
+        let mut msg = RawMessage::new(RecordsDelete::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
         msg.sign(self.attestation.kid.clone(), &self.attestation.jwk)?;
@@ -64,7 +64,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     pub async fn read(&self, record_id: String) -> Result<Box<RecordsReadReply>, MessageSendError> {
-        let mut msg = Message::new(RecordsRead::new(record_id));
+        let mut msg = RawMessage::new(RecordsRead::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
         msg.sign(self.attestation.kid.clone(), &self.attestation.jwk)?;

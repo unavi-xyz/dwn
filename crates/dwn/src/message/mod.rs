@@ -17,18 +17,141 @@ pub mod descriptor;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Request {
-    pub messages: Vec<Message>,
+    pub messages: Vec<RawMessage>,
 }
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct Message {
-    pub attestation: Option<JWS<String>>,
-    pub authorization: Option<JWS<AuthPayload>>,
+pub struct RawMessage {
+    pub(crate) attestation: Option<JWS<String>>,
+    pub(crate) authorization: Option<JWS<AuthPayload>>,
     pub data: Option<Data>,
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
     pub record_id: String,
+}
+
+pub trait Message {
+    fn read(&self) -> &RawMessage;
+    fn into_inner(self) -> RawMessage;
+}
+
+pub trait Attested {
+    fn attestation(&self) -> &JWS<String>;
+    fn attested_dids(&self) -> impl Iterator<Item = String> + '_ {
+        self.attestation()
+            .signatures
+            .iter()
+            .map(|s| s.protected.key_id.clone())
+    }
+}
+
+pub trait Authorized {
+    fn authorization(&self) -> &JWS<AuthPayload>;
+    fn authorized_dids(&self) -> impl Iterator<Item = String> + '_ {
+        self.authorization()
+            .signatures
+            .iter()
+            .map(|s| s.protected.key_id.clone())
+    }
+
+    fn tenant(&self) -> String {
+        self.authorized_dids().next().unwrap()
+    }
+}
+
+pub struct AuthorizedMessage(RawMessage);
+
+impl Message for AuthorizedMessage {
+    fn read(&self) -> &RawMessage {
+        &self.0
+    }
+    fn into_inner(self) -> RawMessage {
+        self.0
+    }
+}
+
+pub struct AttestedMessage(RawMessage);
+
+impl Message for AttestedMessage {
+    fn read(&self) -> &RawMessage {
+        &self.0
+    }
+    fn into_inner(self) -> RawMessage {
+        self.0
+    }
+}
+
+pub struct AttestedAuthorizedMessage(RawMessage);
+
+impl Message for AttestedAuthorizedMessage {
+    fn read(&self) -> &RawMessage {
+        &self.0
+    }
+    fn into_inner(self) -> RawMessage {
+        self.0
+    }
+}
+
+impl Attested for AttestedAuthorizedMessage {
+    fn attestation(&self) -> &JWS<String> {
+        self.0.attestation.as_ref().unwrap()
+    }
+}
+
+impl Attested for AttestedMessage {
+    fn attestation(&self) -> &JWS<String> {
+        self.0.attestation.as_ref().unwrap()
+    }
+}
+
+impl Authorized for AttestedAuthorizedMessage {
+    fn authorization(&self) -> &JWS<AuthPayload> {
+        self.0.authorization.as_ref().unwrap()
+    }
+}
+
+impl Authorized for AuthorizedMessage {
+    fn authorization(&self) -> &JWS<AuthPayload> {
+        self.0.authorization.as_ref().unwrap()
+    }
+}
+
+pub enum ValidatedMessage {
+    Attested(AttestedMessage),
+    AttestedAuthorized(AttestedAuthorizedMessage),
+    Authorized(AuthorizedMessage),
+    Message(RawMessage),
+}
+
+impl Message for ValidatedMessage {
+    fn read(&self) -> &RawMessage {
+        match self {
+            ValidatedMessage::Attested(msg) => msg.read(),
+            ValidatedMessage::AttestedAuthorized(msg) => msg.read(),
+            ValidatedMessage::Authorized(msg) => msg.read(),
+            ValidatedMessage::Message(msg) => msg,
+        }
+    }
+    fn into_inner(self) -> RawMessage {
+        match self {
+            ValidatedMessage::Attested(msg) => msg.into_inner(),
+            ValidatedMessage::AttestedAuthorized(msg) => msg.into_inner(),
+            ValidatedMessage::Authorized(msg) => msg.into_inner(),
+            ValidatedMessage::Message(msg) => msg,
+        }
+    }
+}
+
+impl ValidatedMessage {
+    pub fn tenant(&self) -> Option<String> {
+        match self {
+            ValidatedMessage::Attested(_) => None,
+            ValidatedMessage::AttestedAuthorized(msg) => Some(msg.tenant()),
+            ValidatedMessage::Authorized(msg) => Some(msg.tenant()),
+            ValidatedMessage::Message(_) => None,
+        }
+    }
 }
 
 #[derive(Error, Debug)]
@@ -64,7 +187,7 @@ pub enum DecodeError {
 }
 
 #[derive(Error, Debug)]
-pub enum VerifyError {
+pub enum ValidateError {
     #[error("JWS missing")]
     JwsMissing,
     #[error("Signature missing")]
@@ -79,7 +202,7 @@ pub enum VerifyError {
     Encode(#[from] EncodeError),
 }
 
-impl Message {
+impl RawMessage {
     pub fn new(descriptor: impl Into<Descriptor>) -> Self {
         Self {
             attestation: None,
@@ -146,48 +269,39 @@ impl Message {
         Ok(())
     }
 
-    pub async fn tenant(&self) -> Result<Option<String>, VerifyError> {
+    pub async fn validate(self) -> Result<ValidatedMessage, ValidateError> {
+        // Validate
         if self.attestation.is_some() {
-            let dids = self.verify_attestation().await?;
-            return Ok(dids.first().cloned());
+            self.validate_attestation().await?;
         }
 
         if self.authorization.is_some() {
-            let dids = self.verify_auth().await?;
-            return Ok(dids.first().cloned());
+            self.validate_authorization().await?;
         }
 
-        Ok(None)
+        // Return typed message
+        if self.attestation.is_some() && self.authorization.is_some() {
+            Ok(ValidatedMessage::AttestedAuthorized(
+                AttestedAuthorizedMessage(self),
+            ))
+        } else if self.attestation.is_some() {
+            Ok(ValidatedMessage::Attested(AttestedMessage(self)))
+        } else if self.authorization.is_some() {
+            Ok(ValidatedMessage::Authorized(AuthorizedMessage(self)))
+        } else {
+            Ok(ValidatedMessage::Message(self))
+        }
     }
 
-    /// Verifies all signatures on the message.
-    pub async fn verify(&self) -> Result<(), VerifyError> {
-        let mut attested_dids = Vec::new();
-
-        if self.attestation.is_some() {
-            attested_dids = self.verify_attestation().await?;
-            attested_dids.sort();
-        }
-
-        if self.authorization.is_some() {
-            let mut authorized_dids = self.verify_auth().await?;
-            authorized_dids.sort();
-
-            if self.attestation.is_some() && attested_dids != authorized_dids {
-                return Err(VerifyError::InvalidSignature);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Verifies the message is authorized.
-    /// Returns the authorizing DIDs.
-    pub async fn verify_auth(&self) -> Result<Vec<String>, VerifyError> {
-        let jws = self.authorization.as_ref().ok_or(VerifyError::JwsMissing)?;
+    /// Validates the message is authorized.
+    async fn validate_authorization(&self) -> Result<(), ValidateError> {
+        let jws = self
+            .authorization
+            .as_ref()
+            .ok_or(ValidateError::JwsMissing)?;
 
         if jws.signatures.is_empty() {
-            return Err(VerifyError::SignatureMissing);
+            return Err(ValidateError::SignatureMissing);
         }
 
         // Verify attestation CID matches
@@ -195,22 +309,22 @@ impl Message {
             let attestation = self
                 .attestation
                 .as_ref()
-                .ok_or(VerifyError::InvalidSignature)?;
+                .ok_or(ValidateError::InvalidSignature)?;
 
             let attestation_cid = encode_cbor(&attestation.payload)?.cid().to_string();
 
             if cid != &attestation_cid {
-                return Err(VerifyError::InvalidSignature);
+                return Err(ValidateError::InvalidSignature);
             }
         } else if self.attestation.is_some() {
-            return Err(VerifyError::InvalidSignature);
+            return Err(ValidateError::InvalidSignature);
         }
 
         // Verify descriptor CID matches
         let descriptor_cid = encode_cbor(&self.descriptor)?.cid().to_string();
 
         if jws.payload.descriptor_cid != descriptor_cid {
-            return Err(VerifyError::InvalidSignature);
+            return Err(ValidateError::InvalidSignature);
         }
 
         // Verify payload signature
@@ -220,13 +334,12 @@ impl Message {
         verify_signature(jws, payload).await
     }
 
-    /// Verifies the message is signed.
-    /// Returns the attesting DIDs.
-    pub async fn verify_attestation(&self) -> Result<Vec<String>, VerifyError> {
-        let jws = self.attestation.as_ref().ok_or(VerifyError::JwsMissing)?;
+    /// Validates the message is attested.
+    async fn validate_attestation(&self) -> Result<(), ValidateError> {
+        let jws = self.attestation.as_ref().ok_or(ValidateError::JwsMissing)?;
 
         if jws.signatures.is_empty() {
-            return Err(VerifyError::SignatureMissing);
+            return Err(ValidateError::SignatureMissing);
         }
 
         let payload = jws.payload.as_bytes();
@@ -235,21 +348,17 @@ impl Message {
     }
 }
 
-/// Verifies a JWS.
-/// Returns the DIDs of the keys used to sign the payload.
-async fn verify_signature<T>(jws: &JWS<T>, payload: &[u8]) -> Result<Vec<String>, VerifyError> {
+/// Verifies a JWS signature.
+async fn verify_signature<T>(jws: &JWS<T>, payload: &[u8]) -> Result<(), ValidateError> {
     if jws.signatures.is_empty() {
-        return Err(VerifyError::SignatureMissing);
+        return Err(ValidateError::SignatureMissing);
     }
-
-    let mut dids = Vec::new();
 
     for entry in &jws.signatures {
-        let did = entry.verify(payload).await?;
-        dids.push(did);
+        entry.verify(payload).await?;
     }
 
-    Ok(dids)
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -275,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_message_serialization() {
-        let message = Message {
+        let message = RawMessage {
             attestation: None,
             authorization: None,
             data: Some(Data::Base64("hello".to_string())),
@@ -291,7 +400,7 @@ mod tests {
         assert_eq!(value["descriptor"]["method"], "Write");
         assert_eq!(value["recordId"], "world");
 
-        let deserialized: Message = serde_json::from_str(&serialized).unwrap();
+        let deserialized: RawMessage = serde_json::from_str(&serialized).unwrap();
         assert_eq!(message, deserialized);
     }
 }
