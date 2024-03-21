@@ -17,6 +17,3 @@ tracing-subscriber = "0.3.18"
 
 [profile.release]
 lto = true
-
-[profile.dev.package.sqlx-macros]
-opt-level = 3

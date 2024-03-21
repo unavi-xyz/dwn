@@ -10,7 +10,6 @@ keywords.workspace = true
 [features]
 default = ["surrealdb"]
 surrealdb = ["dwn/surrealdb"]
-mysql = ["dwn/mysql"]
 s3 = ["dwn/s3"]
 
 [dependencies]

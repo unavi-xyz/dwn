@@ -9,15 +9,11 @@ use crate::{
     util::EncodeError,
 };
 
-#[cfg(feature = "mysql")]
-mod mysql;
 #[cfg(feature = "s3")]
 mod s3;
 #[cfg(feature = "surrealdb")]
 mod surrealdb;
 
-#[cfg(feature = "mysql")]
-pub use mysql::MySQL;
 #[cfg(feature = "s3")]
 pub use s3::S3;
 #[cfg(feature = "surrealdb")]
