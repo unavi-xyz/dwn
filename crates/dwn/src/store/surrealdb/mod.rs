@@ -1,5 +1,4 @@
-//! Message store implementation using an embedded SurrealDB database.
-//! Saves to the file system when run natively, or to IndexedDB when run in the browser.
+//! Data and message store implementations using a SurrealDB database.
 
 use std::sync::Arc;
 
@@ -21,6 +20,7 @@ pub struct SurrealDB {
 }
 
 impl SurrealDB {
+    /// Creates a new in-memory SurrealDB instance.
     pub async fn new() -> Result<Self, surrealdb::Error> {
         let db = Surreal::new::<Mem>(()).await?;
         Ok(SurrealDB { db: Arc::new(db) })
