@@ -1,23 +1,32 @@
-use dwn::{store::SurrealDB, Actor, DWN};
+use dwn::{
+    actor::{Actor, CreateRecord},
+    message::descriptor::Filter,
+    store::SurrealDB,
+    DWN,
+};
 use tracing_test::traced_test;
 
 #[traced_test]
 #[tokio::test]
 async fn test_records() {
     let db = SurrealDB::new().await.unwrap();
-    let dwn = DWN {
-        data_store: db.clone(),
-        message_store: db,
-    };
+    let dwn = DWN::new(db);
 
     let actor = Actor::new_did_key(dwn).unwrap();
 
+    // Create a new record.
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 
-    // Create new record.
-    let write = actor.write().data(data.clone()).send().await.unwrap();
-    let record_id = write.entry_id.clone();
-    assert_eq!(write.reply.status.code, 200);
+    let create = actor
+        .create(CreateRecord {
+            data: Some(data.clone()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(create.reply.status.code, 200);
+
+    let record_id = create.record_id;
 
     // Read the record.
     let read = actor.read(record_id.clone()).await.unwrap();
@@ -26,9 +35,10 @@ async fn test_records() {
 
     // Query the record.
     let query = actor
-        .query()
-        .record_id(record_id.clone())
-        .send()
+        .query(Filter {
+            record_id: Some(record_id.clone()),
+            ..Default::default()
+        })
         .await
         .unwrap();
     assert_eq!(query.status.code, 200);
@@ -41,9 +51,10 @@ async fn test_records() {
 
     // Query the deleted record.
     let query = actor
-        .query()
-        .record_id(record_id.clone())
-        .send()
+        .query(Filter {
+            record_id: Some(record_id.clone()),
+            ..Default::default()
+        })
         .await
         .unwrap();
     assert_eq!(query.status.code, 200);
@@ -54,8 +65,14 @@ async fn test_records() {
     assert!(read.is_err());
 
     // Create a new record.
-    let write = actor.write().data(data.clone()).send().await.unwrap();
-    let record_id = write.entry_id.clone();
+    let create = actor
+        .create(CreateRecord {
+            data: Some(data.clone()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    let record_id = create.record_id;
 
     // Read the record.
     let read = actor.read(record_id.clone()).await.unwrap();
@@ -63,15 +80,19 @@ async fn test_records() {
 
     // Update the record.
     let new_data = "Goodbye, world!".bytes().collect::<Vec<_>>();
+
     let update = actor
-        .write()
-        .data(new_data.clone())
-        .parent_id(record_id.clone())
-        .record_id(record_id.clone())
-        .send()
+        .update(
+            record_id.clone(),
+            record_id.clone(),
+            CreateRecord {
+                data: Some(new_data.clone()),
+                ..Default::default()
+            },
+        )
         .await
         .unwrap();
-    assert_eq!(update.reply.status.code, 200);
+    assert_eq!(update.status.code, 200);
 
     // Read the record.
     let reply = actor.read(record_id.clone()).await.unwrap();
@@ -81,9 +102,10 @@ async fn test_records() {
     // Query the record.
     // Only the update message should be returned.
     let query = actor
-        .query()
-        .record_id(record_id.clone())
-        .send()
+        .query(Filter {
+            record_id: Some(record_id.clone()),
+            ..Default::default()
+        })
         .await
         .unwrap();
     assert_eq!(query.status.code, 200);

@@ -3,9 +3,9 @@ use openssl::error::ErrorStack;
 use thiserror::Error;
 
 use crate::{
-    handlers::{RecordsReadReply, Reply, StatusReply},
+    handlers::{RecordsQueryReply, RecordsReadReply, Reply, StatusReply},
     message::{
-        descriptor::{RecordsDelete, RecordsRead},
+        descriptor::{Filter, RecordsDelete, RecordsQuery, RecordsRead},
         AuthError, RawMessage, SignError,
     },
     store::{DataStore, MessageStore},
@@ -13,12 +13,16 @@ use crate::{
     HandleMessageError, DWN,
 };
 
-use self::{query::RecordsQueryBuilder, write::RecordsWriteBuilder};
-
+mod create;
 mod did_key;
-mod query;
-mod write;
 
+pub use create::{CreateRecord, Encryption};
+
+use self::create::build_write;
+
+/// Identity actor.
+/// Holds a DID and associated keys.
+/// Provides methods for interacting with a DWN using the actor's DID.
 pub struct Actor<D: DataStore, M: MessageStore> {
     pub attestation: VerifiableCredential,
     pub authorization: VerifiableCredential,
@@ -32,6 +36,7 @@ pub struct VerifiableCredential {
 }
 
 impl<D: DataStore, M: MessageStore> Actor<D, M> {
+    /// Generates a new `did:key` actor.
     pub fn new_did_key(dwn: DWN<D, M>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
         let did_key = did_key::DidKey::new()?;
         Ok(Actor {
@@ -48,11 +53,22 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         })
     }
 
+    pub async fn create(&self, create: CreateRecord<'_>) -> Result<CreateResult, MessageSendError> {
+        let msg = create.build(self)?;
+        let record_id = msg.record_id.clone();
+
+        let reply = self.dwn.process_message(msg).await?;
+
+        match reply {
+            Reply::Status(reply) => Ok(CreateResult { record_id, reply }),
+            _ => Err(MessageSendError::InvalidReply(reply)),
+        }
+    }
+
     pub async fn delete(&self, record_id: String) -> Result<StatusReply, MessageSendError> {
         let mut msg = RawMessage::new(RecordsDelete::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
-        msg.sign(self.attestation.kid.clone(), &self.attestation.jwk)?;
         msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
 
         let reply = self.dwn.process_message(msg).await?;
@@ -63,11 +79,27 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         }
     }
 
+    pub async fn query(&self, filter: Filter) -> Result<RecordsQueryReply, MessageSendError> {
+        let mut msg = RawMessage::new(RecordsQuery::new(filter));
+
+        if msg.record_id.is_empty() {
+            msg.record_id = msg.generate_record_id()?;
+        }
+
+        msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
+
+        let reply = self.dwn.process_message(msg).await?;
+
+        match reply {
+            Reply::RecordsQuery(reply) => Ok(reply),
+            _ => Err(MessageSendError::InvalidReply(reply)),
+        }
+    }
+
     pub async fn read(&self, record_id: String) -> Result<Box<RecordsReadReply>, MessageSendError> {
         let mut msg = RawMessage::new(RecordsRead::new(record_id));
         msg.record_id = msg.generate_record_id()?;
 
-        msg.sign(self.attestation.kid.clone(), &self.attestation.jwk)?;
         msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
 
         let reply = self.dwn.process_message(msg).await?;
@@ -78,13 +110,26 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         }
     }
 
-    pub fn query(&self) -> RecordsQueryBuilder<D, M> {
-        RecordsQueryBuilder::new(self)
-    }
+    pub async fn update(
+        &self,
+        record_id: String,
+        entry_id: String,
+        create: CreateRecord<'_>,
+    ) -> Result<StatusReply, MessageSendError> {
+        let msg = build_write(self, create, Some(entry_id), Some(record_id))?;
 
-    pub fn write(&self) -> RecordsWriteBuilder<D, M> {
-        RecordsWriteBuilder::new(self)
+        let reply = self.dwn.process_message(msg).await?;
+
+        match reply {
+            Reply::Status(reply) => Ok(reply),
+            _ => Err(MessageSendError::InvalidReply(reply)),
+        }
     }
+}
+
+pub struct CreateResult {
+    pub record_id: String,
+    pub reply: StatusReply,
 }
 
 #[derive(Debug, Error)]

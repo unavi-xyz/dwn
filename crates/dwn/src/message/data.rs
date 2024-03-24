@@ -14,7 +14,7 @@ use openssl::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::util::EncodeError;
+use crate::{actor::Encryption, util::EncodeError};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
@@ -66,6 +66,8 @@ pub struct EncryptResult {
 
 #[derive(Debug, Error)]
 pub enum DecryptError {
+    #[error("Decryption key mismatch: expected {0:?}")]
+    KeyMismatch(EncryptionAlgorithm),
     #[error(transparent)]
     OpenSSL(#[from] ErrorStack),
     #[error(transparent)]
@@ -75,13 +77,7 @@ pub enum DecryptError {
 impl EncryptedData {
     /// Encrypts the given data using AES-256-GCM.
     /// Returns the encrypted data and the generated key.
-    pub fn encrypt_aes(data: &[u8]) -> Result<EncryptResult, ErrorStack> {
-        let key = {
-            let mut key = vec![0; 32]; // AES-256 key size
-            rand_bytes(&mut key)?;
-            key
-        };
-
+    pub fn encrypt_aes(data: &[u8], key: &[u8]) -> Result<EncryptedData, ErrorStack> {
         let iv = {
             let mut iv = vec![0; 12]; // Recommended IV size for GCM
             rand_bytes(&mut iv)?;
@@ -90,7 +86,7 @@ impl EncryptedData {
 
         let cipher = Cipher::aes_256_gcm();
 
-        let mut encrypter = Crypter::new(cipher, Mode::Encrypt, &key, Some(&iv))?;
+        let mut encrypter = Crypter::new(cipher, Mode::Encrypt, key, Some(&iv))?;
 
         let mut ciphertext = vec![0; data.len() + cipher.block_size()];
         let count = encrypter.update(data, &mut ciphertext)?;
@@ -110,13 +106,15 @@ impl EncryptedData {
             tag: URL_SAFE_NO_PAD.encode(&tag),
         };
 
-        Ok(EncryptResult { data, key })
+        Ok(data)
     }
 
     /// Decrypts the data using the given key.
-    pub fn decrypt(&self, key: &[u8]) -> Result<Vec<u8>, DecryptError> {
+    pub fn decrypt(&self, encryption: Encryption) -> Result<Vec<u8>, DecryptError> {
         match self.protected.alg {
-            EncryptionAlgorithm::Aes256Gcm => self.decrypt_aes(key),
+            EncryptionAlgorithm::Aes256Gcm => match encryption {
+                Encryption::Aes256Gcm(key) => self.decrypt_aes(&key),
+            },
         }
     }
 
