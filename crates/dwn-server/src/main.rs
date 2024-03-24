@@ -8,10 +8,7 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let db = SurrealDB::new().await.unwrap();
-    let dwn = Arc::new(DWN {
-        data_store: db.clone(),
-        message_store: db,
-    });
+    let dwn = Arc::new(DWN::new(db));
 
     let router = dwn_server::router(dwn);
 
