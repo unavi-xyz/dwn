@@ -15,7 +15,7 @@ async fn main() {
 
     let router = dwn_server::router(dwn);
 
-    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
     axum::serve(listener, router).await.unwrap();
 }
