@@ -40,22 +40,21 @@
               pkgs.libiconv
             ];
 
-          nativeBuildInputs = with pkgs; [
-            cargo-auditable
-            clang
-            mariadb
-            minio
-            minio-client
-            nodePackages.prettier
-            pkg-config
-          ];
+          nativeBuildInputs = with pkgs; [ clang pkg-config ];
 
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
         };
 
         commonShell = {
           checks = self.checks.${localSystem};
-          packages = with pkgs; [ cargo-rdme cargo-watch rust-analyzer ];
+          packages = with pkgs; [
+            cargo-rdme
+            cargo-watch
+            minio
+            minio-client
+            nodePackages.prettier
+            rust-analyzer
+          ];
 
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
         };
