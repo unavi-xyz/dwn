@@ -17,7 +17,7 @@ mod surrealdb;
 #[cfg(feature = "s3")]
 pub use s3::S3;
 #[cfg(feature = "surrealdb")]
-pub use surrealdb::SurrealDB;
+pub use surrealdb::SurrealStore;
 
 #[derive(Error, Debug)]
 pub enum DataStoreError {

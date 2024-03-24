@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use surrealdb::{
     engine::local::{Db, Mem},
-    Surreal,
+    Connection, Surreal,
 };
 
 use crate::DWN;
@@ -16,29 +16,36 @@ const NAMESPACE: &str = "dwn";
 const DATA_DB_NAME: &str = "data";
 const MESSAGE_DB_NAME: &str = "message";
 
-#[derive(Clone)]
-pub struct SurrealDB(Arc<Surreal<Db>>);
+pub struct SurrealStore<T: Connection>(pub Arc<Surreal<T>>);
 
-impl SurrealDB {
-    /// Creates a new in-memory SurrealDB instance.
-    pub async fn new() -> Result<Self, surrealdb::Error> {
-        let db = Surreal::new::<Mem>(()).await?;
-        Ok(SurrealDB(Arc::new(db)))
+impl<T: Connection> Clone for SurrealStore<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
+}
 
-    pub async fn data_db(&self) -> Result<Arc<Surreal<Db>>, anyhow::Error> {
+impl SurrealStore<Db> {
+    /// Creates a new  in-memory SurrealDB instance.
+    pub async fn new() -> Result<Self, anyhow::Error> {
+        let surreal = Surreal::new::<Mem>(()).await?;
+        Ok(Self(Arc::new(surreal)))
+    }
+}
+
+impl<T: Connection> SurrealStore<T> {
+    pub async fn data_db(&self) -> Result<Arc<Surreal<T>>, anyhow::Error> {
         self.0.use_ns(NAMESPACE).use_db(DATA_DB_NAME).await?;
         Ok(self.0.clone())
     }
 
-    pub async fn message_db(&self) -> Result<Arc<Surreal<Db>>, anyhow::Error> {
+    pub async fn message_db(&self) -> Result<Arc<Surreal<T>>, anyhow::Error> {
         self.0.use_ns(NAMESPACE).use_db(MESSAGE_DB_NAME).await?;
         Ok(self.0.clone())
     }
 }
 
-impl DWN<SurrealDB, SurrealDB> {
-    pub fn new(db: SurrealDB) -> Self {
+impl<T: Connection> DWN<SurrealStore<T>, SurrealStore<T>> {
+    pub fn new(db: SurrealStore<T>) -> Self {
         DWN {
             data_store: db.clone(),
             message_store: db,

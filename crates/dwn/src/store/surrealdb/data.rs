@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::{Id, Table, Thing};
+use surrealdb::{
+    sql::{Id, Table, Thing},
+    Connection,
+};
 
 use crate::store::{DataStore, DataStoreError, GetDataResults, PutDataResults};
 
-use super::SurrealDB;
+use super::SurrealStore;
 
 const DATA_TABLE_NAME: &str = "data";
 
-impl DataStore for SurrealDB {
+impl<T: Connection> DataStore for SurrealStore<T> {
     async fn delete(&self, cid: String) -> Result<(), DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 

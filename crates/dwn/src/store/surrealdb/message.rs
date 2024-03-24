@@ -2,7 +2,10 @@ use anyhow::anyhow;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::{Id, Table, Thing};
+use surrealdb::{
+    sql::{Id, Table, Thing},
+    Connection,
+};
 use time::OffsetDateTime;
 use tracing::warn;
 
@@ -16,12 +19,12 @@ use crate::{
     util::encode_cbor,
 };
 
-use super::SurrealDB;
+use super::SurrealStore;
 
 const DATA_REF_TABLE_NAME: &str = "data_cid_refs";
 const MESSAGE_TABLE_NAME: &str = "messages";
 
-impl MessageStore for SurrealDB {
+impl<T: Connection> MessageStore for SurrealStore<T> {
     async fn delete(
         &self,
         tenant: &str,

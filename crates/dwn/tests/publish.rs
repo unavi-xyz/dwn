@@ -1,7 +1,7 @@
 use dwn::{
     actor::{Actor, CreateRecord},
     message::descriptor::Filter,
-    store::SurrealDB,
+    store::SurrealStore,
     DWN,
 };
 use tracing_test::traced_test;
@@ -9,8 +9,8 @@ use tracing_test::traced_test;
 #[traced_test]
 #[tokio::test]
 async fn test_publish() {
-    let db = SurrealDB::new().await.unwrap();
-    let dwn = DWN::new(db);
+    let store = SurrealStore::new().await.unwrap();
+    let dwn = DWN::new(store);
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
     let bob = Actor::new_did_key(dwn).unwrap();

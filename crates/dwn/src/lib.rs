@@ -3,13 +3,13 @@
 //! ## Usage
 //!
 //! ```
-//! use dwn::{actor::{Actor, CreateRecord}, store::SurrealDB, DWN};
+//! use dwn::{actor::{Actor, CreateRecord}, store::SurrealStore, DWN};
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     // Create a DWN, using an embedded SurrealDB for storage.
-//!     let db = SurrealDB::new().await.unwrap();
-//!     let dwn = DWN::new(db);
+//!     // Create a DWN, using an in-memory SurrealDB instance for storage.
+//!     let store = SurrealStore::new().await.unwrap();
+//!     let dwn = DWN::new(store);
 //!
 //!     // Create an actor to send messages.
 //!     // Here we generate a new `did:key` for the actor's identity,
