@@ -7,8 +7,6 @@ use surrealdb::{
     Connection, Surreal,
 };
 
-use crate::DWN;
-
 pub mod data;
 pub mod message;
 
@@ -41,14 +39,5 @@ impl<T: Connection> SurrealStore<T> {
     pub async fn message_db(&self) -> Result<Arc<Surreal<T>>, anyhow::Error> {
         self.0.use_ns(NAMESPACE).use_db(MESSAGE_DB_NAME).await?;
         Ok(self.0.clone())
-    }
-}
-
-impl<T: Connection> DWN<SurrealStore<T>, SurrealStore<T>> {
-    pub fn new(db: SurrealStore<T>) -> Self {
-        DWN {
-            data_store: db.clone(),
-            message_store: db,
-        }
     }
 }

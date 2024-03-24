@@ -83,6 +83,15 @@ pub enum HandleMessageError {
     CborEncode(#[from] EncodeError),
 }
 
+impl<T: Clone + DataStore + MessageStore> DWN<T, T> {
+    pub fn new(store: T) -> Self {
+        Self {
+            data_store: store.clone(),
+            message_store: store,
+        }
+    }
+}
+
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
     pub async fn process_request(&self, payload: Request) -> Response {
         let mut replies = Vec::new();
