@@ -115,13 +115,14 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         record_id: String,
         entry_id: String,
         create: CreateRecord<'_>,
-    ) -> Result<StatusReply, MessageSendError> {
+    ) -> Result<UpdateResult, MessageSendError> {
         let msg = build_write(self, create, Some(entry_id), Some(record_id))?;
+        let entry_id = msg.entry_id()?;
 
         let reply = self.dwn.process_message(msg).await?;
 
         match reply {
-            Reply::Status(reply) => Ok(reply),
+            Reply::Status(reply) => Ok(UpdateResult { entry_id, reply }),
             _ => Err(MessageSendError::InvalidReply(reply)),
         }
     }
@@ -129,6 +130,11 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
 
 pub struct CreateResult {
     pub record_id: String,
+    pub reply: StatusReply,
+}
+
+pub struct UpdateResult {
+    pub entry_id: String,
     pub reply: StatusReply,
 }
 

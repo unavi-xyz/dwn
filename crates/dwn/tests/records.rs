@@ -92,15 +92,36 @@ async fn test_records() {
         )
         .await
         .unwrap();
-    assert_eq!(update.status.code, 200);
+    assert_eq!(update.reply.status.code, 200);
 
     // Read the record.
     let reply = actor.read(record_id.clone()).await.unwrap();
     assert_eq!(reply.status.code, 200);
     assert_eq!(reply.data, Some(new_data));
 
+    // Update the record again.
+    let newer_data = "Hello, again!".bytes().collect::<Vec<_>>();
+
+    let update = actor
+        .update(
+            record_id.clone(),
+            update.entry_id,
+            CreateRecord {
+                data: Some(newer_data.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(update.reply.status.code, 200);
+
+    // Read the record.
+    let reply = actor.read(record_id.clone()).await.unwrap();
+    assert_eq!(reply.status.code, 200);
+    assert_eq!(reply.data, Some(newer_data));
+
     // Query the record.
-    // Only the update message should be returned.
+    // Only the most recent update message should be returned.
     let query = actor
         .query(Filter {
             record_id: Some(record_id.clone()),
