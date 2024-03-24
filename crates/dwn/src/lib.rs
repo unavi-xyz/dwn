@@ -44,9 +44,7 @@ use handlers::{
     },
     Reply, Response, Status,
 };
-use message::{
-    descriptor::Descriptor, Message, RawMessage, Request, ValidateError, ValidatedMessage,
-};
+use message::{descriptor::Descriptor, Message, Request, ValidateError};
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use thiserror::Error;
 
@@ -110,32 +108,20 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         }
     }
 
-    pub async fn process_message(&self, message: RawMessage) -> Result<Reply, HandleMessageError> {
-        let message = message.validate().await?;
+    pub async fn process_message(&self, message: Message) -> Result<Reply, HandleMessageError> {
+        message.validate().await?;
 
-        match message.read().descriptor {
-            Descriptor::RecordsDelete(_) => match message {
-                ValidatedMessage::AttestedAuthorized(message) => {
-                    handle_records_delete(&self.data_store, &self.message_store, message).await
-                }
-                ValidatedMessage::Authorized(message) => {
-                    handle_records_delete(&self.data_store, &self.message_store, message).await
-                }
-                _ => Err(HandleMessageError::Unauthorized),
-            },
+        match &message.descriptor {
+            Descriptor::RecordsDelete(_) => {
+                handle_records_delete(&self.data_store, &self.message_store, message).await
+            }
             Descriptor::RecordsRead(_) => {
                 handle_records_read(&self.data_store, &self.message_store, message).await
             }
             Descriptor::RecordsQuery(_) => handle_records_query(&self.message_store, message).await,
-            Descriptor::RecordsWrite(_) => match message {
-                ValidatedMessage::AttestedAuthorized(message) => {
-                    handle_records_write(&self.data_store, &self.message_store, message).await
-                }
-                ValidatedMessage::Authorized(message) => {
-                    handle_records_write(&self.data_store, &self.message_store, message).await
-                }
-                _ => Err(HandleMessageError::Unauthorized),
-            },
+            Descriptor::RecordsWrite(_) => {
+                handle_records_write(&self.data_store, &self.message_store, message).await
+            }
             _ => Err(HandleMessageError::UnsupportedInterface),
         }
     }

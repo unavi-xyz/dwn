@@ -17,140 +17,26 @@ pub mod descriptor;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Request {
-    pub messages: Vec<RawMessage>,
+    pub messages: Vec<Message>,
 }
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct RawMessage {
-    pub(crate) attestation: Option<JWS<String>>,
-    pub(crate) authorization: Option<JWS<AuthPayload>>,
+pub struct Message {
+    pub attestation: Option<JWS<String>>,
+    pub authorization: Option<JWS<AuthPayload>>,
     pub data: Option<Data>,
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
     pub record_id: String,
 }
 
-pub trait Message {
-    fn read(&self) -> &RawMessage;
-    fn into_inner(self) -> RawMessage;
-}
-
-pub trait Attested {
-    fn attestation(&self) -> &JWS<String>;
-    fn attested_dids(&self) -> impl Iterator<Item = String> + '_ {
-        self.attestation()
-            .signatures
-            .iter()
-            .map(|s| s.protected.key_id.clone())
-    }
-}
-
-pub trait Authorized {
-    fn authorization(&self) -> &JWS<AuthPayload>;
-    fn authorized_dids(&self) -> impl Iterator<Item = String> + '_ {
-        self.authorization()
-            .signatures
-            .iter()
-            .map(|s| s.protected.key_id.clone())
-    }
-
-    fn tenant(&self) -> String {
-        self.authorized_dids().next().unwrap()
-    }
-}
-
-pub struct AuthorizedMessage(RawMessage);
-
-impl Message for AuthorizedMessage {
-    fn read(&self) -> &RawMessage {
-        &self.0
-    }
-    fn into_inner(self) -> RawMessage {
-        self.0
-    }
-}
-
-pub struct AttestedMessage(RawMessage);
-
-impl Message for AttestedMessage {
-    fn read(&self) -> &RawMessage {
-        &self.0
-    }
-    fn into_inner(self) -> RawMessage {
-        self.0
-    }
-}
-
-pub struct AttestedAuthorizedMessage(RawMessage);
-
-impl Message for AttestedAuthorizedMessage {
-    fn read(&self) -> &RawMessage {
-        &self.0
-    }
-    fn into_inner(self) -> RawMessage {
-        self.0
-    }
-}
-
-impl Attested for AttestedAuthorizedMessage {
-    fn attestation(&self) -> &JWS<String> {
-        self.0.attestation.as_ref().unwrap()
-    }
-}
-
-impl Attested for AttestedMessage {
-    fn attestation(&self) -> &JWS<String> {
-        self.0.attestation.as_ref().unwrap()
-    }
-}
-
-impl Authorized for AttestedAuthorizedMessage {
-    fn authorization(&self) -> &JWS<AuthPayload> {
-        self.0.authorization.as_ref().unwrap()
-    }
-}
-
-impl Authorized for AuthorizedMessage {
-    fn authorization(&self) -> &JWS<AuthPayload> {
-        self.0.authorization.as_ref().unwrap()
-    }
-}
-
-pub enum ValidatedMessage {
-    Attested(AttestedMessage),
-    AttestedAuthorized(AttestedAuthorizedMessage),
-    Authorized(AuthorizedMessage),
-    Message(RawMessage),
-}
-
-impl Message for ValidatedMessage {
-    fn read(&self) -> &RawMessage {
-        match self {
-            ValidatedMessage::Attested(msg) => msg.read(),
-            ValidatedMessage::AttestedAuthorized(msg) => msg.read(),
-            ValidatedMessage::Authorized(msg) => msg.read(),
-            ValidatedMessage::Message(msg) => msg,
-        }
-    }
-    fn into_inner(self) -> RawMessage {
-        match self {
-            ValidatedMessage::Attested(msg) => msg.into_inner(),
-            ValidatedMessage::AttestedAuthorized(msg) => msg.into_inner(),
-            ValidatedMessage::Authorized(msg) => msg.into_inner(),
-            ValidatedMessage::Message(msg) => msg,
-        }
-    }
-}
-
-impl ValidatedMessage {
+impl Message {
+    /// Returns the key ID of the authorizing party, if there is one.
     pub fn tenant(&self) -> Option<String> {
-        match self {
-            ValidatedMessage::Attested(_) => None,
-            ValidatedMessage::AttestedAuthorized(msg) => Some(msg.tenant()),
-            ValidatedMessage::Authorized(msg) => Some(msg.tenant()),
-            ValidatedMessage::Message(_) => None,
-        }
+        self.authorization
+            .as_ref()
+            .and_then(|a| a.signatures.first().map(|s| s.protected.key_id.clone()))
     }
 }
 
@@ -202,7 +88,7 @@ pub enum ValidateError {
     Encode(#[from] EncodeError),
 }
 
-impl RawMessage {
+impl Message {
     pub fn new(descriptor: impl Into<Descriptor>) -> Self {
         Self {
             attestation: None,
@@ -246,8 +132,8 @@ impl RawMessage {
         Ok(())
     }
 
-    pub fn generate_record_id(&self) -> Result<String, EncodeError> {
-        RecordIdGenerator::generate(&self.descriptor)
+    pub fn entry_id(&self) -> Result<String, EncodeError> {
+        EntryIdGenerator::generate(&self.descriptor)
     }
 
     pub fn sign(&mut self, key_id: String, jwk: &JWK) -> Result<(), SignError> {
@@ -269,8 +155,7 @@ impl RawMessage {
         Ok(())
     }
 
-    pub async fn validate(self) -> Result<ValidatedMessage, ValidateError> {
-        // Validate
+    pub async fn validate(&self) -> Result<(), ValidateError> {
         if self.attestation.is_some() {
             self.validate_attestation().await?;
         }
@@ -279,18 +164,7 @@ impl RawMessage {
             self.validate_authorization().await?;
         }
 
-        // Return typed message
-        if self.attestation.is_some() && self.authorization.is_some() {
-            Ok(ValidatedMessage::AttestedAuthorized(
-                AttestedAuthorizedMessage(self),
-            ))
-        } else if self.attestation.is_some() {
-            Ok(ValidatedMessage::Attested(AttestedMessage(self)))
-        } else if self.authorization.is_some() {
-            Ok(ValidatedMessage::Authorized(AuthorizedMessage(self)))
-        } else {
-            Ok(ValidatedMessage::Message(self))
-        }
+        Ok(())
     }
 
     /// Validates the message is authorized.
@@ -362,12 +236,12 @@ async fn verify_signature<T>(jws: &JWS<T>, payload: &[u8]) -> Result<(), Validat
 }
 
 #[derive(Serialize)]
-struct RecordIdGenerator {
+struct EntryIdGenerator {
     #[serde(rename = "descriptorCid")]
     pub descriptor_cid: String,
 }
 
-impl RecordIdGenerator {
+impl EntryIdGenerator {
     pub fn generate(descriptor: &Descriptor) -> Result<String, EncodeError> {
         let generator = Self {
             descriptor_cid: encode_cbor(&descriptor)?.cid().to_string(),
@@ -384,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_message_serialization() {
-        let message = RawMessage {
+        let message = Message {
             attestation: None,
             authorization: None,
             data: Some(Data::Base64("hello".to_string())),
@@ -400,7 +274,7 @@ mod tests {
         assert_eq!(value["descriptor"]["method"], "Write");
         assert_eq!(value["recordId"], "world");
 
-        let deserialized: RawMessage = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Message = serde_json::from_str(&serialized).unwrap();
         assert_eq!(message, deserialized);
     }
 }

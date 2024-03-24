@@ -6,7 +6,7 @@ use crate::{
     message::{
         data::{Data, EncryptedData},
         descriptor::RecordsWrite,
-        RawMessage,
+        Message,
     },
     store::{DataStore, MessageStore},
 };
@@ -56,7 +56,7 @@ impl CreateRecord<'_> {
     pub fn build<D: DataStore, M: MessageStore>(
         self,
         actor: &Actor<D, M>,
-    ) -> Result<RawMessage, MessageSendError> {
+    ) -> Result<Message, MessageSendError> {
         build_write(actor, self, None, None)
     }
 }
@@ -66,7 +66,7 @@ pub(crate) fn build_write<D: DataStore, M: MessageStore>(
     create: CreateRecord,
     parent_id: Option<String>,
     record_id: Option<String>,
-) -> Result<RawMessage, MessageSendError> {
+) -> Result<Message, MessageSendError> {
     let mut descriptor = RecordsWrite::default();
     descriptor.message_timestamp = OffsetDateTime::now_utc();
     descriptor.parent_id = parent_id;
@@ -92,7 +92,7 @@ pub(crate) fn build_write<D: DataStore, M: MessageStore>(
         descriptor.data_cid = Some(cid.to_string());
     }
 
-    let mut msg = RawMessage {
+    let mut msg = Message {
         attestation: None,
         authorization: None,
         data,
@@ -101,7 +101,7 @@ pub(crate) fn build_write<D: DataStore, M: MessageStore>(
     };
 
     if msg.record_id.is_empty() {
-        msg.record_id = msg.generate_record_id()?;
+        msg.record_id = msg.entry_id()?;
     }
 
     if create.signed {

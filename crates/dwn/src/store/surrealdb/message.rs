@@ -10,7 +10,7 @@ use crate::{
     message::{
         data::Data,
         descriptor::{Descriptor, Filter, FilterDateSort},
-        RawMessage,
+        Message,
     },
     store::{DataStore, MessageStore, MessageStoreError},
     util::encode_cbor,
@@ -95,7 +95,7 @@ impl MessageStore for SurrealDB {
     async fn put(
         &self,
         tenant: String,
-        mut message: RawMessage,
+        mut message: Message,
         data_store: &impl DataStore,
     ) -> Result<Cid, MessageStoreError> {
         let mut data_cid = None;
@@ -207,7 +207,7 @@ impl MessageStore for SurrealDB {
         &self,
         tenant: Option<String>,
         filter: Filter,
-    ) -> Result<Vec<RawMessage>, MessageStoreError> {
+    ) -> Result<Vec<Message>, MessageStoreError> {
         let db = self
             .message_db()
             .await
@@ -285,7 +285,7 @@ struct DbMessage {
     data_cid: Option<String>,
     date_created: OffsetDateTime,
     date_published: OffsetDateTime,
-    message: RawMessage,
+    message: Message,
     record_id: String,
     tenant: String,
 }

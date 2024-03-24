@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::message::RawMessage;
+use crate::message::Message;
 
 pub mod records;
 
@@ -46,14 +46,14 @@ impl Reply {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RecordsQueryReply {
-    pub entries: Vec<RawMessage>,
+    pub entries: Vec<Message>,
     pub status: Status,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RecordsReadReply {
     pub data: Option<Vec<u8>>,
-    pub record: RawMessage,
+    pub record: Message,
     pub status: Status,
 }
 

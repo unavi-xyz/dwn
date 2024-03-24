@@ -1,17 +1,17 @@
 use crate::{
     handlers::{RecordsQueryReply, Reply, Status},
-    message::{descriptor::Descriptor, Message, ValidatedMessage},
+    message::{descriptor::Descriptor, Message},
     store::MessageStore,
     HandleMessageError,
 };
 
 pub async fn handle_records_query(
     message_store: &impl MessageStore,
-    message: ValidatedMessage,
+    message: Message,
 ) -> Result<Reply, HandleMessageError> {
     let tenant = message.tenant();
 
-    let filter = match message.into_inner().descriptor {
+    let filter = match message.descriptor {
         Descriptor::RecordsQuery(descriptor) => descriptor.filter,
         _ => {
             return Err(HandleMessageError::InvalidDescriptor(

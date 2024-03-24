@@ -6,7 +6,7 @@ use crate::{
     handlers::{RecordsQueryReply, RecordsReadReply, Reply, StatusReply},
     message::{
         descriptor::{Filter, RecordsDelete, RecordsQuery, RecordsRead},
-        AuthError, RawMessage, SignError,
+        AuthError, Message, SignError,
     },
     store::{DataStore, MessageStore},
     util::EncodeError,
@@ -66,8 +66,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     pub async fn delete(&self, record_id: String) -> Result<StatusReply, MessageSendError> {
-        let mut msg = RawMessage::new(RecordsDelete::new(record_id));
-        msg.record_id = msg.generate_record_id()?;
+        let mut msg = Message::new(RecordsDelete::new(record_id));
+        msg.record_id = msg.entry_id()?;
 
         msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
 
@@ -80,10 +80,10 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     pub async fn query(&self, filter: Filter) -> Result<RecordsQueryReply, MessageSendError> {
-        let mut msg = RawMessage::new(RecordsQuery::new(filter));
+        let mut msg = Message::new(RecordsQuery::new(filter));
 
         if msg.record_id.is_empty() {
-            msg.record_id = msg.generate_record_id()?;
+            msg.record_id = msg.entry_id()?;
         }
 
         msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
@@ -97,8 +97,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     pub async fn read(&self, record_id: String) -> Result<Box<RecordsReadReply>, MessageSendError> {
-        let mut msg = RawMessage::new(RecordsRead::new(record_id));
-        msg.record_id = msg.generate_record_id()?;
+        let mut msg = Message::new(RecordsRead::new(record_id));
+        msg.record_id = msg.entry_id()?;
 
         msg.authorize(self.authorization.kid.clone(), &self.authorization.jwk)?;
 

@@ -6,7 +6,7 @@ use crate::{
     handlers::{RecordsReadReply, Reply, Status},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Message, RawMessage, ValidatedMessage,
+        Message,
     },
     store::{DataStore, MessageStore},
     HandleMessageError,
@@ -17,11 +17,11 @@ use super::util::create_entry_id_map;
 pub async fn handle_records_read(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    message: ValidatedMessage,
+    message: Message,
 ) -> Result<Reply, HandleMessageError> {
     let tenant = message.tenant();
 
-    let descriptor = match &message.read().descriptor {
+    let descriptor = match &message.descriptor {
         Descriptor::RecordsRead(descriptor) => descriptor,
         _ => {
             return Err(HandleMessageError::InvalidDescriptor(
@@ -52,7 +52,7 @@ pub async fn handle_records_read(
     // Get the record that has the data.
     // TODO: Simplify this, without RecordsCommit this is not needed
     let entry_id_map = create_entry_id_map(&messages)?;
-    let record_entry_id = latest_checkpoint.generate_record_id()?;
+    let record_entry_id = latest_checkpoint.entry_id()?;
     let data_cid = get_data_cid(&record_entry_id, &entry_id_map);
 
     let data = match data_cid {
@@ -76,7 +76,7 @@ pub async fn handle_records_read(
 
 /// Get the data CID for a given entry ID.
 /// This will search up the chain of parent messages until it finds a RecordsWrite message.
-fn get_data_cid(entry_id: &str, messages: &HashMap<String, &RawMessage>) -> Option<String> {
+fn get_data_cid(entry_id: &str, messages: &HashMap<String, &Message>) -> Option<String> {
     let entry = messages.get(entry_id)?;
 
     match &entry.descriptor {

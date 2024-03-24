@@ -2,7 +2,7 @@ use crate::{
     handlers::{Reply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Authorized, Message,
+        Message,
     },
     store::{DataStore, MessageStore},
     util::encode_cbor,
@@ -12,11 +12,18 @@ use crate::{
 pub async fn handle_records_delete(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    message: impl Message + Authorized,
+    message: Message,
 ) -> Result<Reply, HandleMessageError> {
-    let tenant = message.tenant();
+    if message.authorization.is_none() {
+        return Err(HandleMessageError::Unauthorized);
+    }
 
-    let descriptor = match &message.read().descriptor {
+    let tenant = match message.tenant() {
+        Some(tenant) => tenant,
+        None => return Err(HandleMessageError::Unauthorized),
+    };
+
+    let descriptor = match &message.descriptor {
         Descriptor::RecordsDelete(desc) => desc,
         _ => {
             return Err(HandleMessageError::InvalidDescriptor(
@@ -70,9 +77,7 @@ pub async fn handle_records_delete(
     }
 
     // Store the message.
-    message_store
-        .put(tenant, message.into_inner(), data_store)
-        .await?;
+    message_store.put(tenant, message, data_store).await?;
 
     Ok(StatusReply {
         status: Status::ok(),

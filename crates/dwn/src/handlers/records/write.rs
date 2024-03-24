@@ -2,7 +2,7 @@ use crate::{
     handlers::{Reply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Authorized, Message,
+        Message,
     },
     store::{DataStore, MessageStore},
     util::encode_cbor,
@@ -12,19 +12,25 @@ use crate::{
 pub async fn handle_records_write(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    message: impl Message + Authorized,
+    message: Message,
 ) -> Result<Reply, HandleMessageError> {
-    let tenant = message.tenant();
-    let message_ref = message.read();
+    if message.authorization.is_none() {
+        return Err(HandleMessageError::Unauthorized);
+    }
 
-    let entry_id = message_ref.generate_record_id()?;
+    let tenant = match message.tenant() {
+        Some(tenant) => tenant,
+        None => return Err(HandleMessageError::Unauthorized),
+    };
+
+    let entry_id = message.entry_id()?;
 
     // Get messages for the record.
     let messages = message_store
         .query(
             Some(tenant.clone()),
             Filter {
-                record_id: Some(message_ref.record_id.clone()),
+                record_id: Some(message.record_id.clone()),
                 date_sort: Some(FilterDateSort::CreatedDescending),
                 ..Default::default()
             },
@@ -33,7 +39,7 @@ pub async fn handle_records_write(
 
     let initial_entry = messages.last();
 
-    if entry_id == message_ref.record_id {
+    if entry_id == message.record_id {
         if initial_entry.is_some() {
             // Initial entry already exists, cease processing.
             return Ok(StatusReply {
@@ -44,14 +50,14 @@ pub async fn handle_records_write(
 
         // Store message as initial entry.
         message_store
-            .put(tenant.clone(), message.into_inner(), data_store)
+            .put(tenant.clone(), message, data_store)
             .await?;
     } else {
         let initial_entry = initial_entry.ok_or(HandleMessageError::InvalidDescriptor(
             "Initial entry not found".to_string(),
         ))?;
 
-        let descriptor = match &message_ref.descriptor {
+        let descriptor = match &message.descriptor {
             Descriptor::RecordsWrite(descriptor) => descriptor,
             _ => {
                 return Err(HandleMessageError::InvalidDescriptor(
@@ -75,7 +81,7 @@ pub async fn handle_records_write(
             .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
             .unwrap_or(initial_entry);
 
-        let checkpoint_entry_id = checkpoint_entry.generate_record_id()?;
+        let checkpoint_entry_id = checkpoint_entry.entry_id()?;
 
         // Ensure parent id matches the latest checkpoint entry.
         if *parent_id != checkpoint_entry_id {
@@ -104,13 +110,13 @@ pub async fn handle_records_write(
         let existing_writes = messages
             .iter()
             .filter(|m| matches!(m.descriptor, Descriptor::RecordsWrite(_)))
-            .filter(|m| m.record_id == message_ref.record_id)
+            .filter(|m| m.record_id == message.record_id)
             .collect::<Vec<_>>();
 
         if existing_writes.is_empty() {
             // Store message as new entry.
             message_store
-                .put(tenant.clone(), message.into_inner(), data_store)
+                .put(tenant.clone(), message, data_store)
                 .await?;
         } else if existing_writes.iter().all(|m| {
             let m_timestamp = match &m.descriptor {
@@ -121,7 +127,7 @@ pub async fn handle_records_write(
             // Ensure message timestamp is greater than the latest write.
             // If times are equal, ensure the entry id is greater.
             if descriptor.message_timestamp == m_timestamp {
-                let m_entry_id = m.generate_record_id().unwrap();
+                let m_entry_id = m.entry_id().unwrap();
                 entry_id > m_entry_id
             } else {
                 descriptor.message_timestamp > m_timestamp
@@ -136,9 +142,7 @@ pub async fn handle_records_write(
             }
 
             // Store message as new entry.
-            message_store
-                .put(tenant, message.into_inner(), data_store)
-                .await?;
+            message_store.put(tenant, message, data_store).await?;
         }
     }
 
