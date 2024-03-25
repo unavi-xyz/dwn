@@ -1,5 +1,3 @@
-*.local
 /minio
-/mysql
 /result
 /target
