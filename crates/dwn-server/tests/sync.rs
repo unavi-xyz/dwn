@@ -9,6 +9,8 @@ use tokio::net::TcpListener;
 
 #[tokio::test]
 async fn test_sync() {
+    let port = port_scanner::request_open_port().unwrap();
+
     // Start a DWN server.
     let dwn_osaka = {
         let store = SurrealStore::new().await.unwrap();
@@ -17,9 +19,10 @@ async fn test_sync() {
 
     let actor_osaka = Actor::new_did_key(dwn_osaka.clone()).unwrap();
 
-    tokio::spawn(async {
+    tokio::spawn(async move {
         let router = dwn_server::router(Arc::new(dwn_osaka));
-        let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
+        let url = format!("0.0.0.0:{}", port);
+        let listener = TcpListener::bind(url).await.unwrap();
         axum::serve(listener, router).await.unwrap();
     });
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -31,7 +34,7 @@ async fn test_sync() {
     };
 
     // Sync Kyoto with Osaka.
-    let mut remote_sync = dwn_kyoto.sync_with("http://localhost:8080".to_string());
+    let mut remote_sync = dwn_kyoto.sync_with(format!("http://localhost:{}", port));
 
     let actor_kyoto = Actor::new_did_key(dwn_kyoto).unwrap();
 

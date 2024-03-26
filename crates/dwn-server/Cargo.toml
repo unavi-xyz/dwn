@@ -19,3 +19,6 @@ surrealdb = { version = "1.3.1", default-features = false, features = ["kv-speed
 tokio.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+port_scanner = "0.1.5"
