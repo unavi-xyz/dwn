@@ -21,7 +21,7 @@ impl<T: Connection> Clone for SurrealStore<T> {
 }
 
 impl SurrealStore<Db> {
-    /// Creates a new  in-memory SurrealDB instance.
+    /// Creates a new in-memory SurrealDB instance.
     pub async fn new() -> Result<Self, anyhow::Error> {
         let surreal = Surreal::new::<Mem>(()).await?;
         Ok(Self(surreal))
