@@ -12,12 +12,10 @@ async fn main() {
     std::fs::create_dir_all("/database").unwrap();
 
     let db = Surreal::new::<SpeeDb>("/database").await.unwrap();
-    let store = SurrealStore(Arc::new(db));
-    let dwn = Arc::new(DWN::new(store));
+    let dwn = DWN::from(SurrealStore(db));
 
-    let router = dwn_server::router(dwn);
+    let router = dwn_server::router(Arc::new(dwn));
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
-
     axum::serve(listener, router).await.unwrap();
 }

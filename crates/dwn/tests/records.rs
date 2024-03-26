@@ -10,7 +10,7 @@ use tracing_test::traced_test;
 #[tokio::test]
 async fn test_records() {
     let store = SurrealStore::new().await.unwrap();
-    let dwn = DWN::new(store);
+    let dwn = DWN::from(store);
 
     let actor = Actor::new_did_key(dwn).unwrap();
 

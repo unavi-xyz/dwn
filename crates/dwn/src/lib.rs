@@ -9,7 +9,7 @@
 //! async fn main() {
 //!     // Create a DWN, using an in-memory SurrealDB instance for storage.
 //!     let store = SurrealStore::new().await.unwrap();
-//!     let dwn = DWN::new(store);
+//!     let dwn = DWN::from(store);
 //!
 //!     // Create an actor to send messages.
 //!     // Here we generate a new `did:key` for the actor's identity,
@@ -45,12 +45,15 @@ use handlers::{
     Reply, Response, Status,
 };
 use message::{descriptor::Descriptor, Message, Request, ValidateError};
+use remote_sync::RemoteSync;
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use thiserror::Error;
+use tokio::sync::mpsc::{error::SendError, Sender};
 
 pub mod actor;
 pub mod handlers;
 pub mod message;
+pub mod remote_sync;
 pub mod store;
 pub mod util;
 
@@ -63,6 +66,7 @@ use crate::handlers::StatusReply;
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,
     pub message_store: M,
+    message_sender: Option<Sender<Message>>,
 }
 
 #[derive(Debug, Error)]
@@ -81,18 +85,35 @@ pub enum HandleMessageError {
     MessageStoreError(#[from] MessageStoreError),
     #[error(transparent)]
     CborEncode(#[from] EncodeError),
+    #[error(transparent)]
+    SendError(#[from] Box<SendError<Message>>),
 }
 
-impl<T: Clone + DataStore + MessageStore> DWN<T, T> {
-    pub fn new(store: T) -> Self {
+impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
+    fn from(store: T) -> Self {
         Self {
             data_store: store.clone(),
             message_store: store,
+            message_sender: None,
         }
     }
 }
 
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
+    pub fn new(data_store: D, message_store: M) -> Self {
+        Self {
+            data_store,
+            message_store,
+            message_sender: None,
+        }
+    }
+
+    pub fn sync_with(&mut self, remote_url: String) -> RemoteSync {
+        let remote_sync = RemoteSync::new(remote_url);
+        self.message_sender = Some(remote_sync.message_send.clone());
+        remote_sync
+    }
+
     pub async fn process_request(&self, payload: Request) -> Response {
         let mut replies = Vec::new();
 
@@ -122,6 +143,10 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 
         match &message.descriptor {
             Descriptor::RecordsDelete(_) => {
+                if let Some(sender) = &self.message_sender {
+                    sender.send(message.clone()).await.map_err(Box::new)?;
+                }
+
                 handle_records_delete(&self.data_store, &self.message_store, message).await
             }
             Descriptor::RecordsRead(_) => {
@@ -129,6 +154,10 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             }
             Descriptor::RecordsQuery(_) => handle_records_query(&self.message_store, message).await,
             Descriptor::RecordsWrite(_) => {
+                if let Some(sender) = &self.message_sender {
+                    sender.send(message.clone()).await.map_err(Box::new)?;
+                }
+
                 handle_records_write(&self.data_store, &self.message_store, message).await
             }
             _ => Err(HandleMessageError::UnsupportedInterface),
