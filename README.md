@@ -13,7 +13,7 @@ use dwn::{actor::{Actor, CreateRecord}, store::SurrealStore, DWN};
 async fn main() {
     // Create a DWN, using an in-memory SurrealDB instance for storage.
     let store = SurrealStore::new().await.unwrap();
-    let dwn = DWN::new(store);
+    let dwn = DWN::from(store);
 
     // Create an actor to send messages.
     // Here we generate a new `did:key` for the actor's identity,
