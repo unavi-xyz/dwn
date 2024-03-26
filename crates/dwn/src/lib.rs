@@ -45,16 +45,17 @@ use handlers::{
     Reply, Response, Status,
 };
 use message::{descriptor::Descriptor, Message, Request, ValidateError};
-use remote_sync::RemoteSync;
+use reqwest::Client;
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
+use sync::RemoteSync;
 use thiserror::Error;
 use tokio::sync::mpsc::{error::SendError, Sender};
 
 pub mod actor;
 pub mod handlers;
 pub mod message;
-pub mod remote_sync;
 pub mod store;
+pub mod sync;
 pub mod util;
 
 use tracing::warn;
@@ -66,27 +67,26 @@ use crate::handlers::StatusReply;
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,
     pub message_store: M,
-    message_sender: Option<Sender<Message>>,
+    remote: Option<Remote>,
 }
 
-#[derive(Debug, Error)]
-pub enum HandleMessageError {
-    #[error("Unauthorized")]
-    Unauthorized,
-    #[error("Unsupported interface")]
-    UnsupportedInterface,
-    #[error(transparent)]
-    ValidateError(#[from] ValidateError),
-    #[error("Invalid descriptor")]
-    InvalidDescriptor(String),
-    #[error(transparent)]
-    DataStoreError(#[from] DataStoreError),
-    #[error(transparent)]
-    MessageStoreError(#[from] MessageStoreError),
-    #[error(transparent)]
-    CborEncode(#[from] EncodeError),
-    #[error(transparent)]
-    SendError(#[from] Box<SendError<Message>>),
+#[derive(Clone)]
+struct Remote {
+    client: Client,
+    sender: Sender<Message>,
+    url: String,
+}
+
+impl Remote {
+    async fn send(&self, messages: Vec<Message>) -> Result<Response, reqwest::Error> {
+        self.client
+            .post(&self.url)
+            .json(&Request { messages })
+            .send()
+            .await?
+            .json::<Response>()
+            .await
+    }
 }
 
 impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
@@ -94,7 +94,7 @@ impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
         Self {
             data_store: store.clone(),
             message_store: store,
-            message_sender: None,
+            remote: None,
         }
     }
 }
@@ -104,13 +104,19 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         Self {
             data_store,
             message_store,
-            message_sender: None,
+            remote: None,
         }
     }
 
     pub fn sync_with(&mut self, remote_url: String) -> RemoteSync {
-        let remote_sync = RemoteSync::new(remote_url);
-        self.message_sender = Some(remote_sync.message_send.clone());
+        let remote_sync = RemoteSync::new(remote_url.clone());
+
+        self.remote = Some(Remote {
+            client: Client::new(),
+            sender: remote_sync.sender.clone(),
+            url: remote_url,
+        });
+
         remote_sync
     }
 
@@ -143,19 +149,40 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 
         match &message.descriptor {
             Descriptor::RecordsDelete(_) => {
-                if let Some(sender) = &self.message_sender {
-                    sender.send(message.clone()).await.map_err(Box::new)?;
+                if let Some(remote) = &self.remote {
+                    remote
+                        .sender
+                        .send(message.clone())
+                        .await
+                        .map_err(Box::new)?;
                 }
 
                 handle_records_delete(&self.data_store, &self.message_store, message).await
             }
             Descriptor::RecordsRead(_) => {
-                handle_records_read(&self.data_store, &self.message_store, message).await
+                match handle_records_read(&self.data_store, &self.message_store, message.clone())
+                    .await
+                {
+                    Ok(reply) => Ok(reply),
+                    Err(err) => {
+                        // If read fails, try remote.
+                        if let Some(remote) = &self.remote {
+                            let response = remote.send(vec![message]).await?;
+                            Ok(response.replies.into_iter().next().unwrap())
+                        } else {
+                            Err(err)
+                        }
+                    }
+                }
             }
             Descriptor::RecordsQuery(_) => handle_records_query(&self.message_store, message).await,
             Descriptor::RecordsWrite(_) => {
-                if let Some(sender) = &self.message_sender {
-                    sender.send(message.clone()).await.map_err(Box::new)?;
+                if let Some(remote) = &self.remote {
+                    remote
+                        .sender
+                        .send(message.clone())
+                        .await
+                        .map_err(Box::new)?;
                 }
 
                 handle_records_write(&self.data_store, &self.message_store, message).await
@@ -163,4 +190,26 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             _ => Err(HandleMessageError::UnsupportedInterface),
         }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum HandleMessageError {
+    #[error("Unauthorized")]
+    Unauthorized,
+    #[error("Unsupported interface")]
+    UnsupportedInterface,
+    #[error(transparent)]
+    ValidateError(#[from] ValidateError),
+    #[error("Invalid descriptor")]
+    InvalidDescriptor(String),
+    #[error(transparent)]
+    DataStoreError(#[from] DataStoreError),
+    #[error(transparent)]
+    MessageStoreError(#[from] MessageStoreError),
+    #[error(transparent)]
+    CborEncode(#[from] EncodeError),
+    #[error(transparent)]
+    SendError(#[from] Box<SendError<Message>>),
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
 }

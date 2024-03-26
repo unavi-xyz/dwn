@@ -1,5 +1,4 @@
 use reqwest::Client;
-use thiserror::Error;
 use tokio::sync::mpsc::{self};
 
 use crate::{
@@ -10,35 +9,27 @@ use crate::{
 /// Sends new messages to a remote DWN.
 pub struct RemoteSync {
     client: Client,
-    message_recv: mpsc::Receiver<Message>,
-    pub(crate) message_send: mpsc::Sender<Message>,
+    pub(crate) sender: mpsc::Sender<Message>,
+    receiver: mpsc::Receiver<Message>,
     remote_url: String,
-}
-
-#[derive(Debug, Error)]
-pub enum SyncError {
-    #[error(transparent)]
-    Reqwest(#[from] reqwest::Error),
-    #[error(transparent)]
-    Serde(#[from] serde_json::Error),
 }
 
 impl RemoteSync {
     pub fn new(remote_url: String) -> Self {
-        let (message_send, message_recv) = mpsc::channel(100);
+        let (sender, receiver) = mpsc::channel(100);
 
         Self {
             client: Client::new(),
-            message_recv,
-            message_send,
+            receiver,
             remote_url,
+            sender,
         }
     }
 
-    pub async fn sync(&mut self) -> Result<Option<Response>, SyncError> {
+    pub async fn sync(&mut self) -> Result<Option<Response>, reqwest::Error> {
         let mut messages = Vec::new();
 
-        while let Ok(message) = self.message_recv.try_recv() {
+        while let Ok(message) = self.receiver.try_recv() {
             messages.push(message);
         }
 

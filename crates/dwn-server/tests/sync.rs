@@ -36,8 +36,7 @@ async fn test_sync() {
     let actor_kyoto = Actor::new_did_key(dwn_kyoto).unwrap();
 
     // Create a record in Kyoto.
-    let data = "Hello, world!".bytes().collect::<Vec<_>>();
-
+    let data = "Hello from Kyoto!".bytes().collect::<Vec<_>>();
     let create = actor_kyoto
         .create(CreateRecord {
             data: Some(data.clone()),
@@ -59,6 +58,23 @@ async fn test_sync() {
 
     // Osaka should have the record now.
     let read = actor_osaka.read(create.record_id.clone()).await.unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.data, Some(data));
+
+    // Create a record in Osaka.
+    let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
+    let create = actor_osaka
+        .create(CreateRecord {
+            data: Some(data.clone()),
+            published: true,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(create.reply.status.code, 200);
+
+    // Kyoto should be able to read the record.
+    let read = actor_kyoto.read(create.record_id.clone()).await.unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.data, Some(data));
 }
