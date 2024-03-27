@@ -15,7 +15,12 @@ pub struct Remote {
 
 impl Remote {
     pub fn new(url: String) -> Self {
-        let (sender, receiver) = mpsc::channel(100);
+        Self::new_with_capacity(url, 100)
+    }
+
+    /// Create a new remote with a message queue size of `capacity`.
+    pub fn new_with_capacity(url: String, capacity: usize) -> Self {
+        let (sender, receiver) = mpsc::channel(capacity);
 
         Self {
             client: Client::new(),
@@ -38,27 +43,29 @@ impl Remote {
 
     /// Sync with the remote DWN.
     /// This will only sync records we have locally, it will not pull new records from the remote.
-    pub async fn sync(&self) -> Result<Option<Response>, reqwest::Error> {
-        self.push().await
+    pub async fn sync(&self) -> Result<(), reqwest::Error> {
+        self.push().await?;
+        self.pull().await?;
+        Ok(())
     }
 
     /// Clear the message queue by sending all messages to the remote server.
-    async fn push(&self) -> Result<Option<Response>, reqwest::Error> {
+    async fn push(&self) -> Result<(), reqwest::Error> {
         let mut messages = Vec::new();
 
         while let Ok(message) = self.receiver.lock().await.try_recv() {
             messages.push(message);
         }
 
-        if messages.is_empty() {
-            return Ok(None);
+        if !messages.is_empty() {
+            let _ = self.send(messages).await;
         }
 
-        self.send(messages).await.map(Some)
+        Ok(())
     }
 
     /// Pull all locally stored records from the remote server.
-    async fn pull(&mut self) -> Result<(), reqwest::Error> {
+    async fn pull(&self) -> Result<(), reqwest::Error> {
         Ok(())
     }
 }
