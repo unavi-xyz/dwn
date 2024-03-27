@@ -14,6 +14,7 @@ pub struct Remote {
 }
 
 impl Remote {
+    /// Create a new remote with a message queue size of 100.
     pub fn new(url: String) -> Self {
         Self::new_with_capacity(url, 100)
     }
