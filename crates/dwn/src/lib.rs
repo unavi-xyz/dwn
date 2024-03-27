@@ -50,7 +50,7 @@ use message::{descriptor::Descriptor, Message, Request, ValidateError};
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use sync::Remote;
 use thiserror::Error;
-use tokio::sync::{mpsc::error::SendError, Mutex};
+use tokio::sync::{mpsc::error::SendError, RwLock};
 
 pub mod actor;
 pub mod handlers;
@@ -67,7 +67,7 @@ use crate::handlers::StatusReply;
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,
     pub message_store: M,
-    pub remotes: Mutex<Vec<Remote>>,
+    pub remotes: RwLock<Vec<Remote>>,
 }
 
 impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
@@ -75,7 +75,7 @@ impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
         Self {
             data_store: store.clone(),
             message_store: store,
-            remotes: Mutex::new(Vec::new()),
+            remotes: RwLock::new(Vec::new()),
         }
     }
 }
@@ -85,29 +85,29 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         Self {
             data_store,
             message_store,
-            remotes: Mutex::new(Vec::new()),
+            remotes: RwLock::new(Vec::new()),
         }
     }
 
     pub async fn add_remote(&self, remote_url: String) {
         let remote = Remote::new(remote_url.clone());
-        self.remotes.lock().await.push(remote);
+        self.remotes.write().await.push(remote);
     }
 
     pub async fn remove_remote(&self, remote_url: &str) {
-        let mut remotes = self.remotes.lock().await;
+        let mut remotes = self.remotes.write().await;
         remotes.retain(|remote| remote.url != remote_url);
     }
 
     pub async fn sync(&self) {
-        for remote in self.remotes.lock().await.iter() {
+        for remote in self.remotes.read().await.iter() {
             remote.sync().await.unwrap();
         }
     }
 
     /// Queue a message to be sent to remote DWNs.
     pub async fn remote_queue(&self, message: &Message) -> Result<(), HandleMessageError> {
-        for remote in self.remotes.lock().await.iter() {
+        for remote in self.remotes.read().await.iter() {
             remote
                 .sender
                 .send(message.clone())
@@ -157,7 +157,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                     Ok(reply) => Ok(reply),
                     Err(err) => {
                         // If read fails, check remotes.
-                        for remote in self.remotes.lock().await.iter() {
+                        for remote in self.remotes.read().await.iter() {
                             let message = message.clone();
                             let tenant = message.tenant();
                             let response = remote.send(vec![message]).await?;
