@@ -7,13 +7,15 @@ Rust implementation of a [Decentralized Web Node](https://identity.foundation/de
 ### Usage
 
 ```rust
-use dwn::{actor::{Actor, CreateRecord}, store::SurrealStore, DWN};
+use std::sync::Arc;
+
+use dwn::{actor::{Actor, CreateRecord}, message::data::Data, store::SurrealStore, DWN};
 
 #[tokio::main]
 async fn main() {
     // Create a DWN, using an in-memory SurrealDB instance for storage.
     let store = SurrealStore::new().await.unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Arc::new(DWN::from(store));
 
     // Create an actor to send messages.
     // Here we generate a new `did:key` for the actor's identity,
@@ -37,7 +39,7 @@ async fn main() {
     let read = actor.read(create.record_id).await.unwrap();
 
     assert_eq!(read.status.code, 200);
-    assert_eq!(read.data, Some(data));
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 }
 ```
 
