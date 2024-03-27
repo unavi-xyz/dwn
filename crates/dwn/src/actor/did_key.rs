@@ -28,6 +28,10 @@ impl DidKey {
         let id = did.strip_prefix("did:key:").ok_or(DidKeygenError::DidGen)?;
         let kid = format!("{}#{}", did, id);
 
-        Ok(DidKey { did, jwk, key_id: kid })
+        Ok(DidKey {
+            did,
+            jwk,
+            key_id: kid,
+        })
     }
 }
