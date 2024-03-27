@@ -4,6 +4,7 @@ use tokio::sync::{mpsc, Mutex};
 use crate::{
     handlers::Response,
     message::{Message, Request},
+    store::{DataStore, MessageStore},
 };
 
 pub struct Remote {
@@ -48,9 +49,13 @@ impl Remote {
 
     /// Sync with the remote DWN.
     /// This will only sync records we have locally, it will not pull new records from the remote.
-    pub async fn sync(&self) -> Result<(), reqwest::Error> {
+    pub async fn sync(
+        &self,
+        data_store: &impl DataStore,
+        message_store: &impl MessageStore,
+    ) -> Result<(), reqwest::Error> {
         self.push().await?;
-        self.pull().await?;
+        self.pull(data_store, message_store).await?;
         Ok(())
     }
 
@@ -70,7 +75,11 @@ impl Remote {
     }
 
     /// Pull all locally stored records from the remote server.
-    async fn pull(&self) -> Result<(), reqwest::Error> {
+    async fn pull(
+        &self,
+        data_store: &impl DataStore,
+        message_store: &impl MessageStore,
+    ) -> Result<(), reqwest::Error> {
         Ok(())
     }
 }

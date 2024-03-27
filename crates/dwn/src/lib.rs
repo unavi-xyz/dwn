@@ -99,10 +99,12 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         remotes.retain(|remote| remote.url != remote_url);
     }
 
-    pub async fn sync(&self) {
+    pub async fn sync(&self) -> Result<(), reqwest::Error> {
         for remote in self.remotes.read().await.iter() {
-            remote.sync().await.unwrap();
+            remote.sync(&self.data_store, &self.message_store).await?;
         }
+
+        Ok(())
     }
 
     /// Queue a message to be sent to remote DWNs.

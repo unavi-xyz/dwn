@@ -51,7 +51,7 @@ async fn test_sync() {
     assert!(read.is_err());
 
     // Sync data.
-    dwn_kyoto.sync().await;
+    dwn_kyoto.sync().await.unwrap();
 
     // Osaka should have the record now.
     let read = actor_osaka.read(create.record_id.clone()).await.unwrap();
