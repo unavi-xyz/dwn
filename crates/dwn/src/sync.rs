@@ -31,6 +31,10 @@ impl Remote {
         }
     }
 
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
     /// Send messages to the remote DWN.
     pub async fn send(&self, messages: Vec<Message>) -> Result<Response, reqwest::Error> {
         self.client
