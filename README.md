@@ -9,7 +9,7 @@ Rust implementation of a [Decentralized Web Node](https://identity.foundation/de
 ```rust
 use std::sync::Arc;
 
-use dwn::{actor::{Actor, CreateRecord}, message::data::Data, store::SurrealStore, DWN};
+use dwn::{actor::Actor, message::data::Data, store::SurrealStore, DWN};
 
 #[tokio::main]
 async fn main() {
@@ -26,17 +26,16 @@ async fn main() {
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 
     let create = actor
-        .create(CreateRecord {
-            data: Some(data.clone()),
-            ..Default::default()
-        })
+        .create()
+        .data(data.clone())
+        .process()
         .await
         .unwrap();
 
     assert_eq!(create.reply.status.code, 200);
 
     // Read the record.
-    let read = actor.read(create.record_id).await.unwrap();
+    let read = actor.read(create.record_id).process().await.unwrap();
 
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
