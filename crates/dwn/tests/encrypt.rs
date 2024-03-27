@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dwn::{
-    actor::{Actor, CreateRecord, Encryption},
+    actor::{Actor, Encryption},
     message::data::Data,
     store::SurrealStore,
     DWN,
@@ -21,17 +21,16 @@ async fn test_encrypt() {
     let encryption = Encryption::generate_aes256().unwrap();
 
     let create = actor
-        .create(CreateRecord {
-            data: Some(data.clone()),
-            encryption: Some(&encryption),
-            ..Default::default()
-        })
+        .create()
+        .data(data.clone())
+        .encryption(&encryption)
+        .process()
         .await
         .unwrap();
     assert_eq!(create.reply.status.code, 200);
 
     // Read the record.
-    let read = actor.read(create.record_id).await.unwrap();
+    let read = actor.read(create.record_id).process().await.unwrap();
     assert_eq!(read.status.code, 200);
 
     // Decrypt the data.

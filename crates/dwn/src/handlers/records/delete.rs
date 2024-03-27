@@ -2,7 +2,7 @@ use crate::{
     handlers::{Reply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Message,
+        Request,
     },
     store::{DataStore, MessageStore},
     util::encode_cbor,
@@ -12,16 +12,13 @@ use crate::{
 pub async fn handle_records_delete(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    message: Message,
+    Request { target, message }: Request,
 ) -> Result<Reply, HandleMessageError> {
-    if message.authorization.is_none() {
+    let authorized = message.is_authorized(&target).await;
+
+    if !authorized {
         return Err(HandleMessageError::Unauthorized);
     }
-
-    let tenant = match message.tenant() {
-        Some(tenant) => tenant,
-        None => return Err(HandleMessageError::Unauthorized),
-    };
 
     let descriptor = match &message.descriptor {
         Descriptor::RecordsDelete(desc) => desc,
@@ -36,7 +33,8 @@ pub async fn handle_records_delete(
 
     let messages = message_store
         .query(
-            Some(tenant.clone()),
+            target.clone(),
+            authorized,
             Filter {
                 record_id: Some(descriptor.record_id.clone()),
                 date_sort: Some(FilterDateSort::CreatedDescending),
@@ -72,12 +70,12 @@ pub async fn handle_records_delete(
     for m in messages {
         let block = encode_cbor(&m)?;
         message_store
-            .delete(&tenant, block.cid().to_string(), data_store)
+            .delete(&target, block.cid().to_string(), data_store)
             .await?;
     }
 
     // Store the message.
-    message_store.put(tenant, message, data_store).await?;
+    message_store.put(target, message, data_store).await?;
 
     Ok(StatusReply {
         status: Status::ok(),

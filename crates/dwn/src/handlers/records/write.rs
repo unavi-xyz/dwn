@@ -2,7 +2,7 @@ use crate::{
     handlers::{Reply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Message,
+        Request,
     },
     store::{DataStore, MessageStore},
     util::encode_cbor,
@@ -12,23 +12,21 @@ use crate::{
 pub async fn handle_records_write(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    message: Message,
+    Request { target, message }: Request,
 ) -> Result<Reply, HandleMessageError> {
-    if message.authorization.is_none() {
+    let authorized = message.is_authorized(&target).await;
+
+    if !authorized {
         return Err(HandleMessageError::Unauthorized);
     }
-
-    let tenant = match message.tenant() {
-        Some(tenant) => tenant,
-        None => return Err(HandleMessageError::Unauthorized),
-    };
 
     let entry_id = message.entry_id()?;
 
     // Get messages for the record.
     let messages = message_store
         .query(
-            Some(tenant.clone()),
+            target.clone(),
+            authorized,
             Filter {
                 record_id: Some(message.record_id.clone()),
                 date_sort: Some(FilterDateSort::CreatedDescending),
@@ -50,7 +48,7 @@ pub async fn handle_records_write(
 
         // Store message as initial entry.
         message_store
-            .put(tenant.clone(), message, data_store)
+            .put(target.clone(), message, data_store)
             .await?;
     } else {
         let initial_entry = initial_entry.ok_or(HandleMessageError::InvalidDescriptor(
@@ -116,7 +114,7 @@ pub async fn handle_records_write(
         if existing_writes.is_empty() {
             // Store message as new entry.
             message_store
-                .put(tenant.clone(), message, data_store)
+                .put(target.clone(), message, data_store)
                 .await?;
         } else if existing_writes.iter().all(|m| {
             let m_timestamp = match &m.descriptor {
@@ -137,12 +135,12 @@ pub async fn handle_records_write(
             for m in existing_writes {
                 let cbor = encode_cbor(&m)?;
                 message_store
-                    .delete(&tenant, cbor.cid().to_string(), data_store)
+                    .delete(&target, cbor.cid().to_string(), data_store)
                     .await?;
             }
 
             // Store message as new entry.
-            message_store.put(tenant, message, data_store).await?;
+            message_store.put(target, message, data_store).await?;
         }
     }
 

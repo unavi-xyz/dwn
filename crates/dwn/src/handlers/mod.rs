@@ -5,12 +5,6 @@ use crate::message::Message;
 
 pub mod records;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Response {
-    pub status: Option<Status>,
-    pub replies: Vec<Reply>,
-}
-
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Status {
@@ -30,7 +24,7 @@ impl Status {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Reply {
     RecordsQuery(RecordsQueryReply),
-    RecordsRead(Box<RecordsReadReply>),
+    RecordsRead(RecordsReadReply),
     Status(StatusReply),
 }
 
@@ -52,7 +46,7 @@ pub struct RecordsQueryReply {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RecordsReadReply {
-    pub record: Message,
+    pub record: Box<Message>,
     pub status: Status,
 }
 
@@ -62,19 +56,19 @@ pub struct StatusReply {
 }
 
 impl From<RecordsQueryReply> for Reply {
-    fn from(val: RecordsQueryReply) -> Self {
-        Reply::RecordsQuery(val)
+    fn from(reply: RecordsQueryReply) -> Self {
+        Reply::RecordsQuery(reply)
     }
 }
 
 impl From<RecordsReadReply> for Reply {
-    fn from(val: RecordsReadReply) -> Self {
-        Reply::RecordsRead(Box::new(val))
+    fn from(reply: RecordsReadReply) -> Self {
+        Reply::RecordsRead(reply)
     }
 }
 
 impl From<StatusReply> for Reply {
-    fn from(val: StatusReply) -> Self {
-        Reply::Status(val)
+    fn from(reply: StatusReply) -> Self {
+        Reply::Status(reply)
     }
 }

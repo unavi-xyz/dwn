@@ -12,7 +12,7 @@ async fn main() {
     std::fs::create_dir_all("/database").unwrap();
 
     let db = Surreal::new::<SpeeDb>("/database").await.unwrap();
-    let dwn = DWN::from(SurrealStore(db));
+    let dwn = DWN::from(SurrealStore::from(db));
 
     let router = dwn_server::router(Arc::new(dwn));
 

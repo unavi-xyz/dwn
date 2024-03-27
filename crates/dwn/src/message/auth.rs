@@ -57,11 +57,14 @@ pub enum SignatureVerifyError {
 
 impl SignatureEntry {
     /// Verify the signature of the payload.
-    /// Returns the DID of the key used to sign the payload.
-    pub async fn verify(&self, payload: &[u8]) -> Result<String, SignatureVerifyError> {
+    pub async fn verify(
+        &self,
+        payload: &[u8],
+        relationship: VerificationRelationship,
+    ) -> Result<(), SignatureVerifyError> {
         // Resolve the key.
         let did_url = DIDURL::from_str(&self.protected.key_id)?;
-        let verification_method = resolve_authentication_method(&did_url).await?;
+        let verification_method = resolve_vc(&did_url, relationship).await?;
 
         // Verify signature.
         let jwk = verification_method.get_jwk()?;
@@ -73,32 +76,30 @@ impl SignatureEntry {
             ));
         }
 
-        Ok(did_url.did)
+        Ok(())
     }
 }
 
-async fn resolve_authentication_method(
+async fn resolve_vc(
     did_url: &DIDURL,
+    relationship: VerificationRelationship,
 ) -> Result<VerificationMethodMap, SignatureVerifyError> {
-    let doc = resolve_did_url_document(did_url).await?;
+    let doc = resolve_did_document(did_url).await?;
 
-    // Ensure the DID URL is an authentication method
-    let authentication_method_ids = doc
-        .get_verification_method_ids(VerificationRelationship::Authentication)
+    let method_ids = doc
+        .get_verification_method_ids(relationship)
         .map_err(|_| SignatureVerifyError::MethodNotFound)?;
 
-    if !authentication_method_ids.contains(&did_url.to_string()) {
+    if !method_ids.contains(&did_url.to_string()) {
         return Err(SignatureVerifyError::MethodNotFound);
     }
 
-    resolve_verificaton_method(did_url).await
+    resolve_vc_map(did_url).await
 }
 
 #[async_recursion]
-async fn resolve_verificaton_method(
-    did_url: &DIDURL,
-) -> Result<VerificationMethodMap, SignatureVerifyError> {
-    let doc = resolve_did_url_document(did_url).await?;
+async fn resolve_vc_map(did_url: &DIDURL) -> Result<VerificationMethodMap, SignatureVerifyError> {
+    let doc = resolve_did_document(did_url).await?;
 
     let verification_methods = doc
         .verification_method
@@ -112,7 +113,7 @@ async fn resolve_verificaton_method(
     let method_map = match method {
         VerificationMethod::Map(m) => m.to_owned(),
         VerificationMethod::RelativeDIDURL(url) => {
-            resolve_verificaton_method(&DIDURL {
+            resolve_vc_map(&DIDURL {
                 did: did_url.did.clone(),
                 query: url.query.clone(),
                 fragment: url.fragment.clone(),
@@ -120,13 +121,13 @@ async fn resolve_verificaton_method(
             })
             .await?
         }
-        VerificationMethod::DIDURL(url) => resolve_verificaton_method(url).await?,
+        VerificationMethod::DIDURL(url) => resolve_vc_map(url).await?,
     };
 
     Ok(method_map)
 }
 
-async fn resolve_did_url_document(did_url: &DIDURL) -> Result<Document, SignatureVerifyError> {
+async fn resolve_did_document(did_url: &DIDURL) -> Result<Document, SignatureVerifyError> {
     let did = did_url.did.clone();
     let did_method = DID_METHODS
         .get_method(&did)

@@ -8,15 +8,26 @@ use surrealdb::{
 pub mod data;
 pub mod message;
 
-const NAMESPACE: &str = "dwn";
-const DATA_DB_NAME: &str = "data";
-const MESSAGE_DB_NAME: &str = "message";
+pub struct SurrealStore<T: Connection> {
+    pub db: Surreal<T>,
+    pub namepace: String,
+}
 
-pub struct SurrealStore<T: Connection>(pub Surreal<T>);
+impl<T: Connection> From<Surreal<T>> for SurrealStore<T> {
+    fn from(db: Surreal<T>) -> Self {
+        Self {
+            db,
+            namepace: "dwn".to_string(),
+        }
+    }
+}
 
 impl<T: Connection> Clone for SurrealStore<T> {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self {
+            db: self.db.clone(),
+            namepace: self.namepace.clone(),
+        }
     }
 }
 
@@ -24,18 +35,24 @@ impl SurrealStore<Db> {
     /// Creates a new in-memory SurrealDB instance.
     pub async fn new() -> Result<Self, anyhow::Error> {
         let surreal = Surreal::new::<Mem>(()).await?;
-        Ok(Self(surreal))
+
+        Ok(Self {
+            db: surreal,
+            namepace: "dwn".to_string(),
+        })
     }
 }
 
 impl<T: Connection> SurrealStore<T> {
     pub async fn data_db(&self) -> Result<Surreal<T>, anyhow::Error> {
-        self.0.use_ns(NAMESPACE).use_db(DATA_DB_NAME).await?;
-        Ok(self.0.clone())
+        let db = self.db.clone();
+        db.use_ns(&self.namepace).use_db("data").await?;
+        Ok(db)
     }
 
-    pub async fn message_db(&self) -> Result<Surreal<T>, anyhow::Error> {
-        self.0.use_ns(NAMESPACE).use_db(MESSAGE_DB_NAME).await?;
-        Ok(self.0.clone())
+    pub async fn message_db(&self, tenant: &str) -> Result<Surreal<T>, anyhow::Error> {
+        let db = self.db.clone();
+        db.use_ns(&self.namepace).use_db(tenant).await?;
+        Ok(db)
     }
 }

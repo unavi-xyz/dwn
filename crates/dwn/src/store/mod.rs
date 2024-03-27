@@ -90,7 +90,8 @@ pub trait MessageStore: Send + Sync {
     ) -> impl Future<Output = Result<Cid, MessageStoreError>> + Send + Sync;
     fn query(
         &self,
-        tenant: Option<String>,
+        tenant: String,
+        authorized: bool,
         filter: Filter,
     ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
 }

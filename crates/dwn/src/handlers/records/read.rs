@@ -8,7 +8,7 @@ use crate::{
     message::{
         data::{Data, EncryptedData},
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Message,
+        Message, Request,
     },
     store::{DataStore, MessageStore},
     HandleMessageError,
@@ -19,9 +19,9 @@ use super::util::create_entry_id_map;
 pub async fn handle_records_read(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    message: Message,
+    Request { target, message }: Request,
 ) -> Result<Reply, HandleMessageError> {
-    let tenant = message.tenant();
+    let authorized = message.is_authorized(&target).await;
 
     let descriptor = match &message.descriptor {
         Descriptor::RecordsRead(descriptor) => descriptor,
@@ -34,7 +34,8 @@ pub async fn handle_records_read(
 
     let messages = message_store
         .query(
-            tenant,
+            target,
+            authorized,
             Filter {
                 record_id: Some(descriptor.record_id.clone()),
                 date_sort: Some(FilterDateSort::CreatedDescending),
@@ -88,7 +89,7 @@ pub async fn handle_records_read(
     }
 
     Ok(RecordsReadReply {
-        record,
+        record: Box::new(record),
         status: Status::ok(),
     }
     .into())

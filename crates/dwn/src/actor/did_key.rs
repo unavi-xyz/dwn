@@ -12,7 +12,7 @@ pub enum DidKeygenError {
 pub struct DidKey {
     pub did: String,
     pub jwk: JWK,
-    pub kid: String,
+    pub key_id: String,
 }
 
 impl DidKey {
@@ -28,6 +28,6 @@ impl DidKey {
         let id = did.strip_prefix("did:key:").ok_or(DidKeygenError::DidGen)?;
         let kid = format!("{}#{}", did, id);
 
-        Ok(DidKey { did, jwk, kid })
+        Ok(DidKey { did, jwk, key_id: kid })
     }
 }

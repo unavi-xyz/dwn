@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dwn::{
-    actor::{Actor, CreateRecord},
+    actor::{Actor, MessageBuilder},
     message::{data::Data, descriptor::Filter},
     store::SurrealStore,
     DWN,
@@ -14,69 +14,95 @@ async fn test_publish() {
     let store = SurrealStore::new().await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
-    let alice = Actor::new_did_key(dwn.clone()).unwrap();
-    let bob = Actor::new_did_key(dwn).unwrap();
+    let actor = Actor::new_did_key(dwn.clone()).unwrap();
 
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 
-    // Alice creates an unpublished record.
-    let create = alice
-        .create(CreateRecord {
-            data: Some(data.clone()),
-            ..Default::default()
-        })
-        .await
-        .unwrap();
+    // Create an unpublished record.
+    let create = actor.create().data(data.clone()).process().await.unwrap();
     let record_id = create.record_id;
 
-    // Alice can read the record.
-    let read = alice.read(record_id.clone()).await.unwrap();
+    // The record can only be read with authorization.
+    let read = actor.read(record_id.clone()).process().await.unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
-    // Bob cannot read the record.
-    let read = bob.read(record_id.clone()).await;
+    let read = actor
+        .read(record_id.clone())
+        .authorized(false)
+        .process()
+        .await;
     assert!(read.is_err());
 
-    // Bob cannot query the record.
-    let query = bob
+    // The record can only be queried with authorization.
+    let query = actor
         .query(Filter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+
+    let query = actor
+        .query(Filter {
+            record_id: Some(record_id.clone()),
+            ..Default::default()
+        })
+        .authorized(false)
+        .process()
         .await
         .unwrap();
     assert_eq!(query.status.code, 200);
     assert_eq!(query.entries.len(), 0);
 
-    // Alice creates a published record.
-    let create = alice
-        .create(CreateRecord {
-            data: Some(data.clone()),
-            published: true,
-            ..Default::default()
-        })
+    // Create a published record.
+    let create = actor
+        .create()
+        .data(data.clone())
+        .published(true)
+        .process()
         .await
         .unwrap();
 
     let record_id = create.record_id;
 
-    // Alice can read the record.
-    let read = alice.read(record_id.clone()).await.unwrap();
+    // Can read with or without authorization.
+    let read = actor.read(record_id.clone()).process().await.unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
-    // Bob can read the record.
-    let read = bob.read(record_id.clone()).await.unwrap();
+    let read = actor
+        .read(record_id.clone())
+        .authorized(false)
+        .process()
+        .await
+        .unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
-    // Bob can query the record.
-    let query = bob
+    // Can query with or without authorization.
+    let query = actor
         .query(Filter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+    assert_eq!(query.entries[0].record_id, record_id.clone());
+
+    let query = actor
+        .query(Filter {
+            record_id: Some(record_id.clone()),
+            ..Default::default()
+        })
+        .authorized(false)
+        .process()
         .await
         .unwrap();
     assert_eq!(query.status.code, 200);

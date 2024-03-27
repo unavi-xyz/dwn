@@ -31,7 +31,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         data_store: &impl DataStore,
     ) -> Result<(), MessageStoreError> {
         let db = self
-            .message_db()
+            .message_db(tenant)
             .await
             .map_err(MessageStoreError::BackendError)?;
 
@@ -51,6 +51,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         };
 
         // Ensure the message belongs to the tenant.
+        // TODO: How to delete messages from your dwn that are not yours?
         if message.tenant != tenant {
             return Err(MessageStoreError::NotFound);
         }
@@ -123,13 +124,11 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
             // Check if the data is already stored.
             let db = self
-                .message_db()
+                .message_db(&tenant)
                 .await
                 .map_err(MessageStoreError::BackendError)?;
 
             let cid = data.cid()?.to_string();
-
-            println!("data: {:?}", data);
 
             let id = Thing::from((
                 Table::from(DATA_REF_TABLE_NAME).to_string(),
@@ -176,7 +175,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let message_cid = cbor.cid();
 
         let db = self
-            .message_db()
+            .message_db(&tenant)
             .await
             .map_err(MessageStoreError::BackendError)?;
 
@@ -220,19 +219,18 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
     async fn query(
         &self,
-        tenant: Option<String>,
+        tenant: String,
+        authorized: bool,
         filter: Filter,
     ) -> Result<Vec<Message>, MessageStoreError> {
         let db = self
-            .message_db()
+            .message_db(&tenant)
             .await
             .map_err(MessageStoreError::BackendError)?;
 
         let mut conditions = vec![];
 
-        if tenant.is_some() {
-            conditions.push("(tenant = $tenant OR message.descriptor.published = true)");
-        } else {
+        if !authorized {
             conditions.push("message.descriptor.published = true");
         }
 
@@ -246,17 +244,13 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             format!(" WHERE {}", conditions.join(" AND "))
         };
 
-        let mut query = db
+        let query = db
             .query(format!(
                 "SELECT * FROM type::table($table){}",
                 condition_statement
             ))
             .bind(("table", Table::from(MESSAGE_TABLE_NAME.to_string())))
             .bind(("record_id", filter.record_id));
-
-        if let Some(tenant) = tenant {
-            query = query.bind(("tenant", tenant));
-        }
 
         let mut res = query
             .await

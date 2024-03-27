@@ -1,4 +1,6 @@
-use didkit::JWK;
+use std::str::FromStr;
+
+use didkit::{VerificationRelationship, DIDURL, JWK};
 use libipld_core::error::SerdeError;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -17,7 +19,9 @@ pub mod descriptor;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Request {
-    pub messages: Vec<Message>,
+    pub message: Message,
+    /// Target DID.
+    pub target: String,
 }
 
 #[skip_serializing_none]
@@ -29,15 +33,6 @@ pub struct Message {
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
     pub record_id: String,
-}
-
-impl Message {
-    /// Returns the key ID of the authorizing party, if there is one.
-    pub fn tenant(&self) -> Option<String> {
-        self.authorization
-            .as_ref()
-            .and_then(|a| a.signatures.first().map(|s| s.protected.key_id.clone()))
-    }
 }
 
 #[derive(Error, Debug)]
@@ -155,28 +150,37 @@ impl Message {
         Ok(())
     }
 
-    pub async fn validate(&self) -> Result<(), ValidateError> {
-        if self.attestation.is_some() {
-            self.validate_attestation().await?;
+    /// Checks whether the key used in the authorization JWS is an authorization key for the given DID.
+    pub async fn is_authorized(&self, did: &str) -> bool {
+        if let Err(_) = self.validate_authorization().await {
+            return false;
         }
 
-        if self.authorization.is_some() {
-            self.validate_authorization().await?;
+        let jws = match &self.authorization {
+            Some(jws) => jws,
+            None => return false,
+        };
+
+        for signature in &jws.signatures {
+            let did_url = match DIDURL::from_str(&signature.protected.key_id) {
+                Ok(did_url) => did_url,
+                Err(_) => continue,
+            };
+
+            if did_url.did == did {
+                return true;
+            }
         }
 
-        Ok(())
+        false
     }
 
-    /// Validates the message is authorized.
-    async fn validate_authorization(&self) -> Result<(), ValidateError> {
+    /// Validates the authorization JWS.
+    pub async fn validate_authorization(&self) -> Result<(), ValidateError> {
         let jws = self
             .authorization
             .as_ref()
             .ok_or(ValidateError::JwsMissing)?;
-
-        if jws.signatures.is_empty() {
-            return Err(ValidateError::SignatureMissing);
-        }
 
         // Verify attestation CID matches
         if let Some(cid) = jws.payload.attestation_cid.as_ref() {
@@ -205,31 +209,29 @@ impl Message {
         let payload = serde_json::to_string(&jws.payload)?;
         let payload = payload.as_bytes();
 
-        verify_signature(jws, payload).await
+        verify_jws(jws, payload, VerificationRelationship::Authentication).await
     }
 
-    /// Validates the message is attested.
-    async fn validate_attestation(&self) -> Result<(), ValidateError> {
+    /// Validates the attestation JWS.
+    pub async fn validate_attestation(&self) -> Result<(), ValidateError> {
         let jws = self.attestation.as_ref().ok_or(ValidateError::JwsMissing)?;
-
-        if jws.signatures.is_empty() {
-            return Err(ValidateError::SignatureMissing);
-        }
-
         let payload = jws.payload.as_bytes();
-
-        verify_signature(jws, payload).await
+        verify_jws(jws, payload, VerificationRelationship::AssertionMethod).await
     }
 }
 
-/// Verifies a JWS signature.
-async fn verify_signature<T>(jws: &JWS<T>, payload: &[u8]) -> Result<(), ValidateError> {
+/// Verify the JWS signatures.
+async fn verify_jws<T>(
+    jws: &JWS<T>,
+    payload: &[u8],
+    relationship: VerificationRelationship,
+) -> Result<(), ValidateError> {
     if jws.signatures.is_empty() {
         return Err(ValidateError::SignatureMissing);
     }
 
     for entry in &jws.signatures {
-        entry.verify(payload).await?;
+        entry.verify(payload, relationship.clone()).await?;
     }
 
     Ok(())

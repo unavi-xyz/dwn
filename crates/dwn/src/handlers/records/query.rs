@@ -1,15 +1,15 @@
 use crate::{
     handlers::{RecordsQueryReply, Reply, Status},
-    message::{descriptor::Descriptor, Message},
+    message::{descriptor::Descriptor, Request},
     store::MessageStore,
     HandleMessageError,
 };
 
 pub async fn handle_records_query(
     message_store: &impl MessageStore,
-    message: Message,
+    Request { target, message }: Request,
 ) -> Result<Reply, HandleMessageError> {
-    let tenant = message.tenant();
+    let authorized = message.is_authorized(&target).await;
 
     let filter = match message.descriptor {
         Descriptor::RecordsQuery(descriptor) => descriptor.filter,
@@ -21,7 +21,7 @@ pub async fn handle_records_query(
     };
 
     let entries = message_store
-        .query(tenant, filter.unwrap_or_default())
+        .query(target, authorized, filter.unwrap_or_default())
         .await?;
 
     Ok(RecordsQueryReply {
