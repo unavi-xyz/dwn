@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 
 use crate::{
     handlers::{RecordsReadReply, Reply, Status},
     message::{
+        data::{Data, EncryptedData},
         descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
     },
@@ -41,21 +43,22 @@ pub async fn handle_records_read(
         )
         .await?;
 
-    let latest_checkpoint = messages
+    let mut record = messages
         .iter()
         .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
         .or(messages.last())
         .ok_or(HandleMessageError::InvalidDescriptor(
             "Record not found".to_string(),
-        ))?;
+        ))?
+        .to_owned();
 
-    // Get the record that has the data.
+    // Read data.
     // TODO: Simplify this, without RecordsCommit this is not needed
     let entry_id_map = create_entry_id_map(&messages)?;
-    let record_entry_id = latest_checkpoint.entry_id()?;
+    let record_entry_id = record.entry_id()?;
     let data_cid = get_data_cid(&record_entry_id, &entry_id_map);
 
-    let data = match data_cid {
+    let data_bytes = match data_cid {
         Some(data_cid) => {
             let data_cid = Cid::try_from(data_cid).map_err(|e| {
                 HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
@@ -66,9 +69,26 @@ pub async fn handle_records_read(
         None => None,
     };
 
+    if let Some(bytes) = data_bytes {
+        match &record.data {
+            Some(Data::Base64(_)) => {
+                record.data = Some(Data::new_base64(&bytes));
+            }
+            Some(Data::Encrypted(data)) => {
+                record.data = Some(Data::Encrypted(EncryptedData {
+                    ciphertext: URL_SAFE_NO_PAD.encode(&bytes),
+                    iv: data.iv.clone(),
+                    protected: data.protected.clone(),
+                    recipients: data.recipients.clone(),
+                    tag: data.tag.clone(),
+                }))
+            }
+            None => {}
+        }
+    }
+
     Ok(RecordsReadReply {
-        data,
-        record: latest_checkpoint.to_owned(),
+        record,
         status: Status::ok(),
     }
     .into())

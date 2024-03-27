@@ -52,7 +52,6 @@ pub struct RecordsQueryReply {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RecordsReadReply {
-    pub data: Option<Vec<u8>>,
     pub record: Message,
     pub status: Status,
 }

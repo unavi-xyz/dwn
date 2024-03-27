@@ -3,13 +3,15 @@
 //! ## Usage
 //!
 //! ```
-//! use dwn::{actor::{Actor, CreateRecord}, store::SurrealStore, DWN};
+//! use std::sync::Arc;
+//!
+//! use dwn::{actor::{Actor, CreateRecord}, message::data::Data, store::SurrealStore, DWN};
 //!
 //! #[tokio::main]
 //! async fn main() {
 //!     // Create a DWN, using an in-memory SurrealDB instance for storage.
 //!     let store = SurrealStore::new().await.unwrap();
-//!     let dwn = DWN::from(store);
+//!     let dwn = Arc::new(DWN::from(store));
 //!
 //!     // Create an actor to send messages.
 //!     // Here we generate a new `did:key` for the actor's identity,
@@ -33,7 +35,7 @@
 //!     let read = actor.read(create.record_id).await.unwrap();
 //!
 //!     assert_eq!(read.status.code, 200);
-//!     assert_eq!(read.data, Some(data));
+//!     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 //! }
 //! ```
 
@@ -49,7 +51,10 @@ use reqwest::Client;
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use sync::RemoteSync;
 use thiserror::Error;
-use tokio::sync::mpsc::{error::SendError, Sender};
+use tokio::sync::{
+    mpsc::{error::SendError, Sender},
+    RwLock,
+};
 
 pub mod actor;
 pub mod handlers;
@@ -63,21 +68,27 @@ use util::EncodeError;
 
 use crate::handlers::StatusReply;
 
-#[derive(Clone)]
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,
     pub message_store: M,
-    remote: Option<Remote>,
+    pub remote: RwLock<Option<Remote>>,
 }
 
-#[derive(Clone)]
-struct Remote {
-    client: Client,
-    sender: Sender<Message>,
-    url: String,
+pub struct Remote {
+    pub client: Client,
+    pub sender: Sender<Message>,
+    pub url: String,
 }
 
 impl Remote {
+    pub fn from_remote_sync(remote_sync: &RemoteSync) -> Self {
+        Self {
+            client: Client::new(),
+            sender: remote_sync.sender.clone(),
+            url: remote_sync.remote_url.clone(),
+        }
+    }
+
     async fn send(&self, messages: Vec<Message>) -> Result<Response, reqwest::Error> {
         self.client
             .post(&self.url)
@@ -94,7 +105,7 @@ impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
         Self {
             data_store: store.clone(),
             message_store: store,
-            remote: None,
+            remote: RwLock::new(None),
         }
     }
 }
@@ -104,20 +115,31 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         Self {
             data_store,
             message_store,
-            remote: None,
+            remote: RwLock::new(None),
         }
     }
 
-    pub fn sync_with(&mut self, remote_url: String) -> RemoteSync {
+    pub async fn set_remote(&self, remote_url: String) -> RemoteSync {
         let remote_sync = RemoteSync::new(remote_url.clone());
+        let remote = Remote::from_remote_sync(&remote_sync);
 
-        self.remote = Some(Remote {
-            client: Client::new(),
-            sender: remote_sync.sender.clone(),
-            url: remote_url,
-        });
+        *self.remote.write().await = Some(remote);
 
         remote_sync
+    }
+
+    /// Sends a message to the remote node, if one is set.
+    /// Clones the message if it is sent.
+    pub async fn send_to_remote(&self, message: &Message) -> Result<(), HandleMessageError> {
+        if let Some(remote) = &self.remote.read().await.as_ref() {
+            remote
+                .sender
+                .send(message.clone())
+                .await
+                .map_err(Box::new)?;
+        }
+
+        Ok(())
     }
 
     pub async fn process_request(&self, payload: Request) -> Response {
@@ -149,14 +171,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
 
         match &message.descriptor {
             Descriptor::RecordsDelete(_) => {
-                if let Some(remote) = &self.remote {
-                    remote
-                        .sender
-                        .send(message.clone())
-                        .await
-                        .map_err(Box::new)?;
-                }
-
+                self.send_to_remote(&message).await?;
                 handle_records_delete(&self.data_store, &self.message_store, message).await
             }
             Descriptor::RecordsRead(_) => {
@@ -165,10 +180,32 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                 {
                     Ok(reply) => Ok(reply),
                     Err(err) => {
-                        // If read fails, try remote.
-                        if let Some(remote) = &self.remote {
+                        // If read fails, check remote.
+                        if let Some(remote) = self.remote.read().await.as_ref() {
+                            let tenant = message.tenant();
                             let response = remote.send(vec![message]).await?;
-                            Ok(response.replies.into_iter().next().unwrap())
+
+                            match response.replies.into_iter().next() {
+                                Some(Reply::RecordsRead(reply)) => {
+                                    // Add record to local store.
+                                    if let Some(tenant) = tenant {
+                                        // TODO: Only store data by default if under a certain size.
+                                        // TODO: Add a flag to enable or disable storing data.
+
+                                        self.message_store
+                                            .put(tenant, reply.record.clone(), &self.data_store)
+                                            .await?;
+                                    }
+
+                                    Ok(Reply::RecordsRead(reply))
+                                }
+                                Some(_) => Err(HandleMessageError::InvalidDescriptor(
+                                    "Unexpected reply from remote".to_string(),
+                                )),
+                                None => Err(HandleMessageError::InvalidDescriptor(
+                                    "No reply from remote".to_string(),
+                                )),
+                            }
                         } else {
                             Err(err)
                         }
@@ -177,14 +214,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             }
             Descriptor::RecordsQuery(_) => handle_records_query(&self.message_store, message).await,
             Descriptor::RecordsWrite(_) => {
-                if let Some(remote) = &self.remote {
-                    remote
-                        .sender
-                        .send(message.clone())
-                        .await
-                        .map_err(Box::new)?;
-                }
-
+                self.send_to_remote(&message).await?;
                 handle_records_write(&self.data_store, &self.message_store, message).await
             }
             _ => Err(HandleMessageError::UnsupportedInterface),

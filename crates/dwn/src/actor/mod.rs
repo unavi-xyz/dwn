@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use didkit::JWK;
 use openssl::error::ErrorStack;
 use thiserror::Error;
@@ -27,7 +29,7 @@ pub struct Actor<D: DataStore, M: MessageStore> {
     pub attestation: VerifiableCredential,
     pub authorization: VerifiableCredential,
     pub did: String,
-    pub dwn: DWN<D, M>,
+    pub dwn: Arc<DWN<D, M>>,
 }
 
 pub struct VerifiableCredential {
@@ -37,7 +39,7 @@ pub struct VerifiableCredential {
 
 impl<D: DataStore, M: MessageStore> Actor<D, M> {
     /// Generates a new `did:key` actor.
-    pub fn new_did_key(dwn: DWN<D, M>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
+    pub fn new_did_key(dwn: Arc<DWN<D, M>>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
         let did_key = did_key::DidKey::new()?;
         Ok(Actor {
             attestation: VerifiableCredential {

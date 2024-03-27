@@ -7,11 +7,10 @@ use surrealdb::{
     Connection,
 };
 use time::OffsetDateTime;
-use tracing::warn;
 
 use crate::{
     message::{
-        data::Data,
+        data::{Data, EncryptedData},
         descriptor::{Descriptor, Filter, FilterDateSort},
         Message,
     },
@@ -103,7 +102,26 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
     ) -> Result<Cid, MessageStoreError> {
         let mut data_cid = None;
 
+        // TODO: Only store data in data store if over a certain size.
+
         if let Some(data) = message.data.take() {
+            // Keep the data type, but clear the data.
+            match &data {
+                Data::Base64(_) => {
+                    message.data = Some(Data::Base64(String::new()));
+                }
+                Data::Encrypted(data) => {
+                    message.data = Some(Data::Encrypted(EncryptedData {
+                        ciphertext: String::new(),
+                        iv: data.iv.clone(),
+                        tag: data.tag.clone(),
+                        protected: data.protected.clone(),
+                        recipients: data.recipients.clone(),
+                    }));
+                }
+            }
+
+            // Check if the data is already stored.
             let db = self
                 .message_db()
                 .await
@@ -111,12 +129,13 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
             let cid = data.cid()?.to_string();
 
+            println!("data: {:?}", data);
+
             let id = Thing::from((
                 Table::from(DATA_REF_TABLE_NAME).to_string(),
                 Id::String(cid.clone()),
             ));
 
-            // Get the current data CID object.
             let db_data_ref: Option<DbDataCidRefs> = db
                 .select(id.clone())
                 .await
@@ -138,19 +157,12 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
                 let bytes = match data {
-                    Data::Base64(data) => match URL_SAFE_NO_PAD.decode(data.as_bytes()) {
-                        Ok(bytes) => bytes,
-                        Err(err) => {
-                            warn!("Failed to decode base64 data: {}", err);
-                            data.into()
-                        }
-                    },
-                    Data::Encrypted(data) => serde_json::to_vec(&data).map_err(|err| {
-                        MessageStoreError::BackendError(anyhow!(
-                            "Failed to serialize encrypted data: {}",
-                            err
-                        ))
-                    })?,
+                    Data::Base64(data) => URL_SAFE_NO_PAD
+                        .decode(data.as_bytes())
+                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?,
+                    Data::Encrypted(data) => URL_SAFE_NO_PAD
+                        .decode(data.ciphertext.as_bytes())
+                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?,
                 };
 
                 // Store data in the data store.

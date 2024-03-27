@@ -6,12 +6,11 @@ use crate::{
     message::{Message, Request},
 };
 
-/// Sends new messages to a remote DWN.
 pub struct RemoteSync {
     client: Client,
+    pub(crate) remote_url: String,
     pub(crate) sender: mpsc::Sender<Message>,
     receiver: mpsc::Receiver<Message>,
-    remote_url: String,
 }
 
 impl RemoteSync {

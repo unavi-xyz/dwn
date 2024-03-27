@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use dwn::{
     actor::{Actor, CreateRecord, Encryption},
-    message::data::EncryptedData,
+    message::data::Data,
     store::SurrealStore,
     DWN,
 };
@@ -10,7 +12,7 @@ use tracing_test::traced_test;
 #[tokio::test]
 async fn test_encrypt() {
     let store = SurrealStore::new().await.unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();
 
@@ -31,10 +33,12 @@ async fn test_encrypt() {
     // Read the record.
     let read = actor.read(create.record_id).await.unwrap();
     assert_eq!(read.status.code, 200);
-    assert_ne!(read.data, Some(data.clone()));
 
     // Decrypt the data.
-    let encrypted = serde_json::from_slice::<EncryptedData>(&read.data.unwrap()).unwrap();
+    let encrypted = match read.record.data.unwrap() {
+        Data::Encrypted(encrypted) => encrypted,
+        _ => panic!("expected encrypted data"),
+    };
     let decrypted = encrypted.decrypt(encryption).unwrap();
     assert_eq!(decrypted, data);
 }

@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use dwn::{
     actor::{Actor, CreateRecord},
-    message::descriptor::Filter,
+    message::{data::Data, descriptor::Filter},
     store::SurrealStore,
     DWN,
 };
@@ -10,7 +12,7 @@ use tracing_test::traced_test;
 #[tokio::test]
 async fn test_records() {
     let store = SurrealStore::new().await.unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();
 
@@ -31,7 +33,7 @@ async fn test_records() {
     // Read the record.
     let read = actor.read(record_id.clone()).await.unwrap();
     assert_eq!(read.status.code, 200);
-    assert_eq!(read.data, Some(data.clone()));
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
     // Query the record.
     let query = actor
@@ -95,9 +97,9 @@ async fn test_records() {
     assert_eq!(update.reply.status.code, 200);
 
     // Read the record.
-    let reply = actor.read(record_id.clone()).await.unwrap();
-    assert_eq!(reply.status.code, 200);
-    assert_eq!(reply.data, Some(new_data));
+    let read = actor.read(record_id.clone()).await.unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&new_data)));
 
     // Update the record again.
     let newer_data = "Hello, again!".bytes().collect::<Vec<_>>();
@@ -116,9 +118,9 @@ async fn test_records() {
     assert_eq!(update.reply.status.code, 200);
 
     // Read the record.
-    let reply = actor.read(record_id.clone()).await.unwrap();
-    assert_eq!(reply.status.code, 200);
-    assert_eq!(reply.data, Some(newer_data));
+    let read = actor.read(record_id.clone()).await.unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&newer_data)));
 
     // Query the record.
     // Only the most recent update message should be returned.

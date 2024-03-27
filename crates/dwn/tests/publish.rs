@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use dwn::{
     actor::{Actor, CreateRecord},
-    message::descriptor::Filter,
+    message::{data::Data, descriptor::Filter},
     store::SurrealStore,
     DWN,
 };
@@ -10,7 +12,7 @@ use tracing_test::traced_test;
 #[tokio::test]
 async fn test_publish() {
     let store = SurrealStore::new().await.unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
     let bob = Actor::new_did_key(dwn).unwrap();
@@ -30,7 +32,7 @@ async fn test_publish() {
     // Alice can read the record.
     let read = alice.read(record_id.clone()).await.unwrap();
     assert_eq!(read.status.code, 200);
-    assert_eq!(read.data, Some(data.clone()));
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
     // Bob cannot read the record.
     let read = bob.read(record_id.clone()).await;
@@ -62,12 +64,12 @@ async fn test_publish() {
     // Alice can read the record.
     let read = alice.read(record_id.clone()).await.unwrap();
     assert_eq!(read.status.code, 200);
-    assert_eq!(read.data, Some(data.clone()));
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
     // Bob can read the record.
     let read = bob.read(record_id.clone()).await.unwrap();
     assert_eq!(read.status.code, 200);
-    assert_eq!(read.data, Some(data.clone()));
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
     // Bob can query the record.
     let query = bob
