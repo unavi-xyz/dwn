@@ -4,7 +4,7 @@ use dwn::{
     actor::{Actor, CreateRecord},
     message::data::Data,
     store::SurrealStore,
-    Remote, DWN,
+    DWN,
 };
 use tokio::net::TcpListener;
 
@@ -13,11 +13,8 @@ async fn test_sync() {
     let port = port_scanner::request_open_port().unwrap();
 
     // Start a DWN server.
-    let dwn_osaka = {
-        let store = SurrealStore::new().await.unwrap();
-        Arc::new(DWN::from(store))
-    };
-
+    let store_osaka = SurrealStore::new().await.unwrap();
+    let dwn_osaka = Arc::new(DWN::from(store_osaka));
     let actor_osaka = Actor::new_did_key(dwn_osaka.clone()).unwrap();
 
     tokio::spawn(async move {
@@ -29,17 +26,13 @@ async fn test_sync() {
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     // Create another DWN.
-    let dwn_kyoto = {
-        let store = SurrealStore::new().await.unwrap();
-        Arc::new(DWN::from(store))
-    };
-
-    // Sync Kyoto with Osaka.
-    let mut remote_sync = dwn_kyoto
-        .set_remote(format!("http://localhost:{}", port))
-        .await;
-
+    let store_kyoto = SurrealStore::new().await.unwrap();
+    let dwn_kyoto = Arc::new(DWN::from(store_kyoto.clone()));
     let actor_kyoto = Actor::new_did_key(dwn_kyoto.clone()).unwrap();
+
+    // Set the remote to Osaka.
+    let osaka_url = format!("http://localhost:{}", port);
+    dwn_kyoto.add_remote(osaka_url.clone()).await;
 
     // Create a record in Kyoto.
     let data = "Hello from Kyoto!".bytes().collect::<Vec<_>>();
@@ -58,9 +51,7 @@ async fn test_sync() {
     assert!(read.is_err());
 
     // Sync data.
-    let res = remote_sync.sync().await.unwrap().unwrap();
-    assert_eq!(res.status.unwrap().code, 200);
-    assert_eq!(res.replies[0].status().code, 200);
+    dwn_kyoto.sync().await;
 
     // Osaka should have the record now.
     let read = actor_osaka.read(create.record_id.clone()).await.unwrap();
@@ -86,12 +77,12 @@ async fn test_sync() {
 
     // If we remove the remote, Kyoto should still be able to read the record.
     // This is because the record is now stored locally.
-    dwn_kyoto.remote.write().await.take();
+    dwn_kyoto.remove_remote(&osaka_url).await;
 
     let read = actor_kyoto.read(create.record_id.clone()).await.unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
     // Add the remote back.
-    *dwn_kyoto.remote.write().await = Some(Remote::from_remote_sync(&remote_sync));
+    dwn_kyoto.add_remote(osaka_url).await;
 }
