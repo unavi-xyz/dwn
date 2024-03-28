@@ -3,14 +3,14 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 repository = "https://github.com/unavi-xyz/dwn"
 license = "MIT OR Apache-2.0"
 keywords = ["did", "dwn"]
 
 [workspace.dependencies]
-dwn = { path = "crates/dwn", version = "0.0.3", default-features = false }
+dwn = { path = "crates/dwn", version = "0.0.4", default-features = false }
 tokio = { version = "1.35.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"

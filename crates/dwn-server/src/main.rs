@@ -8,7 +8,6 @@ use tokio::net::TcpListener;
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    // Make database directory if it doesn't exist.
     std::fs::create_dir_all("/database").unwrap();
 
     let db = Surreal::new::<SpeeDb>("/database").await.unwrap();
