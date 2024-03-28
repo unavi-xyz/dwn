@@ -6,7 +6,7 @@ use reqwest::Client;
 use thiserror::Error;
 
 use crate::{
-    handlers::{Reply, StatusReply},
+    handlers::{records::write::handle_records_write, Reply, StatusReply},
     message::{
         descriptor::{Descriptor, Filter},
         AuthError, Message, Request, SignError,
@@ -46,6 +46,7 @@ pub struct Actor<D: DataStore, M: MessageStore> {
     pub remotes: Vec<Remote>,
 }
 
+#[derive(Clone)]
 pub struct VerifiableCredential {
     pub jwk: JWK,
     pub key_id: String,
@@ -92,6 +93,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         // Pull from remotes.
         let mut record_ids = HashSet::new();
 
+        // TODO: Pull other tenants, not just self.did
+        // This is to support the case where you are connected to another tenant's remote.
         for message in self
             .dwn
             .message_store
@@ -106,7 +109,24 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
 
             for record_id in record_ids.iter() {
                 let message = self.read(record_id.clone()).build()?;
-                self.send_message(message, url).await?;
+
+                let reply = match self.send_message(message, url).await? {
+                    Reply::RecordsRead(reply) => reply,
+                    _ => return Err(SyncError::ProcessMessage(ProcessMessageError::InvalidReply)),
+                };
+
+                // Process the reply.
+                // TODO: Can RecordsRead return a delete message?
+                // TODO: Test if CRDT can handle multiple writes / deletes in remote.
+                handle_records_write(
+                    &self.dwn.data_store,
+                    &self.dwn.message_store,
+                    Request {
+                        target: self.did.clone(),
+                        message: *reply.record,
+                    },
+                )
+                .await?;
             }
         }
 
@@ -201,6 +221,8 @@ pub enum SyncError {
     Reqwest(#[from] reqwest::Error),
     #[error(transparent)]
     ProcessMessage(#[from] ProcessMessageError),
+    #[error(transparent)]
+    HandleMessage(#[from] HandleMessageError),
 }
 
 #[derive(Debug, Error)]
