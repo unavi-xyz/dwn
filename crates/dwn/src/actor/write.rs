@@ -66,13 +66,13 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
         self
     }
 
-    fn message_hook(&mut self, message: &mut Message) -> Result<(), PrepareError> {
+    fn post_build(&mut self, message: &mut Message) -> Result<(), PrepareError> {
         self.final_entry_id = message.entry_id()?;
         self.final_record_id = message.record_id.clone();
         Ok(())
     }
 
-    fn build(&mut self) -> Result<Message, PrepareError> {
+    fn create_message(&mut self) -> Result<Message, PrepareError> {
         let mut descriptor = RecordsWrite::default();
         descriptor.message_timestamp = OffsetDateTime::now_utc();
         descriptor.parent_id = self.parent_id.take();
@@ -105,6 +105,10 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
             descriptor: descriptor.into(),
             record_id: self.record_id.take().unwrap_or_default(),
         };
+
+        if msg.record_id.is_empty() {
+            msg.record_id = msg.entry_id()?;
+        }
 
         if self.signed {
             msg.sign(

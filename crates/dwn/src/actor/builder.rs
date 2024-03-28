@@ -23,18 +23,12 @@ pub trait MessageBuilder: Sized {
     /// Defaults to the actor's DID.
     fn target(self, target: String) -> Self;
 
+    /// Create the inital message.
+    fn create_message(&mut self) -> Result<Message, PrepareError>;
+
     /// Build the message.
-    fn build(&mut self) -> Result<Message, PrepareError>;
-
-    /// Hook called after finishing a message.
-    /// Useful for extracting data.
-    fn message_hook(&mut self, _message: &mut Message) -> Result<(), PrepareError> {
-        Ok(())
-    }
-
-    /// Process the message with the local DWN.
-    async fn process(&mut self) -> Result<Reply, ProcessMessageError> {
-        let mut message = self.build()?;
+    fn build(&mut self) -> Result<Message, ProcessMessageError> {
+        let mut message = self.create_message()?;
 
         if message.record_id.is_empty() {
             message.record_id = message.entry_id()?;
@@ -47,7 +41,20 @@ pub trait MessageBuilder: Sized {
             message.authorize(actor.authorization.key_id.clone(), &actor.authorization.jwk)?;
         }
 
-        self.message_hook(&mut message)?;
+        self.post_build(&mut message)?;
+
+        Ok(message)
+    }
+
+    /// Hook called after building the message.
+    fn post_build(&mut self, _message: &mut Message) -> Result<(), PrepareError> {
+        Ok(())
+    }
+
+    /// Process the message with the local DWN.
+    #[allow(async_fn_in_trait)]
+    async fn process(&mut self) -> Result<Reply, ProcessMessageError> {
+        let message = self.build()?;
 
         let actor = self.get_actor();
         let target = self.get_target();
@@ -73,6 +80,8 @@ pub enum ProcessMessageError {
     PrepareError(#[from] PrepareError),
     #[error(transparent)]
     HandleMessageError(#[from] HandleMessageError),
+    #[error(transparent)]
+    RequestError(#[from] reqwest::Error),
     #[error("Invalid reply")]
     InvalidReply,
 }

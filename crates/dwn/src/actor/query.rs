@@ -40,7 +40,7 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsQueryBuilder<'
         self
     }
 
-    fn build(&mut self) -> Result<Message, PrepareError> {
+    fn create_message(&mut self) -> Result<Message, PrepareError> {
         Ok(Message::new(RecordsQuery::new(self.filter.clone())))
     }
 }

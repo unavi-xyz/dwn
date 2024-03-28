@@ -22,6 +22,7 @@ impl Status {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
 pub enum Reply {
     RecordsQuery(RecordsQueryReply),
     RecordsRead(RecordsReadReply),

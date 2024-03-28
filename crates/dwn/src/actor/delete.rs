@@ -39,12 +39,12 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsDeleteBuilder<
         self
     }
 
-    fn message_hook(&mut self, message: &mut Message) -> Result<(), PrepareError> {
+    fn post_build(&mut self, message: &mut Message) -> Result<(), PrepareError> {
         self.final_entry_id = message.entry_id()?;
         Ok(())
     }
 
-    fn build(&mut self) -> Result<Message, PrepareError> {
+    fn create_message(&mut self) -> Result<Message, PrepareError> {
         Ok(Message::new(RecordsDelete::new(self.record_id.clone())))
     }
 }

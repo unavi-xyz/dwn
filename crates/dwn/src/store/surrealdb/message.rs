@@ -20,8 +20,8 @@ use crate::{
 
 use super::SurrealStore;
 
-const DATA_REF_TABLE_NAME: &str = "data_cid_refs";
-const MESSAGE_TABLE_NAME: &str = "messages";
+const DATA_REF_TABLE: &str = "data_cid_refs";
+const MESSAGE_TABLE: &str = "messages";
 
 impl<T: Connection> MessageStore for SurrealStore<T> {
     async fn delete(
@@ -36,7 +36,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .map_err(MessageStoreError::BackendError)?;
 
         let id = Thing::from((
-            Table::from(MESSAGE_TABLE_NAME.to_string()).to_string(),
+            Table::from(MESSAGE_TABLE.to_string()).to_string(),
             Id::String(cid),
         ));
 
@@ -63,7 +63,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         if let Some(data_cid) = message.data_cid {
             let id = Thing::from((
-                Table::from(DATA_REF_TABLE_NAME).to_string(),
+                Table::from(DATA_REF_TABLE).to_string(),
                 Id::String(data_cid.to_string()),
             ));
 
@@ -131,7 +131,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             let cid = data.cid()?.to_string();
 
             let id = Thing::from((
-                Table::from(DATA_REF_TABLE_NAME).to_string(),
+                Table::from(DATA_REF_TABLE).to_string(),
                 Id::String(cid.clone()),
             ));
 
@@ -181,7 +181,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         // Store the message.
         let id = Thing::from((
-            Table::from(MESSAGE_TABLE_NAME.to_string()).to_string(),
+            Table::from(MESSAGE_TABLE.to_string()).to_string(),
             Id::String(message_cid.to_string()),
         ));
 
@@ -249,7 +249,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 "SELECT * FROM type::table($table){}",
                 condition_statement
             ))
-            .bind(("table", Table::from(MESSAGE_TABLE_NAME.to_string())))
+            .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
             .bind(("record_id", filter.record_id));
 
         let mut res = query
@@ -259,6 +259,8 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let mut db_messages: Vec<DbMessage> = res
             .take(0)
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+
+        // TODO: Sort in query
 
         if let Some(sort) = filter.date_sort {
             match sort {

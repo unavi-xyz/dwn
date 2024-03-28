@@ -149,6 +149,7 @@ mod tests {
     fn test_serde() {
         for desc in default_descriptors() {
             let json = serde_json::to_value(&desc).unwrap();
+
             let desc2: Descriptor = serde_json::from_value(json).unwrap();
             assert_eq!(desc, desc2);
         }

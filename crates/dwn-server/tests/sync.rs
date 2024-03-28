@@ -66,40 +66,41 @@ async fn test_sync() {
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&data)));
 
-    // // Create a record in Osaka.
-    // let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
-    // let create = actor_osaka
-    //     .create()
-    //     .data(data.clone())
-    //     .published(true)
-    //     .process()
-    //     .await
-    //     .unwrap();
-    // assert_eq!(create.reply.status.code, 200);
-    //
-    // // Kyoto should be able to read the record.
-    // let read = actor_kyoto
-    //     .read(create.record_id.clone())
-    //     .target(actor_osaka.did.clone())
-    //     .process()
-    //     .await
-    //     .unwrap();
-    // assert_eq!(read.status.code, 200);
-    // assert_eq!(read.record.data, Some(Data::new_base64(&data)));
-    //
-    // // If we remove the remote, Kyoto should still be able to read the record.
-    // // This is because the record is now stored locally.
-    // actor_kyoto.remove_remote(&osaka_url);
-    //
-    // let read = actor_kyoto
-    //     .read(create.record_id.clone())
-    //     .target(actor_osaka.did.clone())
-    //     .process()
-    //     .await
-    //     .unwrap();
-    // assert_eq!(read.status.code, 200);
-    // assert_eq!(read.record.data, Some(Data::new_base64(&data)));
-    //
-    // // Add the remote back.
-    // actor_kyoto.add_remote(osaka_url);
+    // Create a record in Osaka.
+    let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
+    let create = actor_osaka
+        .create()
+        .data(data.clone())
+        .published(true)
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(create.reply.status.code, 200);
+
+    // Kyoto should be able to read the record.
+    // Kyoto will fetch the remote if a record is not found.
+    let read = actor_kyoto
+        .read(create.record_id.clone())
+        .target(actor_osaka.did.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
+
+    // If we remove the remote, Kyoto should still be able to read the record.
+    // The record is now stored locally.
+    actor_kyoto.remove_remote(&osaka_url);
+
+    let read = actor_kyoto
+        .read(create.record_id.clone())
+        .target(actor_osaka.did.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
+
+    // Add the remote back.
+    actor_kyoto.add_remote(osaka_url);
 }

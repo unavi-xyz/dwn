@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use didkit::JWK;
 use openssl::error::ErrorStack;
@@ -11,7 +11,7 @@ use crate::{
         descriptor::{Descriptor, Filter},
         AuthError, Message, Request, SignError,
     },
-    store::{DataStore, MessageStore},
+    store::{DataStore, MessageStore, MessageStoreError},
     util::EncodeError,
     HandleMessageError, DWN,
 };
@@ -27,8 +27,8 @@ mod write;
 pub use builder::MessageBuilder;
 
 use self::{
-    delete::RecordsDeleteBuilder, query::RecordsQueryBuilder, read::RecordsReadBuilder,
-    remote::Remote, write::RecordsWriteBuilder,
+    builder::ProcessMessageError, delete::RecordsDeleteBuilder, query::RecordsQueryBuilder,
+    read::RecordsReadBuilder, remote::Remote, write::RecordsWriteBuilder,
 };
 
 pub use delete::DeleteResponse;
@@ -81,15 +81,34 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     /// Sync the local DWN with the actor's remote DWNs.
-    pub async fn sync(&self) -> Result<(), reqwest::Error> {
-        // Push to remotes
+    pub async fn sync(&self) -> Result<(), SyncError> {
+        // Push to remotes.
         for remote in &self.remotes {
             while let Ok(message) = remote.receiver.write().await.try_recv() {
                 self.send_message(message, remote.url()).await?;
             }
         }
 
-        // TODO: Pull from remotes
+        // Pull from remotes.
+        let mut record_ids = HashSet::new();
+
+        for message in self
+            .dwn
+            .message_store
+            .query(self.did.clone(), true, Filter::default())
+            .await?
+        {
+            record_ids.insert(message.record_id);
+        }
+
+        for remote in &self.remotes {
+            let url = remote.url();
+
+            for record_id in record_ids.iter() {
+                let message = self.read(record_id.clone()).build()?;
+                self.send_message(message, url).await?;
+            }
+        }
 
         Ok(())
     }
@@ -172,6 +191,16 @@ pub struct CreateResult {
 pub struct UpdateResult {
     pub entry_id: String,
     pub reply: StatusReply,
+}
+
+#[derive(Debug, Error)]
+pub enum SyncError {
+    #[error(transparent)]
+    MessageStore(#[from] MessageStoreError),
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    #[error(transparent)]
+    ProcessMessage(#[from] ProcessMessageError),
 }
 
 #[derive(Debug, Error)]

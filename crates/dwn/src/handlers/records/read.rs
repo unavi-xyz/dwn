@@ -34,7 +34,7 @@ pub async fn handle_records_read(
 
     let messages = message_store
         .query(
-            target,
+            target.clone(),
             authorized,
             Filter {
                 record_id: Some(descriptor.record_id.clone()),
