@@ -56,12 +56,12 @@ use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
 
 pub mod actor;
+mod encode;
 mod handlers;
 pub mod message;
 pub mod store;
-mod util;
 
-pub use util::EncodeError;
+pub use encode::EncodeError;
 
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub data_store: D,

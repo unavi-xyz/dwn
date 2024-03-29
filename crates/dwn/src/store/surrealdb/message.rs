@@ -14,7 +14,7 @@ use crate::{
         Data, EncryptedData, Message,
     },
     store::{DataStore, MessageStore, MessageStoreError},
-    util::encode_cbor,
+    encode::encode_cbor,
 };
 
 use super::SurrealStore;

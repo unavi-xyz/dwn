@@ -14,7 +14,7 @@ use openssl::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{actor::records::Encryption, util::EncodeError};
+use crate::{actor::records::Encryption, encode::EncodeError};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
@@ -144,25 +144,29 @@ impl EncryptedData {
 /// Returns the CID of the given IPLD after DAG-PB encoding.
 fn dag_pb_cid(ipld: Ipld) -> Result<Cid, EncodeError> {
     let ipld = make_pb_compatible(ipld)?;
-
     let bytes = DagPbCodec.encode(&ipld).map_err(EncodeError::Encode)?;
-
     let hash = Code::Sha2_256.digest(&bytes);
     Ok(Cid::new_v1(DagPbCodec.into(), hash))
 }
 
 /// Converts the given IPLD into a format compatible with the DAG-PB codec.
 fn make_pb_compatible(ipld: Ipld) -> Result<Ipld, EncodeError> {
+    println!("make_pb_compatible: {:?}", ipld);
+
     let mut data = None;
     let mut links = Vec::new();
 
     match ipld {
         Ipld::Link(cid) => {
+            println!("link: {:?}", cid);
+
             links.push(ipld!({
                 "Hash": cid,
             }));
         }
         Ipld::List(list) => {
+            println!("list: {:?}", list);
+
             for ipld in list {
                 let cid = dag_pb_cid(ipld)?;
 
@@ -172,6 +176,8 @@ fn make_pb_compatible(ipld: Ipld) -> Result<Ipld, EncodeError> {
             }
         }
         Ipld::Map(map) => {
+            println!("map: {:?}", map);
+
             for (key, value) in map {
                 let cid = dag_pb_cid(value)?;
 
@@ -203,5 +209,11 @@ mod tests {
     fn test_base64_cid() {
         let data = Data::Base64("Hello, world!".to_string());
         data.cid().ok();
+    }
+
+    #[test]
+    fn test_pb_encode_list() {
+        let data = Ipld::List(vec![Ipld::Integer(1), Ipld::Integer(2), Ipld::Integer(3)]);
+        let ipld = make_pb_compatible(data).unwrap();
     }
 }

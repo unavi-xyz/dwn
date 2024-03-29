@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     message::{descriptor::Filter, DecodeError, Message},
-    util::EncodeError,
+    encode::EncodeError,
 };
 
 #[cfg(feature = "s3")]

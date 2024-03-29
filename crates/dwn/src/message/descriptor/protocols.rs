@@ -31,7 +31,7 @@ impl Default for ProtocolsConfigure {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolDefinition {
     pub protocol: String,
     pub published: bool,
@@ -39,14 +39,14 @@ pub struct ProtocolDefinition {
     pub structure: HashMap<String, ProtocolStructure>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolType {
     #[serde(rename = "dataFormat")]
     pub data_format: Vec<String>,
     pub schema: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ProtocolStructure {
     pub actions: Vec<Action>,
     pub children: HashMap<String, ProtocolStructure>,

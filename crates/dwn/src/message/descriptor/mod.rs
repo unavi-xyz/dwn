@@ -119,7 +119,7 @@ impl<'de> Deserialize<'de> for Descriptor {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::encode_cbor;
+    use crate::encode::encode_cbor;
 
     use super::*;
 

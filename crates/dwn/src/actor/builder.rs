@@ -4,7 +4,7 @@ use crate::{
     handlers::MessageReply,
     message::{AuthError, DwnRequest, Message},
     store::{DataStore, MessageStore},
-    util::EncodeError,
+    encode::EncodeError,
     HandleMessageError,
 };
 

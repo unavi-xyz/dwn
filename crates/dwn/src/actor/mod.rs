@@ -12,7 +12,7 @@ use crate::{
         AuthError, DwnRequest, Message, SignError,
     },
     store::{DataStore, MessageStore, MessageStoreError},
-    util::EncodeError,
+    encode::EncodeError,
     HandleMessageError, DWN,
 };
 

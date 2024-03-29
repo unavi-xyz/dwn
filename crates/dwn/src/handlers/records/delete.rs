@@ -5,7 +5,7 @@ use crate::{
         DwnRequest,
     },
     store::{DataStore, MessageStore},
-    util::encode_cbor,
+    encode::encode_cbor,
     HandleMessageError,
 };
 
