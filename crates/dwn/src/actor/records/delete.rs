@@ -1,6 +1,6 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{Reply, StatusReply},
+    handlers::{MessageReply, StatusReply},
     message::{descriptor::RecordsDelete, Message},
     store::{DataStore, MessageStore},
 };
@@ -60,7 +60,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsDeleteBuilder<'a, D, M> {
         let reply = MessageBuilder::process(&mut self).await?;
 
         let reply = match reply {
-            Reply::Status(reply) => reply,
+            MessageReply::Status(reply) => reply,
             _ => return Err(ProcessMessageError::InvalidReply),
         };
 

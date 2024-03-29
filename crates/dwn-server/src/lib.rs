@@ -10,7 +10,7 @@ use axum::{
     Json, Router,
 };
 use dwn::{
-    message::Request,
+    message::DwnRequest,
     store::{DataStore, MessageStore},
     DWN,
 };
@@ -28,7 +28,7 @@ async fn handle_post(
     State(dwn): State<
         Arc<DWN<impl DataStore + Send + Sync + 'static, impl MessageStore + Send + Sync + 'static>>,
     >,
-    Json(request): Json<Request>,
+    Json(request): Json<DwnRequest>,
 ) -> Response {
     match dwn.process_message(request).await {
         Ok(reply) => Json(reply).into_response(),

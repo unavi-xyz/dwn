@@ -6,10 +6,10 @@ use reqwest::Client;
 use thiserror::Error;
 
 use crate::{
-    handlers::{records::write::handle_records_write, Reply, StatusReply},
+    handlers::{records::write::handle_records_write, MessageReply, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, ProtocolDefinition},
-        AuthError, Message, Request, SignError,
+        AuthError, DwnRequest, Message, SignError,
     },
     store::{DataStore, MessageStore, MessageStoreError},
     util::EncodeError,
@@ -18,12 +18,14 @@ use crate::{
 
 mod builder;
 mod did_key;
+pub mod protocols;
 pub mod records;
 mod remote;
 
-pub use builder::{MessageBuilder, ProcessMessageError};
+pub use builder::*;
 
 use self::{
+    protocols::ProtocolsConfigureBuilder,
     records::{RecordsDeleteBuilder, RecordsQueryBuilder, RecordsReadBuilder, RecordsWriteBuilder},
     remote::Remote,
 };
@@ -105,7 +107,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
                 let message = self.read(record_id.clone()).build()?;
 
                 let reply = match self.send_message(message, url).await? {
-                    Reply::RecordsRead(reply) => reply,
+                    MessageReply::RecordsRead(reply) => reply,
                     _ => return Err(SyncError::ProcessMessage(ProcessMessageError::InvalidReply)),
                 };
 
@@ -115,7 +117,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
                 handle_records_write(
                     &self.dwn.data_store,
                     &self.dwn.message_store,
-                    Request {
+                    DwnRequest {
                         target: self.did.clone(),
                         message: *reply.record,
                     },
@@ -141,7 +143,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     /// Process a message in the local DWN.
-    async fn process_message(&self, message: Message) -> Result<Reply, HandleMessageError> {
+    async fn process_message(&self, message: Message) -> Result<MessageReply, HandleMessageError> {
         match &message.descriptor {
             Descriptor::RecordsDelete(_) => {
                 self.remote_queue(&message).await?;
@@ -153,7 +155,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         }
 
         self.dwn
-            .process_message(Request {
+            .process_message(DwnRequest {
                 target: self.did.clone(),
                 message,
             })
@@ -161,8 +163,12 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     /// Sends a message to a remote DWN.
-    async fn send_message(&self, message: Message, url: &str) -> Result<Reply, reqwest::Error> {
-        let request = Request {
+    async fn send_message(
+        &self,
+        message: Message,
+        url: &str,
+    ) -> Result<MessageReply, reqwest::Error> {
+        let request = DwnRequest {
             target: self.did.clone(),
             message,
         };
@@ -172,7 +178,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             .json(&request)
             .send()
             .await?
-            .json::<Reply>()
+            .json::<MessageReply>()
             .await
     }
 
@@ -196,7 +202,12 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         RecordsWriteBuilder::new_update(self, record_id, parent_id)
     }
 
-    pub fn register_protocol(&self, _protocol: &ProtocolDefinition) {}
+    pub fn register_protocol(
+        &self,
+        definition: ProtocolDefinition,
+    ) -> ProtocolsConfigureBuilder<D, M> {
+        ProtocolsConfigureBuilder::new(self, Some(definition))
+    }
 }
 
 pub struct CreateResult {

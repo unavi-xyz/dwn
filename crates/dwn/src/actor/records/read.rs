@@ -1,7 +1,7 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{RecordsReadReply, Reply},
-    message::{descriptor::RecordsRead, Message, Request},
+    handlers::{MessageReply, RecordsReadReply},
+    message::{descriptor::RecordsRead, DwnRequest, Message},
     store::{DataStore, MessageStore},
     HandleMessageError,
 };
@@ -60,7 +60,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
 
     pub async fn process(&mut self) -> Result<RecordsReadReply, ProcessMessageError> {
         let reply = match MessageBuilder::process(self).await {
-            Ok(Reply::RecordsRead(reply)) => reply,
+            Ok(MessageReply::RecordsRead(reply)) => reply,
             Ok(_) => unreachable!(),
             Err(err) => {
                 let message = self.final_message.as_ref().unwrap();
@@ -72,7 +72,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                         .clone()
                         .unwrap_or_else(|| self.actor.did.clone());
 
-                    let request = Request {
+                    let request = DwnRequest {
                         target: target.clone(),
                         message: message.clone(),
                     };
@@ -84,10 +84,10 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                         .json(&request)
                         .send()
                         .await?
-                        .json::<Reply>()
+                        .json::<MessageReply>()
                         .await;
 
-                    if let Ok(Reply::RecordsRead(reply)) = reply {
+                    if let Ok(MessageReply::RecordsRead(reply)) = reply {
                         // Store the record locally.
                         self.actor
                             .dwn

@@ -20,7 +20,7 @@ pub mod descriptor;
 pub use data::*;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct Request {
+pub struct DwnRequest {
     pub message: Message,
     /// Target DID.
     pub target: String,

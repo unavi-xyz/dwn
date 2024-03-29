@@ -4,10 +4,10 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 
 use crate::{
-    handlers::{RecordsReadReply, Reply, Status},
+    handlers::{MessageReply, RecordsReadReply, Status},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Data, EncryptedData, Message, Request,
+        Data, DwnRequest, EncryptedData, Message,
     },
     store::{DataStore, MessageStore},
     HandleMessageError,
@@ -18,8 +18,8 @@ use super::util::create_entry_id_map;
 pub async fn handle_records_read(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    Request { target, message }: Request,
-) -> Result<Reply, HandleMessageError> {
+    DwnRequest { target, message }: DwnRequest,
+) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
 
     let descriptor = match &message.descriptor {

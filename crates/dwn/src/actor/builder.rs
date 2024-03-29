@@ -1,8 +1,8 @@
 use thiserror::Error;
 
 use crate::{
-    handlers::Reply,
-    message::{AuthError, Message, Request},
+    handlers::MessageReply,
+    message::{AuthError, DwnRequest, Message},
     store::{DataStore, MessageStore},
     util::EncodeError,
     HandleMessageError,
@@ -53,14 +53,14 @@ pub trait MessageBuilder: Sized {
 
     /// Process the message with the local DWN.
     #[allow(async_fn_in_trait)]
-    async fn process(&mut self) -> Result<Reply, ProcessMessageError> {
+    async fn process(&mut self) -> Result<MessageReply, ProcessMessageError> {
         let message = self.build()?;
 
         let actor = self.get_actor();
         let target = self.get_target();
 
         let reply = if let Some(target) = target {
-            let request = Request { message, target };
+            let request = DwnRequest { message, target };
             actor.dwn.process_message(request).await?
         } else {
             actor.process_message(message).await?

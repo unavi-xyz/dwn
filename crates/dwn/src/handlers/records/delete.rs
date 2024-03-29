@@ -1,8 +1,8 @@
 use crate::{
-    handlers::{Reply, Status, StatusReply},
+    handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
-        Request,
+        DwnRequest,
     },
     store::{DataStore, MessageStore},
     util::encode_cbor,
@@ -12,8 +12,8 @@ use crate::{
 pub async fn handle_records_delete(
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
-    Request { target, message }: Request,
-) -> Result<Reply, HandleMessageError> {
+    DwnRequest { target, message }: DwnRequest,
+) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
 
     if !authorized {

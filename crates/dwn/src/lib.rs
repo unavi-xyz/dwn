@@ -43,13 +43,14 @@
 //! ```
 
 use handlers::{
+    protocols::handle_protocols_configure,
     records::{
         delete::handle_records_delete, query::handle_records_query, read::handle_records_read,
         write::handle_records_write,
     },
-    Reply,
+    MessageReply,
 };
-use message::{descriptor::Descriptor, Message, Request, ValidateError};
+use message::{descriptor::Descriptor, DwnRequest, Message, ValidateError};
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
@@ -84,8 +85,14 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
         }
     }
 
-    pub async fn process_message(&self, request: Request) -> Result<Reply, HandleMessageError> {
+    pub async fn process_message(
+        &self,
+        request: DwnRequest,
+    ) -> Result<MessageReply, HandleMessageError> {
         match &request.message.descriptor {
+            Descriptor::ProtocolsConfigure(_) => {
+                handle_protocols_configure(&self.data_store, &self.message_store, request).await
+            }
             Descriptor::RecordsDelete(_) => {
                 handle_records_delete(&self.data_store, &self.message_store, request).await
             }

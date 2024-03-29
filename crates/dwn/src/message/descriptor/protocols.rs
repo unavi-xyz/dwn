@@ -9,18 +9,24 @@ pub struct ProtocolsConfigure {
     interface: Interface,
     method: Method,
 
-    pub protocol_version: String,
-    pub definition: ProtocolDefinition,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub definition: Option<ProtocolDefinition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "lastConfiguration")]
+    pub last_configuration: Option<String>,
+    #[serde(rename = "protocolVersion")]
+    pub protocol_version: Option<String>,
 }
 
-impl ProtocolsConfigure {
-    pub fn new(definition: ProtocolDefinition) -> Self {
+impl Default for ProtocolsConfigure {
+    fn default() -> Self {
         ProtocolsConfigure {
             interface: Interface::Protocols,
             method: Method::Configure,
 
-            protocol_version: "0.0.0".to_string(),
-            definition,
+            definition: None,
+            last_configuration: None,
+            protocol_version: None,
         }
     }
 }
@@ -35,6 +41,7 @@ pub struct ProtocolDefinition {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolType {
+    #[serde(rename = "dataFormat")]
     pub data_format: Vec<String>,
     pub schema: Option<String>,
 }

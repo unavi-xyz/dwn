@@ -66,6 +66,12 @@ impl From<RecordsDelete> for Descriptor {
     }
 }
 
+impl From<ProtocolsConfigure> for Descriptor {
+    fn from(desc: ProtocolsConfigure) -> Self {
+        Descriptor::ProtocolsConfigure(desc)
+    }
+}
+
 impl<'de> Deserialize<'de> for Descriptor {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -76,7 +82,6 @@ impl<'de> Deserialize<'de> for Descriptor {
         let interface = match json.get("interface").and_then(|i| i.as_str()) {
             Some(i) => i,
             None => {
-                warn!("Missing interface");
                 return Err(serde::de::Error::custom("Missing interface"));
             }
         };
@@ -84,35 +89,25 @@ impl<'de> Deserialize<'de> for Descriptor {
         let method = match json.get("method").and_then(|m| m.as_str()) {
             Some(m) => m,
             None => {
-                warn!("Missing method");
                 return Err(serde::de::Error::custom("Missing method"));
             }
         };
 
         match (interface, method) {
+            ("Protocols", "Configure") => Ok(Descriptor::ProtocolsConfigure(
+                serde_json::from_value(json).map_err(serde::de::Error::custom)?,
+            )),
             ("Records", "Read") => Ok(Descriptor::RecordsRead(
-                serde_json::from_value(json).unwrap_or_else(|e| {
-                    warn!("Failed to deserialize RecordsRead: {}", e);
-                    RecordsRead::default()
-                }),
+                serde_json::from_value(json).map_err(serde::de::Error::custom)?,
             )),
             ("Records", "Query") => Ok(Descriptor::RecordsQuery(
-                serde_json::from_value(json).unwrap_or_else(|e| {
-                    warn!("Failed to deserialize RecordsQuery: {}", e);
-                    RecordsQuery::default()
-                }),
+                serde_json::from_value(json).map_err(serde::de::Error::custom)?,
             )),
             ("Records", "Write") => Ok(Descriptor::RecordsWrite(
-                serde_json::from_value(json).unwrap_or_else(|e| {
-                    warn!("Failed to deserialize RecordsWrite: {}", e);
-                    RecordsWrite::default()
-                }),
+                serde_json::from_value(json).map_err(serde::de::Error::custom)?,
             )),
             ("Records", "Delete") => Ok(Descriptor::RecordsDelete(
-                serde_json::from_value(json).unwrap_or_else(|e| {
-                    warn!("Failed to deserialize RecordsDelete: {}", e);
-                    RecordsDelete::default()
-                }),
+                serde_json::from_value(json).map_err(serde::de::Error::custom)?,
             )),
             _ => {
                 warn!("Unsupported interface: {} {}", interface, method);

@@ -3,6 +3,7 @@ use serde_with::skip_serializing_none;
 
 use crate::message::Message;
 
+pub mod protocols;
 pub mod records;
 
 #[skip_serializing_none]
@@ -23,18 +24,18 @@ impl Status {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum Reply {
+pub enum MessageReply {
     RecordsQuery(RecordsQueryReply),
     RecordsRead(RecordsReadReply),
     Status(StatusReply),
 }
 
-impl Reply {
+impl MessageReply {
     pub fn status(&self) -> &Status {
         match self {
-            Reply::RecordsQuery(reply) => &reply.status,
-            Reply::RecordsRead(reply) => &reply.status,
-            Reply::Status(reply) => &reply.status,
+            MessageReply::RecordsQuery(reply) => &reply.status,
+            MessageReply::RecordsRead(reply) => &reply.status,
+            MessageReply::Status(reply) => &reply.status,
         }
     }
 }
@@ -56,20 +57,20 @@ pub struct StatusReply {
     pub status: Status,
 }
 
-impl From<RecordsQueryReply> for Reply {
+impl From<RecordsQueryReply> for MessageReply {
     fn from(reply: RecordsQueryReply) -> Self {
-        Reply::RecordsQuery(reply)
+        MessageReply::RecordsQuery(reply)
     }
 }
 
-impl From<RecordsReadReply> for Reply {
+impl From<RecordsReadReply> for MessageReply {
     fn from(reply: RecordsReadReply) -> Self {
-        Reply::RecordsRead(reply)
+        MessageReply::RecordsRead(reply)
     }
 }
 
-impl From<StatusReply> for Reply {
+impl From<StatusReply> for MessageReply {
     fn from(reply: StatusReply) -> Self {
-        Reply::Status(reply)
+        MessageReply::Status(reply)
     }
 }
