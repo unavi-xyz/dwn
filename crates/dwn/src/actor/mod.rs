@@ -6,13 +6,13 @@ use reqwest::Client;
 use thiserror::Error;
 
 use crate::{
+    encode::EncodeError,
     handlers::{records::write::handle_records_write, MessageReply, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, ProtocolDefinition},
         AuthError, DwnRequest, Message, SignError,
     },
     store::{DataStore, MessageStore, MessageStoreError},
-    encode::EncodeError,
     HandleMessageError, DWN,
 };
 

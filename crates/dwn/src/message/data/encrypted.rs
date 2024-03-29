@@ -1,11 +1,5 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use libipld::{ipld, pb::DagPbCodec, Cid, Ipld};
-use libipld_cbor::DagCborCodec;
-use libipld_core::{
-    codec::Codec,
-    multihash::{Code, MultihashDigest},
-    serde::to_ipld,
-};
+
 use openssl::{
     error::ErrorStack,
     rand::rand_bytes,
@@ -14,34 +8,7 @@ use openssl::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{actor::records::Encryption, encode::EncodeError};
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(untagged)]
-pub enum Data {
-    Base64(String),
-    Encrypted(EncryptedData),
-}
-
-impl Data {
-    pub fn new_base64(data: &[u8]) -> Self {
-        Data::Base64(URL_SAFE_NO_PAD.encode(data))
-    }
-
-    /// Returns the CID of the data after DAG-PB encoding.
-    pub fn cid(&self) -> Result<Cid, EncodeError> {
-        match self {
-            Data::Base64(data) => {
-                let ipld = to_ipld(data)?;
-                dag_pb_cid(ipld)
-            }
-            Data::Encrypted(data) => {
-                let ipld = to_ipld(data)?;
-                dag_pb_cid(ipld)
-            }
-        }
-    }
-}
+use crate::actor::records::Encryption;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct EncryptedData {
@@ -138,82 +105,5 @@ impl EncryptedData {
         plaintext.truncate(count + rest);
 
         Ok(plaintext)
-    }
-}
-
-/// Returns the CID of the given IPLD after DAG-PB encoding.
-fn dag_pb_cid(ipld: Ipld) -> Result<Cid, EncodeError> {
-    let ipld = make_pb_compatible(ipld)?;
-    let bytes = DagPbCodec.encode(&ipld).map_err(EncodeError::Encode)?;
-    let hash = Code::Sha2_256.digest(&bytes);
-    Ok(Cid::new_v1(DagPbCodec.into(), hash))
-}
-
-/// Converts the given IPLD into a format compatible with the DAG-PB codec.
-fn make_pb_compatible(ipld: Ipld) -> Result<Ipld, EncodeError> {
-    println!("make_pb_compatible: {:?}", ipld);
-
-    let mut data = None;
-    let mut links = Vec::new();
-
-    match ipld {
-        Ipld::Link(cid) => {
-            println!("link: {:?}", cid);
-
-            links.push(ipld!({
-                "Hash": cid,
-            }));
-        }
-        Ipld::List(list) => {
-            println!("list: {:?}", list);
-
-            for ipld in list {
-                let cid = dag_pb_cid(ipld)?;
-
-                links.push(ipld!({
-                    "Hash": cid,
-                }));
-            }
-        }
-        Ipld::Map(map) => {
-            println!("map: {:?}", map);
-
-            for (key, value) in map {
-                let cid = dag_pb_cid(value)?;
-
-                links.push(ipld!({
-                    "Hash": cid,
-                    "Name": key,
-                }));
-            }
-        }
-        _ => data = Some(DagCborCodec.encode(&ipld).map_err(EncodeError::Encode)?),
-    };
-
-    match data {
-        Some(data) => Ok(ipld!({
-            "Data": data,
-            "Links": links,
-        })),
-        None => Ok(ipld!({
-            "Links": links,
-        })),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_base64_cid() {
-        let data = Data::Base64("Hello, world!".to_string());
-        data.cid().ok();
-    }
-
-    #[test]
-    fn test_pb_encode_list() {
-        let data = Ipld::List(vec![Ipld::Integer(1), Ipld::Integer(2), Ipld::Integer(3)]);
-        let ipld = make_pb_compatible(data).unwrap();
     }
 }

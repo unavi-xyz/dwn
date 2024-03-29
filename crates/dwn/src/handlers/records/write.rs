@@ -1,11 +1,11 @@
 use crate::{
+    encode::encode_cbor,
     handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{Descriptor, Filter, FilterDateSort},
         DwnRequest,
     },
     store::{DataStore, MessageStore},
-    encode::encode_cbor,
     HandleMessageError,
 };
 

@@ -1,10 +1,10 @@
 use thiserror::Error;
 
 use crate::{
+    encode::EncodeError,
     handlers::MessageReply,
     message::{AuthError, DwnRequest, Message},
     store::{DataStore, MessageStore},
-    encode::EncodeError,
     HandleMessageError,
 };
 

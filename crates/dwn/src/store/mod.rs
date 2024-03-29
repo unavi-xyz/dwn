@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    message::{descriptor::Filter, DecodeError, Message},
     encode::EncodeError,
+    message::{descriptor::Filter, DecodeError, Message},
 };
 
 #[cfg(feature = "s3")]

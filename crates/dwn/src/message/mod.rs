@@ -7,8 +7,8 @@ use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
-    message::auth::{AuthPayload, SignatureEntry, JWS},
     encode::{encode_cbor, EncodeError},
+    message::auth::{AuthPayload, SignatureEntry, JWS},
 };
 
 use self::{auth::SignatureVerifyError, descriptor::Descriptor};
