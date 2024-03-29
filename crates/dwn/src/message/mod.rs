@@ -15,10 +15,9 @@ use self::{auth::SignatureVerifyError, descriptor::Descriptor};
 
 mod auth;
 mod data;
-pub(crate) mod descriptor;
+pub mod descriptor;
 
 pub use data::*;
-pub use descriptor::{Filter, FilterDateCreated, FilterDateSort};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Request {

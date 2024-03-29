@@ -9,7 +9,10 @@ use surrealdb::{
 use time::OffsetDateTime;
 
 use crate::{
-    message::{descriptor::Descriptor, Data, EncryptedData, Filter, FilterDateSort, Message},
+    message::{
+        descriptor::{Descriptor, Filter, FilterDateSort},
+        Data, EncryptedData, Message,
+    },
     store::{DataStore, MessageStore, MessageStoreError},
     util::encode_cbor,
 };
