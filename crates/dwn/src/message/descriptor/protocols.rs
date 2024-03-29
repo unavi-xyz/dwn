@@ -11,10 +11,11 @@ pub struct ProtocolsConfigure {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub definition: Option<ProtocolDefinition>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "lastConfiguration")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_configuration: Option<String>,
     #[serde(rename = "protocolVersion")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol_version: Option<String>,
 }
 
@@ -43,6 +44,7 @@ pub struct ProtocolDefinition {
 pub struct ProtocolType {
     #[serde(rename = "dataFormat")]
     pub data_format: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub schema: Option<String>,
 }
 
@@ -51,6 +53,8 @@ pub struct ProtocolStructure {
     pub actions: Vec<Action>,
     pub children: HashMap<String, ProtocolStructure>,
 }
+
+const ACTIONS_KEY: &str = "$actions";
 
 impl<'de> Deserialize<'de> for ProtocolStructure {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -64,7 +68,7 @@ impl<'de> Deserialize<'de> for ProtocolStructure {
 
         if let serde_json::Value::Object(map) = value {
             for (key, value) in map {
-                if key == "$actions" {
+                if key == ACTIONS_KEY {
                     actions = serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 } else {
                     children.insert(
@@ -88,13 +92,16 @@ impl Serialize for ProtocolStructure {
 
         if !self.actions.is_empty() {
             map.insert(
-                "$actions".to_string(),
-                serde_json::to_value(&self.actions).unwrap(),
+                ACTIONS_KEY.to_string(),
+                serde_json::to_value(&self.actions).map_err(serde::ser::Error::custom)?,
             );
         }
 
         for (key, value) in &self.children {
-            map.insert(key.to_string(), serde_json::to_value(value).unwrap());
+            map.insert(
+                key.to_string(),
+                serde_json::to_value(value).map_err(serde::ser::Error::custom)?,
+            );
         }
 
         map.serialize(serializer)
@@ -104,6 +111,7 @@ impl Serialize for ProtocolStructure {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Action {
     pub who: ActionWho,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub of: Option<String>,
     pub can: ActionCan,
 }
