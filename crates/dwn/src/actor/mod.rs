@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::{
     handlers::{records::write::handle_records_write, Reply, StatusReply},
     message::{
-        descriptor::{Descriptor, Filter},
+        descriptor::{Descriptor, Filter, ProtocolDefinition},
         AuthError, Message, Request, SignError,
     },
     store::{DataStore, MessageStore, MessageStoreError},
@@ -17,22 +17,16 @@ use crate::{
 };
 
 mod builder;
-mod delete;
 mod did_key;
-mod query;
-mod read;
+pub mod records;
 mod remote;
-mod write;
 
-pub use builder::MessageBuilder;
+pub use builder::{MessageBuilder, ProcessMessageError};
 
 use self::{
-    builder::ProcessMessageError, delete::RecordsDeleteBuilder, query::RecordsQueryBuilder,
-    read::RecordsReadBuilder, remote::Remote, write::RecordsWriteBuilder,
+    records::{RecordsDeleteBuilder, RecordsQueryBuilder, RecordsReadBuilder, RecordsWriteBuilder},
+    remote::Remote,
 };
-
-pub use delete::DeleteResponse;
-pub use write::{Encryption, WriteResponse};
 
 /// Identity actor.
 /// Holds a DID and associated keys.
@@ -201,6 +195,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     pub fn update(&self, record_id: String, parent_id: String) -> RecordsWriteBuilder<D, M> {
         RecordsWriteBuilder::new_update(self, record_id, parent_id)
     }
+
+    pub fn register_protocol(&self, _protocol: &ProtocolDefinition) {}
 }
 
 pub struct CreateResult {

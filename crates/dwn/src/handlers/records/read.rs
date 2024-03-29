@@ -6,9 +6,7 @@ use libipld::Cid;
 use crate::{
     handlers::{RecordsReadReply, Reply, Status},
     message::{
-        data::{Data, EncryptedData},
-        descriptor::{Descriptor, Filter, FilterDateSort},
-        Message, Request,
+        descriptor::Descriptor, Data, EncryptedData, Filter, FilterDateSort, Message, Request,
     },
     store::{DataStore, MessageStore},
     HandleMessageError,

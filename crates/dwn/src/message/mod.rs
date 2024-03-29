@@ -7,15 +7,18 @@ use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
-    message::auth::{AuthPayload, Protected, SignatureEntry, JWS},
+    message::auth::{AuthPayload, SignatureEntry, JWS},
     util::{encode_cbor, EncodeError},
 };
 
-use self::{auth::SignatureVerifyError, data::Data, descriptor::Descriptor};
+use self::{auth::SignatureVerifyError, descriptor::Descriptor};
 
-pub mod auth;
-pub mod data;
-pub mod descriptor;
+mod auth;
+mod data;
+pub(crate) mod descriptor;
+
+pub use data::*;
+pub use descriptor::{Filter, FilterDateCreated, FilterDateSort};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Request {
@@ -117,7 +120,7 @@ impl Message {
         let jws = JWS {
             payload,
             signatures: vec![SignatureEntry {
-                protected: Protected { algorithm, key_id },
+                protected: auth::Protected { algorithm, key_id },
                 signature,
             }],
         };
@@ -140,7 +143,7 @@ impl Message {
         let jws = JWS {
             payload,
             signatures: vec![SignatureEntry {
-                protected: Protected { algorithm, key_id },
+                protected: auth::Protected { algorithm, key_id },
                 signature,
             }],
         };
@@ -152,7 +155,7 @@ impl Message {
 
     /// Checks whether the key used in the authorization JWS is an authorization key for the given DID.
     pub async fn is_authorized(&self, did: &str) -> bool {
-        if let Err(_) = self.validate_authorization().await {
+        if self.validate_authorization().await.is_err() {
             return false;
         }
 

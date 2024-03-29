@@ -2,8 +2,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tracing::warn;
 
+mod protocols;
 mod records;
 
+pub use protocols::*;
 pub use records::*;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -25,16 +27,6 @@ pub enum Method {
     Write,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum Encryption {
-    /// AES-GCM
-    #[serde(rename = "jwe")]
-    JWE,
-    /// XSalsa20-Poly1305
-    #[serde(rename = "X25519")]
-    X25519,
-}
-
 #[derive(Clone, Debug, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum Descriptor {
@@ -42,7 +34,7 @@ pub enum Descriptor {
     PermissionsQuery,
     PermissionsRequest,
     PermissionsRevoke,
-    ProtocolsConfigure,
+    ProtocolsConfigure(ProtocolsConfigure),
     ProtocolsQuery,
     RecordsDelete(RecordsDelete),
     RecordsQuery(RecordsQuery),

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use dwn::{
     actor::Actor,
-    message::data::Data,
+    message::Data,
     store::{DataStore, MessageStore, SurrealStore},
     DWN,
 };

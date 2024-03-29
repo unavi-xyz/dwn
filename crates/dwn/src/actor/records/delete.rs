@@ -1,12 +1,8 @@
 use crate::{
+    actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{Reply, StatusReply},
     message::{descriptor::RecordsDelete, Message},
     store::{DataStore, MessageStore},
-};
-
-use super::{
-    builder::{MessageBuilder, ProcessMessageError},
-    Actor, PrepareError,
 };
 
 pub struct RecordsDeleteBuilder<'a, D: DataStore, M: MessageStore> {

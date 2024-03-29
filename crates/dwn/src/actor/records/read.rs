@@ -1,13 +1,9 @@
 use crate::{
+    actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{RecordsReadReply, Reply},
     message::{descriptor::RecordsRead, Message, Request},
     store::{DataStore, MessageStore},
     HandleMessageError,
-};
-
-use super::{
-    builder::{MessageBuilder, ProcessMessageError},
-    Actor, PrepareError,
 };
 
 pub struct RecordsReadBuilder<'a, D: DataStore, M: MessageStore> {

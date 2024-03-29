@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use dwn::{
     actor::{Actor, MessageBuilder},
-    message::{data::Data, descriptor::Filter},
+    message::{Data, Filter},
     store::SurrealStore,
     DWN,
 };

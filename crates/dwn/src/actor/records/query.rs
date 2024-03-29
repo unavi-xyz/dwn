@@ -1,16 +1,11 @@
 use crate::{
+    actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{RecordsQueryReply, Reply},
-    message::{
-        descriptor::{Filter, RecordsQuery},
-        Message,
-    },
+    message::{descriptor::RecordsQuery, Message},
     store::{DataStore, MessageStore},
 };
 
-use super::{
-    builder::{MessageBuilder, ProcessMessageError},
-    Actor, PrepareError,
-};
+pub use crate::message::descriptor::{Filter, FilterDateCreated, FilterDateSort};
 
 pub struct RecordsQueryBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,

@@ -1,11 +1,7 @@
-use libipld::{Block, DefaultParams, Ipld};
+use libipld::{Block, DefaultParams};
 use libipld_cbor::DagCborCodec;
-use libipld_core::{
-    error::SerdeError,
-    multihash::Code,
-    serde::{from_ipld, to_ipld},
-};
-use serde::{de::DeserializeOwned, Serialize};
+use libipld_core::{error::SerdeError, multihash::Code, serde::to_ipld};
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -24,13 +20,4 @@ pub fn encode_cbor(data: &impl Serialize) -> Result<Block<DefaultParams>, Encode
     let block = Block::<DefaultParams>::encode(DagCborCodec, Code::Sha2_256, &ipld)
         .map_err(EncodeError::Encode)?;
     Ok(block)
-}
-
-/// Decodes a DAG-CBOR block.
-pub fn decode_cbor<T: DeserializeOwned>(block: Block<DefaultParams>) -> Result<T, EncodeError> {
-    let ipld = block
-        .decode::<DagCborCodec, Ipld>()
-        .map_err(EncodeError::Decode)?;
-    let data = from_ipld(ipld)?;
-    Ok(data)
 }

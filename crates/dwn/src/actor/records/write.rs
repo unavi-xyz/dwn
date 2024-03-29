@@ -3,18 +3,10 @@ use openssl::{error::ErrorStack, rand::rand_bytes};
 use time::OffsetDateTime;
 
 use crate::{
+    actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{Reply, StatusReply},
-    message::{
-        data::{Data, EncryptedData},
-        descriptor::RecordsWrite,
-        Message,
-    },
+    message::{descriptor::RecordsWrite, Data, EncryptedData, Message},
     store::{DataStore, MessageStore},
-};
-
-use super::{
-    builder::{MessageBuilder, ProcessMessageError},
-    Actor, PrepareError,
 };
 
 #[derive(Clone)]

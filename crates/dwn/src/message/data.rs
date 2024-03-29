@@ -14,7 +14,7 @@ use openssl::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{actor::Encryption, util::EncodeError};
+use crate::{actor::records::Encryption, util::EncodeError};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]

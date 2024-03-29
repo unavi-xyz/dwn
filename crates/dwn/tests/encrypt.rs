@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use dwn::{
-    actor::{Actor, Encryption},
-    message::data::Data,
+    actor::{records::Encryption, Actor},
+    message::Data,
     store::SurrealStore,
     DWN,
 };

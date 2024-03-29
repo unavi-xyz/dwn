@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
-use super::{Encryption, Interface, Method};
+use super::{Interface, Method};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsRead {
@@ -129,6 +129,16 @@ pub struct RecordsWrite {
     pub protocol_version: Option<String>,
     pub published: Option<bool>,
     pub schema: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub enum Encryption {
+    /// AES-GCM
+    #[serde(rename = "jwe")]
+    JWE,
+    /// XSalsa20-Poly1305
+    #[serde(rename = "X25519")]
+    X25519,
 }
 
 impl Default for RecordsWrite {
