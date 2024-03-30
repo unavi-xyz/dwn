@@ -3,7 +3,7 @@ use serde_json::Value;
 use tracing::warn;
 
 use self::{
-    protocols::ProtocolsConfigure,
+    protocols::{ProtocolsConfigure, ProtocolsQuery},
     records::{RecordsDelete, RecordsQuery, RecordsRead, RecordsWrite},
 };
 
@@ -37,7 +37,7 @@ pub enum Descriptor {
     PermissionsRequest,
     PermissionsRevoke,
     ProtocolsConfigure(ProtocolsConfigure),
-    ProtocolsQuery,
+    ProtocolsQuery(ProtocolsQuery),
     RecordsDelete(RecordsDelete),
     RecordsQuery(RecordsQuery),
     RecordsRead(RecordsRead),
@@ -47,6 +47,12 @@ pub enum Descriptor {
 impl From<ProtocolsConfigure> for Descriptor {
     fn from(desc: ProtocolsConfigure) -> Self {
         Descriptor::ProtocolsConfigure(desc)
+    }
+}
+
+impl From<ProtocolsQuery> for Descriptor {
+    fn from(desc: ProtocolsQuery) -> Self {
+        Descriptor::ProtocolsQuery(desc)
     }
 }
 
@@ -97,6 +103,9 @@ impl<'de> Deserialize<'de> for Descriptor {
 
         match (interface, method) {
             ("Protocols", "Configure") => Ok(Descriptor::ProtocolsConfigure(
+                serde_json::from_value(json).map_err(serde::de::Error::custom)?,
+            )),
+            ("Protocols", "Query") => Ok(Descriptor::ProtocolsQuery(
                 serde_json::from_value(json).map_err(serde::de::Error::custom)?,
             )),
             ("Records", "Read") => Ok(Descriptor::RecordsRead(

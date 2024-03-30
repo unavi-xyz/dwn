@@ -4,6 +4,7 @@ use dwn::{
     actor::Actor,
     message::descriptor::protocols::{
         Action, ActionCan, ActionWho, ProtocolDefinition, ProtocolStructure, ProtocolType,
+        ProtocolsFilter,
     },
     store::SurrealStore,
     DWN,
@@ -47,4 +48,12 @@ async fn test_configure_protocol() {
         .await
         .unwrap();
     assert_eq!(register.status.code, 200);
+
+    let filter = ProtocolsFilter {
+        protocol: "test-protocol".to_string(),
+        versions: vec!["0.1.0".to_string()],
+    };
+
+    let query = actor.query_protocols(filter).process().await.unwrap();
+    assert_eq!(query.status.code, 200);
 }

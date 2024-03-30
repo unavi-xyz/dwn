@@ -11,15 +11,11 @@ pub struct ProtocolsQuery {
 }
 
 impl ProtocolsQuery {
-    pub fn new(protocol: String) -> Self {
+    pub fn new(filter: ProtocolsFilter) -> Self {
         ProtocolsQuery {
             interface: Interface::Protocols,
             method: Method::Query,
-
-            filter: ProtocolsFilter {
-                protocol,
-                versions: vec![],
-            },
+            filter,
         }
     }
 }

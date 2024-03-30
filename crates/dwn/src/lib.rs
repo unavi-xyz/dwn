@@ -43,7 +43,7 @@
 //! ```
 
 use handlers::{
-    protocols::handle_protocols_configure,
+    protocols::{handle_protocols_configure, handle_protocols_query},
     records::{
         delete::handle_records_delete, query::handle_records_query, read::handle_records_read,
         write::handle_records_write,
@@ -93,6 +93,10 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             Descriptor::ProtocolsConfigure(_) => {
                 handle_protocols_configure(&self.data_store, &self.message_store, request).await
             }
+            Descriptor::ProtocolsQuery(_) => {
+                handle_protocols_query(&self.data_store, &self.message_store, request).await
+            }
+
             Descriptor::RecordsDelete(_) => {
                 handle_records_delete(&self.data_store, &self.message_store, request).await
             }

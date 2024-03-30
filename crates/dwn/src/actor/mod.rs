@@ -29,7 +29,7 @@ mod remote;
 pub use builder::*;
 
 use self::{
-    protocols::ProtocolsConfigureBuilder,
+    protocols::{ProtocolsConfigureBuilder, ProtocolsQueryBuilder},
     records::{RecordsDeleteBuilder, RecordsQueryBuilder, RecordsReadBuilder, RecordsWriteBuilder},
     remote::Remote,
 };
@@ -213,9 +213,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         ProtocolsConfigureBuilder::new(self, Some(definition))
     }
 
-    pub fn query_protocol(&self, filter: ProtocolsFilter) -> ProtocolsConfigureBuilder<D, M> {
-        todo!();
-        // ProtocolsQueryBuilder::new(self, filter)
+    pub fn query_protocols(&self, filter: ProtocolsFilter) -> ProtocolsQueryBuilder<D, M> {
+        ProtocolsQueryBuilder::new(self, filter)
     }
 }
 
