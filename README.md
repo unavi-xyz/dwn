@@ -26,7 +26,7 @@ async fn main() {
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 
     let create = actor
-        .create()
+        .create_record()
         .data(data.clone())
         .process()
         .await
@@ -36,7 +36,7 @@ async fn main() {
 
     // Read the record.
     let read = actor
-        .read(create.record_id)
+        .read_record(create.record_id)
         .process()
         .await
         .unwrap();
