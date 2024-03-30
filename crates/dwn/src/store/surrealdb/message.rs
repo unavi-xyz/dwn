@@ -11,7 +11,10 @@ use time::OffsetDateTime;
 use crate::{
     encode::encode_cbor,
     message::{
-        descriptor::{Descriptor, Filter, FilterDateSort},
+        descriptor::{
+            records::{FilterDateSort, RecordsFilter},
+            Descriptor,
+        },
         Data, EncryptedData, Message,
     },
     store::{DataStore, MessageStore, MessageStoreError},
@@ -220,7 +223,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         &self,
         tenant: String,
         authorized: bool,
-        filter: Filter,
+        filter: RecordsFilter,
     ) -> Result<Vec<Message>, MessageStoreError> {
         let db = self
             .message_db(&tenant)

@@ -2,11 +2,13 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tracing::warn;
 
-mod protocols;
-mod records;
+use self::{
+    protocols::ProtocolsConfigure,
+    records::{RecordsDelete, RecordsQuery, RecordsRead, RecordsWrite},
+};
 
-pub use protocols::*;
-pub use records::*;
+pub mod protocols;
+pub mod records;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Interface {
@@ -42,6 +44,12 @@ pub enum Descriptor {
     RecordsWrite(RecordsWrite),
 }
 
+impl From<ProtocolsConfigure> for Descriptor {
+    fn from(desc: ProtocolsConfigure) -> Self {
+        Descriptor::ProtocolsConfigure(desc)
+    }
+}
+
 impl From<RecordsRead> for Descriptor {
     fn from(desc: RecordsRead) -> Self {
         Descriptor::RecordsRead(desc)
@@ -63,12 +71,6 @@ impl From<RecordsWrite> for Descriptor {
 impl From<RecordsDelete> for Descriptor {
     fn from(desc: RecordsDelete) -> Self {
         Descriptor::RecordsDelete(desc)
-    }
-}
-
-impl From<ProtocolsConfigure> for Descriptor {
-    fn from(desc: ProtocolsConfigure) -> Self {
-        Descriptor::ProtocolsConfigure(desc)
     }
 }
 

@@ -2,7 +2,10 @@ use crate::{
     encode::encode_cbor,
     handlers::{MessageReply, Status, StatusReply},
     message::{
-        descriptor::{Descriptor, Filter, FilterDateSort},
+        descriptor::{
+            records::{FilterDateSort, RecordsFilter},
+            Descriptor,
+        },
         DwnRequest,
     },
     store::{DataStore, MessageStore},
@@ -35,7 +38,7 @@ pub async fn handle_records_delete(
         .query(
             target.clone(),
             authorized,
-            Filter {
+            RecordsFilter {
                 record_id: Some(descriptor.record_id.clone()),
                 date_sort: Some(FilterDateSort::CreatedDescending),
                 ..Default::default()

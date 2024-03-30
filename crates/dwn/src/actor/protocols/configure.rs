@@ -2,7 +2,7 @@ use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{MessageReply, StatusReply},
     message::{
-        descriptor::{ProtocolDefinition, ProtocolsConfigure},
+        descriptor::protocols::{ProtocolDefinition, ProtocolsConfigure},
         Message,
     },
     store::{DataStore, MessageStore},

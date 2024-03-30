@@ -5,7 +5,7 @@ use time::OffsetDateTime;
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{MessageReply, StatusReply},
-    message::{descriptor::RecordsWrite, Data, EncryptedData, Message},
+    message::{descriptor::records::RecordsWrite, Data, EncryptedData, Message},
     store::{DataStore, MessageStore},
 };
 

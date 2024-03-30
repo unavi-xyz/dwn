@@ -6,7 +6,10 @@ use libipld::Cid;
 use crate::{
     handlers::{MessageReply, RecordsReadReply, Status},
     message::{
-        descriptor::{Descriptor, Filter, FilterDateSort},
+        descriptor::{
+            records::{FilterDateSort, RecordsFilter},
+            Descriptor,
+        },
         Data, DwnRequest, EncryptedData, Message,
     },
     store::{DataStore, MessageStore},
@@ -35,7 +38,7 @@ pub async fn handle_records_read(
         .query(
             target.clone(),
             authorized,
-            Filter {
+            RecordsFilter {
                 record_id: Some(descriptor.record_id.clone()),
                 date_sort: Some(FilterDateSort::CreatedDescending),
                 ..Default::default()

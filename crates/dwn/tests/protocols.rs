@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use dwn::{
     actor::Actor,
-    message::descriptor::{
+    message::descriptor::protocols::{
         Action, ActionCan, ActionWho, ProtocolDefinition, ProtocolStructure, ProtocolType,
     },
     store::SurrealStore,
@@ -10,15 +10,14 @@ use dwn::{
 };
 use tracing_test::traced_test;
 
-#[traced_test]
 #[tokio::test]
-async fn test_protocols() {
+#[traced_test]
+async fn test_configure_protocol() {
     let store = SurrealStore::new().await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();
 
-    // Create a new protocol.
     let mut definition = ProtocolDefinition {
         protocol: "test-protocol".to_string(),
         published: true,

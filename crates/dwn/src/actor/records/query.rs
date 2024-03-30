@@ -1,16 +1,17 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{MessageReply, RecordsQueryReply},
-    message::{descriptor::RecordsQuery, Message},
+    message::{
+        descriptor::records::{RecordsFilter, RecordsQuery},
+        Message,
+    },
     store::{DataStore, MessageStore},
 };
-
-pub use crate::message::descriptor::{Filter, FilterDateCreated, FilterDateSort};
 
 pub struct RecordsQueryBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
     authorized: bool,
-    filter: Filter,
+    filter: RecordsFilter,
     target: Option<String>,
 }
 
@@ -41,7 +42,7 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsQueryBuilder<'
 }
 
 impl<'a, D: DataStore, M: MessageStore> RecordsQueryBuilder<'a, D, M> {
-    pub fn new(actor: &'a Actor<D, M>, filter: Filter) -> Self {
+    pub fn new(actor: &'a Actor<D, M>, filter: RecordsFilter) -> Self {
         RecordsQueryBuilder {
             actor,
             authorized: true,

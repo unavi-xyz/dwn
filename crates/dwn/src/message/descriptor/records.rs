@@ -42,7 +42,7 @@ pub struct RecordsQuery {
     interface: Interface,
     method: Method,
 
-    pub filter: Option<Filter>,
+    pub filter: Option<RecordsFilter>,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
 }
@@ -60,7 +60,7 @@ impl Default for RecordsQuery {
 }
 
 impl RecordsQuery {
-    pub fn new(filter: Filter) -> Self {
+    pub fn new(filter: RecordsFilter) -> Self {
         RecordsQuery {
             filter: Some(filter),
             ..Default::default()
@@ -70,7 +70,7 @@ impl RecordsQuery {
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-pub struct Filter {
+pub struct RecordsFilter {
     pub attester: Option<String>,
     #[serde(rename = "contextId")]
     pub context_id: Option<String>,

@@ -9,7 +9,11 @@ use crate::{
     encode::EncodeError,
     handlers::{records::write::handle_records_write, MessageReply, StatusReply},
     message::{
-        descriptor::{Descriptor, Filter, ProtocolDefinition},
+        descriptor::{
+            protocols::{ProtocolDefinition, ProtocolsFilter},
+            records::RecordsFilter,
+            Descriptor,
+        },
         AuthError, DwnRequest, Message, SignError,
     },
     store::{DataStore, MessageStore, MessageStoreError},
@@ -94,7 +98,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         for message in self
             .dwn
             .message_store
-            .query(self.did.clone(), true, Filter::default())
+            .query(self.did.clone(), true, RecordsFilter::default())
             .await?
         {
             record_ids.insert(message.record_id);
@@ -104,7 +108,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             let url = remote.url();
 
             for record_id in record_ids.iter() {
-                let message = self.read(record_id.clone()).build()?;
+                let message = self.read_record(record_id.clone()).build()?;
 
                 let reply = match self.send_message(message, url).await? {
                     MessageReply::RecordsRead(reply) => reply,
@@ -182,23 +186,23 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             .await
     }
 
-    pub fn create(&self) -> RecordsWriteBuilder<D, M> {
+    pub fn create_record(&self) -> RecordsWriteBuilder<D, M> {
         RecordsWriteBuilder::new(self)
     }
 
-    pub fn delete(&self, record_id: String) -> RecordsDeleteBuilder<D, M> {
+    pub fn delete_record(&self, record_id: String) -> RecordsDeleteBuilder<D, M> {
         RecordsDeleteBuilder::new(self, record_id)
     }
 
-    pub fn query(&self, filter: Filter) -> RecordsQueryBuilder<D, M> {
+    pub fn query_record(&self, filter: RecordsFilter) -> RecordsQueryBuilder<D, M> {
         RecordsQueryBuilder::new(self, filter)
     }
 
-    pub fn read(&self, record_id: String) -> RecordsReadBuilder<D, M> {
+    pub fn read_record(&self, record_id: String) -> RecordsReadBuilder<D, M> {
         RecordsReadBuilder::new(self, record_id)
     }
 
-    pub fn update(&self, record_id: String, parent_id: String) -> RecordsWriteBuilder<D, M> {
+    pub fn update_record(&self, record_id: String, parent_id: String) -> RecordsWriteBuilder<D, M> {
         RecordsWriteBuilder::new_update(self, record_id, parent_id)
     }
 
@@ -207,6 +211,11 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         definition: ProtocolDefinition,
     ) -> ProtocolsConfigureBuilder<D, M> {
         ProtocolsConfigureBuilder::new(self, Some(definition))
+    }
+
+    pub fn query_protocol(&self, filter: ProtocolsFilter) -> ProtocolsConfigureBuilder<D, M> {
+        todo!();
+        // ProtocolsQueryBuilder::new(self, filter)
     }
 }
 

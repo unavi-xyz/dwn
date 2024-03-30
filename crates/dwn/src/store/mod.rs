@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     encode::EncodeError,
-    message::{descriptor::Filter, DecodeError, Message},
+    message::{descriptor::records::RecordsFilter, DecodeError, Message},
 };
 
 #[cfg(feature = "s3")]
@@ -92,6 +92,6 @@ pub trait MessageStore: Send + Sync {
         &self,
         tenant: String,
         authorized: bool,
-        filter: Filter,
+        filter: RecordsFilter,
     ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use super::{Interface, Method};
+use crate::message::descriptor::{Interface, Method};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolsConfigure {

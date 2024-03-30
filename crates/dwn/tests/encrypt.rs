@@ -21,7 +21,7 @@ async fn test_encrypt() {
     let encryption = Encryption::generate_aes256().unwrap();
 
     let create = actor
-        .create()
+        .create_record()
         .data(data.clone())
         .encryption(&encryption)
         .process()
@@ -30,7 +30,7 @@ async fn test_encrypt() {
     assert_eq!(create.reply.status.code, 200);
 
     // Read the record.
-    let read = actor.read(create.record_id).process().await.unwrap();
+    let read = actor.read_record(create.record_id).process().await.unwrap();
     assert_eq!(read.status.code, 200);
 
     // Decrypt the data.

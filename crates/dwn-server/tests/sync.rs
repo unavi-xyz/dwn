@@ -66,7 +66,7 @@ async fn test_read_remote() {
     // Create a record in Osaka.
     let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
     let create = alice_osaka
-        .create()
+        .create_record()
         .data(data.clone())
         .process()
         .await
@@ -76,7 +76,7 @@ async fn test_read_remote() {
     // Kyoto should be able to read the record.
     // Kyoto will fetch the remote if a record is not found.
     let read = alice_kyoto
-        .read(create.record_id.clone())
+        .read_record(create.record_id.clone())
         .process()
         .await
         .unwrap();
@@ -88,7 +88,7 @@ async fn test_read_remote() {
     alice_kyoto.remove_remote(&osaka_url);
 
     let read = alice_kyoto
-        .read(create.record_id.clone())
+        .read_record(create.record_id.clone())
         .process()
         .await
         .unwrap();
@@ -110,7 +110,7 @@ async fn test_sync_push() {
     // Create a record in Kyoto.
     let data = "Hello from Kyoto!".bytes().collect::<Vec<_>>();
     let create = alice_kyoto
-        .create()
+        .create_record()
         .data(data.clone())
         .process()
         .await
@@ -118,7 +118,10 @@ async fn test_sync_push() {
     assert_eq!(create.reply.status.code, 200);
 
     // Osaka should not have the record yet.
-    let read = alice_osaka.read(create.record_id.clone()).process().await;
+    let read = alice_osaka
+        .read_record(create.record_id.clone())
+        .process()
+        .await;
     assert!(read.is_err());
 
     // Sync data.
@@ -126,7 +129,7 @@ async fn test_sync_push() {
 
     // Osaka should have the record now.
     let read = alice_osaka
-        .read(create.record_id.clone())
+        .read_record(create.record_id.clone())
         .process()
         .await
         .unwrap();
@@ -148,7 +151,7 @@ async fn test_sync_pull() {
     // Create a record in Osaka.
     let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
     let create = alice_osaka
-        .create()
+        .create_record()
         .data(data.clone())
         .process()
         .await
@@ -158,7 +161,7 @@ async fn test_sync_pull() {
     // Read the record in Kyoto.
     // This will store the record locally.
     let read = alice_kyoto
-        .read(create.record_id.clone())
+        .read_record(create.record_id.clone())
         .process()
         .await
         .unwrap();
@@ -168,7 +171,7 @@ async fn test_sync_pull() {
     // Update the record in Osaka.
     let new_data = "Hello again from Osaka!".bytes().collect::<Vec<_>>();
     let update = alice_osaka
-        .update(create.record_id.clone(), create.entry_id.clone())
+        .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(new_data.clone())
         .process()
         .await
@@ -177,7 +180,7 @@ async fn test_sync_pull() {
 
     // Kyoto should not have the updated record yet.
     let read = alice_kyoto
-        .read(create.record_id.clone())
+        .read_record(create.record_id.clone())
         .process()
         .await
         .unwrap();
@@ -189,7 +192,7 @@ async fn test_sync_pull() {
 
     // Kyoto should have the updated record now.
     let read = alice_kyoto
-        .read(create.record_id.clone())
+        .read_record(create.record_id.clone())
         .process()
         .await
         .unwrap();
