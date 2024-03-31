@@ -35,7 +35,7 @@ pub async fn handle_records_read(
     };
 
     let messages = message_store
-        .query(
+        .query_records(
             target.clone(),
             authorized,
             RecordsFilter {

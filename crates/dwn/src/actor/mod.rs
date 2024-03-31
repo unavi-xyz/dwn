@@ -98,7 +98,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         for message in self
             .dwn
             .message_store
-            .query(self.did.clone(), true, RecordsFilter::default())
+            .query_records(self.did.clone(), true, RecordsFilter::default())
             .await?
         {
             record_ids.insert(message.record_id);

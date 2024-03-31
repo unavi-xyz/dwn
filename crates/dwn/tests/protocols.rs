@@ -2,9 +2,12 @@ use std::sync::Arc;
 
 use dwn::{
     actor::Actor,
-    message::descriptor::protocols::{
-        Action, ActionCan, ActionWho, ProtocolDefinition, ProtocolStructure, ProtocolType,
-        ProtocolsFilter,
+    message::descriptor::{
+        protocols::{
+            Action, ActionCan, ActionWho, ProtocolDefinition, ProtocolStructure, ProtocolType,
+            ProtocolsFilter,
+        },
+        Descriptor,
     },
     store::SurrealStore,
     DWN,
@@ -42,7 +45,7 @@ async fn test_configure_protocol() {
     definition.structure.insert("test".to_string(), structure);
 
     let register = actor
-        .register_protocol(definition)
+        .register_protocol(definition.clone())
         .protocol_version("0.1.0".to_string())
         .process()
         .await
@@ -56,4 +59,16 @@ async fn test_configure_protocol() {
 
     let query = actor.query_protocols(filter).process().await.unwrap();
     assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+
+    let descriptor = match &query.entries[0].descriptor {
+        Descriptor::ProtocolsConfigure(descriptor) => descriptor,
+        _ => panic!("unexpected descriptor"),
+    };
+
+    assert_eq!(
+        descriptor.definition.as_ref().unwrap().protocol,
+        "test-protocol"
+    );
+    assert_eq!(descriptor.protocol_version, Some("0.1.0".to_string()));
 }

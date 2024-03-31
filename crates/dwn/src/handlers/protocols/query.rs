@@ -1,13 +1,12 @@
 use crate::{
-    handlers::{MessageReply, Status, StatusReply},
+    handlers::{MessageReply, QueryReply, Status},
     message::{descriptor::Descriptor, DwnRequest},
-    store::{DataStore, MessageStore},
+    store::MessageStore,
     HandleMessageError,
 };
 
 pub async fn handle_protocols_query(
-    _data_store: &impl DataStore,
-    _message_store: &impl MessageStore,
+    message_store: &impl MessageStore,
     DwnRequest { target, message }: DwnRequest,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
@@ -16,7 +15,7 @@ pub async fn handle_protocols_query(
         return Err(HandleMessageError::Unauthorized);
     }
 
-    let _descriptor = match &message.descriptor {
+    let descriptor = match message.descriptor {
         Descriptor::ProtocolsQuery(descriptor) => descriptor,
         _ => {
             return Err(HandleMessageError::InvalidDescriptor(
@@ -25,9 +24,12 @@ pub async fn handle_protocols_query(
         }
     };
 
-    // TODO: Query protocols
+    let entries = message_store
+        .query_protocols(target, authorized, descriptor.filter)
+        .await?;
 
-    Ok(StatusReply {
+    Ok(QueryReply {
+        entries,
         status: Status::ok(),
     }
     .into())

@@ -27,7 +27,7 @@ pub async fn handle_records_write(
 
     // Get messages for the record.
     let messages = message_store
-        .query(
+        .query_records(
             target.clone(),
             authorized,
             RecordsFilter {

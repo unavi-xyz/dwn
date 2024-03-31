@@ -1,6 +1,6 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{MessageReply, RecordsQueryReply},
+    handlers::{MessageReply, QueryReply},
     message::{
         descriptor::records::{RecordsFilter, RecordsQuery},
         Message,
@@ -51,11 +51,11 @@ impl<'a, D: DataStore, M: MessageStore> RecordsQueryBuilder<'a, D, M> {
         }
     }
 
-    pub async fn process(&mut self) -> Result<RecordsQueryReply, ProcessMessageError> {
+    pub async fn process(&mut self) -> Result<QueryReply, ProcessMessageError> {
         let reply = MessageBuilder::process(self).await?;
 
         let reply = match reply {
-            MessageReply::RecordsQuery(reply) => reply,
+            MessageReply::Query(reply) => reply,
             _ => return Err(ProcessMessageError::InvalidReply),
         };
 

@@ -25,7 +25,7 @@ impl Status {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum MessageReply {
-    RecordsQuery(RecordsQueryReply),
+    Query(QueryReply),
     RecordsRead(RecordsReadReply),
     Status(StatusReply),
 }
@@ -33,7 +33,7 @@ pub enum MessageReply {
 impl MessageReply {
     pub fn status(&self) -> &Status {
         match self {
-            MessageReply::RecordsQuery(reply) => &reply.status,
+            MessageReply::Query(reply) => &reply.status,
             MessageReply::RecordsRead(reply) => &reply.status,
             MessageReply::Status(reply) => &reply.status,
         }
@@ -41,7 +41,7 @@ impl MessageReply {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct RecordsQueryReply {
+pub struct QueryReply {
     pub entries: Vec<Message>,
     pub status: Status,
 }
@@ -57,9 +57,9 @@ pub struct StatusReply {
     pub status: Status,
 }
 
-impl From<RecordsQueryReply> for MessageReply {
-    fn from(reply: RecordsQueryReply) -> Self {
-        MessageReply::RecordsQuery(reply)
+impl From<QueryReply> for MessageReply {
+    fn from(reply: QueryReply) -> Self {
+        MessageReply::Query(reply)
     }
 }
 

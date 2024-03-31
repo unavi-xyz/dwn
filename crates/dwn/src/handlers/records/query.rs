@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{MessageReply, RecordsQueryReply, Status},
+    handlers::{MessageReply, QueryReply, Status},
     message::{descriptor::Descriptor, DwnRequest},
     store::MessageStore,
     HandleMessageError,
@@ -21,10 +21,10 @@ pub async fn handle_records_query(
     };
 
     let entries = message_store
-        .query(target, authorized, filter.unwrap_or_default())
+        .query_records(target, authorized, filter.unwrap_or_default())
         .await?;
 
-    Ok(RecordsQueryReply {
+    Ok(QueryReply {
         entries,
         status: Status::ok(),
     }

@@ -35,7 +35,7 @@ pub async fn handle_records_delete(
     // TODO: Ensure all immutable values from inital entry are not changed.
 
     let messages = message_store
-        .query(
+        .query_records(
             target.clone(),
             authorized,
             RecordsFilter {

@@ -94,7 +94,7 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
                 handle_protocols_configure(&self.data_store, &self.message_store, request).await
             }
             Descriptor::ProtocolsQuery(_) => {
-                handle_protocols_query(&self.data_store, &self.message_store, request).await
+                handle_protocols_query(&self.message_store, request).await
             }
 
             Descriptor::RecordsDelete(_) => {

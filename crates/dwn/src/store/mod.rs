@@ -6,7 +6,10 @@ use thiserror::Error;
 
 use crate::{
     encode::EncodeError,
-    message::{descriptor::records::RecordsFilter, DecodeError, Message},
+    message::{
+        descriptor::{protocols::ProtocolsFilter, records::RecordsFilter},
+        DecodeError, Message,
+    },
 };
 
 #[cfg(feature = "s3")]
@@ -30,10 +33,12 @@ pub enum DataStoreError {
 pub trait DataStore: Send + Sync {
     fn delete(&self, cid: String)
         -> impl Future<Output = Result<(), DataStoreError>> + Send + Sync;
+
     fn get(
         &self,
         cid: String,
     ) -> impl Future<Output = Result<Option<GetDataResults>, DataStoreError>> + Send + Sync;
+
     fn put(
         &self,
         cid: String,
@@ -51,6 +56,36 @@ pub struct GetDataResults {
 pub struct PutDataResults {
     #[serde(rename = "dataSize")]
     size: usize,
+}
+
+pub trait MessageStore: Send + Sync {
+    fn delete(
+        &self,
+        tenant: &str,
+        cid: String,
+        data_store: &impl DataStore,
+    ) -> impl Future<Output = Result<(), MessageStoreError>> + Send + Sync;
+
+    fn put(
+        &self,
+        tenant: String,
+        message: Message,
+        data_store: &impl DataStore,
+    ) -> impl Future<Output = Result<Cid, MessageStoreError>> + Send + Sync;
+
+    fn query_protocols(
+        &self,
+        tenant: String,
+        authorized: bool,
+        filter: ProtocolsFilter,
+    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
+
+    fn query_records(
+        &self,
+        tenant: String,
+        authorized: bool,
+        filter: RecordsFilter,
+    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
 }
 
 #[derive(Error, Debug)]
@@ -73,25 +108,4 @@ pub enum MessageStoreError {
     BackendError(anyhow::Error),
     #[error(transparent)]
     DataStoreError(#[from] DataStoreError),
-}
-
-pub trait MessageStore: Send + Sync {
-    fn delete(
-        &self,
-        tenant: &str,
-        cid: String,
-        data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<(), MessageStoreError>> + Send + Sync;
-    fn put(
-        &self,
-        tenant: String,
-        message: Message,
-        data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<Cid, MessageStoreError>> + Send + Sync;
-    fn query(
-        &self,
-        tenant: String,
-        authorized: bool,
-        filter: RecordsFilter,
-    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
 }

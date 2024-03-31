@@ -1,6 +1,6 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{MessageReply, StatusReply},
+    handlers::{MessageReply, QueryReply},
     message::{
         descriptor::protocols::{ProtocolsFilter, ProtocolsQuery},
         Message,
@@ -52,11 +52,11 @@ impl<'a, D: DataStore, M: MessageStore> ProtocolsQueryBuilder<'a, D, M> {
         }
     }
 
-    pub async fn process(&mut self) -> Result<StatusReply, ProcessMessageError> {
+    pub async fn process(&mut self) -> Result<QueryReply, ProcessMessageError> {
         let reply = MessageBuilder::process(self).await?;
 
         let reply = match reply {
-            MessageReply::Status(reply) => reply,
+            MessageReply::Query(reply) => reply,
             _ => return Err(ProcessMessageError::InvalidReply),
         };
 

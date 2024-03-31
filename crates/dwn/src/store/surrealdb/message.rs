@@ -12,6 +12,7 @@ use crate::{
     encode::encode_cbor,
     message::{
         descriptor::{
+            protocols::ProtocolsFilter,
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -219,7 +220,64 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         Ok(*message_cid)
     }
 
-    async fn query(
+    async fn query_protocols(
+        &self,
+        tenant: String,
+        authorized: bool,
+        filter: ProtocolsFilter,
+    ) -> Result<Vec<Message>, MessageStoreError> {
+        let db = self
+            .message_db(&tenant)
+            .await
+            .map_err(MessageStoreError::BackendError)?;
+
+        let mut conditions = vec![
+            "message.descriptor.interface = 'Protocols'",
+            "message.descriptor.method = 'Configure'",
+            "message.descriptor.definition.protocol = $protocol",
+        ];
+
+        if !filter.versions.is_empty() {
+            // TODO: No worky :(
+            // conditions.push("message.descriptor.protocol_version IN $versions");
+        }
+
+        if !authorized {
+            conditions.push("message.descriptor.definition.published = true")
+        }
+
+        let condition_statement = if conditions.is_empty() {
+            "".to_string()
+        } else {
+            format!(" WHERE ({})", conditions.join(") AND ("))
+        };
+
+        let query = db
+            .query(format!(
+                "SELECT * FROM type::table($table){}",
+                condition_statement
+            ))
+            .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
+            .bind(("protocol", filter.protocol))
+            .bind(("versions", filter.versions));
+
+        let mut res = query
+            .await
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+
+        let mut db_messages: Vec<DbMessage> = res
+            .take(0)
+            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+
+        db_messages.sort_by(|a, b| a.date_created.cmp(&b.date_created));
+
+        Ok(db_messages
+            .into_iter()
+            .map(|db_message| db_message.message)
+            .collect())
+    }
+
+    async fn query_records(
         &self,
         tenant: String,
         authorized: bool,
@@ -243,7 +301,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let condition_statement = if conditions.is_empty() {
             "".to_string()
         } else {
-            format!(" WHERE {}", conditions.join(" AND "))
+            format!(" WHERE ({})", conditions.join(") AND ("))
         };
 
         let query = db
