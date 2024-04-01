@@ -1,3 +1,4 @@
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
@@ -10,6 +11,8 @@ pub struct RecordsWrite {
     interface: Interface,
     method: Method,
 
+    #[serde(rename = "contextId")]
+    pub context_id: Option<String>,
     pub data_cid: Option<String>,
     #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
     pub date_published: Option<OffsetDateTime>,
@@ -20,7 +23,7 @@ pub struct RecordsWrite {
     pub parent_id: Option<String>,
     pub protocol: Option<String>,
     #[serde(rename = "protocolVersion")]
-    pub protocol_version: Option<String>,
+    pub protocol_version: Option<Version>,
     pub published: Option<bool>,
     pub schema: Option<String>,
 }
@@ -43,6 +46,7 @@ impl Default for RecordsWrite {
             interface: Interface::Records,
             method: Method::Write,
 
+            context_id: None,
             data_cid: None,
             date_published: Some(time),
             encryption: None,
@@ -53,5 +57,27 @@ impl Default for RecordsWrite {
             published: None,
             schema: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_semver_serde() {
+        let version = Version::new(1, 0, 0);
+        let json = serde_json::to_string(&version).unwrap();
+        assert_eq!(json, r#""1.0.0""#);
+
+        let write = RecordsWrite {
+            protocol_version: Some(Version::new(1, 0, 0)),
+            ..Default::default()
+        };
+
+        let json = serde_json::to_string(&write).unwrap();
+        let write: RecordsWrite = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(write.protocol_version, Some(Version::new(1, 0, 0)));
     }
 }

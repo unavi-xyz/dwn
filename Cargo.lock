@@ -1945,6 +1945,7 @@ dependencies = [
  "openssl",
  "reqwest 0.12.2",
  "rust-s3",
+ "semver",
  "serde",
  "serde_ipld_dagcbor",
  "serde_json",
