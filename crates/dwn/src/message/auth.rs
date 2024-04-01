@@ -26,7 +26,7 @@ pub struct AuthPayload {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct JWS<T> {
+pub struct Jws<T> {
     pub payload: T,
     pub signatures: Vec<SignatureEntry>,
 }

@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     encode::{encode_cbor, EncodeError},
-    message::auth::{AuthPayload, SignatureEntry, JWS},
+    message::auth::{AuthPayload, SignatureEntry, Jws},
 };
 
 use self::{auth::SignatureVerifyError, descriptor::Descriptor};
@@ -29,8 +29,8 @@ pub struct DwnRequest {
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Message {
-    pub attestation: Option<JWS<String>>,
-    pub authorization: Option<JWS<AuthPayload>>,
+    pub attestation: Option<Jws<String>>,
+    pub authorization: Option<Jws<AuthPayload>>,
     pub data: Option<Data>,
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
@@ -116,7 +116,7 @@ impl Message {
 
         let signature = didkit::ssi::jws::encode_sign(algorithm, &payload_ser, jwk)?;
 
-        let jws = JWS {
+        let jws = Jws {
             payload,
             signatures: vec![SignatureEntry {
                 protected: auth::Protected { algorithm, key_id },
@@ -139,7 +139,7 @@ impl Message {
 
         let signature = didkit::ssi::jws::encode_sign(algorithm, &payload, jwk)?;
 
-        let jws = JWS {
+        let jws = Jws {
             payload,
             signatures: vec![SignatureEntry {
                 protected: auth::Protected { algorithm, key_id },
@@ -224,7 +224,7 @@ impl Message {
 
 /// Verify the JWS signatures.
 async fn verify_jws<T>(
-    jws: &JWS<T>,
+    jws: &Jws<T>,
     payload: &[u8],
     relationship: VerificationRelationship,
 ) -> Result<(), ValidateError> {
