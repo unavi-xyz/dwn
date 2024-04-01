@@ -238,8 +238,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         ];
 
         if !filter.versions.is_empty() {
-            // TODO: No worky :(
-            // conditions.push("message.descriptor.protocol_version IN $versions");
+            conditions.push("message.descriptor.protocolVersion IN $versions");
         }
 
         if !authorized {

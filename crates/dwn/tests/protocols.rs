@@ -70,5 +70,5 @@ async fn test_configure_protocol() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, Some("0.1.0".to_string()));
+    assert_eq!(descriptor.protocol_version, "0.1.0".to_string());
 }

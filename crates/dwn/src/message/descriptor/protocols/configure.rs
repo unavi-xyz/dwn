@@ -15,8 +15,7 @@ pub struct ProtocolsConfigure {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_configuration: Option<String>,
     #[serde(rename = "protocolVersion")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub protocol_version: Option<String>,
+    pub protocol_version: String,
 }
 
 impl Default for ProtocolsConfigure {
@@ -27,7 +26,7 @@ impl Default for ProtocolsConfigure {
 
             definition: None,
             last_configuration: None,
-            protocol_version: None,
+            protocol_version: "0.0.0".to_string(),
         }
     }
 }
