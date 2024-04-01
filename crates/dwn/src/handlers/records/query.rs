@@ -7,12 +7,15 @@ use crate::{
 
 pub async fn handle_records_query(
     message_store: &impl MessageStore,
-    DwnRequest { target, message }: DwnRequest,
+    DwnRequest {
+        target,
+        mut message,
+    }: DwnRequest,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
 
-    let filter = match message.descriptor {
-        Descriptor::RecordsQuery(descriptor) => descriptor.filter,
+    let filter = match &mut message.descriptor {
+        Descriptor::RecordsQuery(descriptor) => descriptor.filter.take(),
         _ => {
             return Err(HandleMessageError::InvalidDescriptor(
                 "Not a RecordsQuery message".to_string(),
@@ -21,7 +24,12 @@ pub async fn handle_records_query(
     };
 
     let entries = message_store
-        .query_records(target, authorized, filter.unwrap_or_default())
+        .query_records(
+            target,
+            message.author().as_deref(),
+            authorized,
+            filter.unwrap_or_default(),
+        )
         .await?;
 
     Ok(QueryReply {

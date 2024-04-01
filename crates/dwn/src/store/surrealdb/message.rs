@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
@@ -7,12 +9,13 @@ use surrealdb::{
     Connection,
 };
 use time::OffsetDateTime;
+use tracing::{debug, warn};
 
 use crate::{
     encode::encode_cbor,
     message::{
         descriptor::{
-            protocols::ProtocolsFilter,
+            protocols::{ActionCan, ActionWho, ProtocolsFilter},
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -21,7 +24,7 @@ use crate::{
     store::{DataStore, MessageStore, MessageStoreError},
 };
 
-use super::SurrealStore;
+use super::{ql::Conditions, SurrealStore};
 
 const DATA_REF_TABLE: &str = "data_cid_refs";
 const MESSAGE_TABLE: &str = "messages";
@@ -205,8 +208,11 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let date_published = date_published.unwrap_or_else(OffsetDateTime::now_utc);
 
+        let author = message.author().map(|a| a.to_string());
+
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
+                author,
                 data_cid,
                 date_created,
                 date_published,
@@ -231,24 +237,23 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let mut conditions = vec![
-            "message.descriptor.interface = 'Protocols'",
-            "message.descriptor.method = 'Configure'",
-            "message.descriptor.definition.protocol = $protocol",
-        ];
+        let mut conditions = Conditions::new_and();
+        conditions.add("message.descriptor.interface = 'Protocols'".to_string());
+        conditions.add("message.descriptor.method = 'Configure'".to_string());
+        conditions.add("message.descriptor.definition.protocol = $protocol".to_string());
 
         if !filter.versions.is_empty() {
-            conditions.push("message.descriptor.protocolVersion IN $versions");
+            conditions.add("message.descriptor.protocolVersion IN $versions".to_string());
         }
 
         if !authorized {
-            conditions.push("message.descriptor.definition.published = true")
+            conditions.add("message.descriptor.definition.published = true".to_string());
         }
 
         let condition_statement = if conditions.is_empty() {
             "".to_string()
         } else {
-            format!(" WHERE ({})", conditions.join(") AND ("))
+            format!(" WHERE {}", conditions)
         };
 
         let query = db
@@ -279,6 +284,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
     async fn query_records(
         &self,
         tenant: String,
+        author: Option<&str>,
         authorized: bool,
         filter: RecordsFilter,
     ) -> Result<Vec<Message>, MessageStoreError> {
@@ -287,29 +293,136 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .await
             .map_err(MessageStoreError::BackendError)?;
 
-        let mut conditions = vec![];
+        let mut binds = HashMap::new();
+        let mut conditions = Conditions::new_and();
 
         if !authorized {
-            conditions.push("message.descriptor.published = true");
+            conditions.add("message.descriptor.published = true".to_string());
         }
 
-        if filter.record_id.is_some() {
-            conditions.push("record_id = $record_id");
+        if let Some(protocol) = &filter.protocol {
+            binds.insert("protocol".to_string(), protocol.to_string());
+            conditions.add("message.descriptor.protocol = $protocol".to_string());
+
+            // Get protocol.
+            let mut versions = Vec::new();
+
+            if let Some(protocol_version) = &filter.protocol_version {
+                versions.push(protocol_version.clone());
+            }
+
+            let protocols = self
+                .query_protocols(
+                    tenant.clone(),
+                    authorized,
+                    ProtocolsFilter {
+                        protocol: protocol.clone(),
+                        versions,
+                    },
+                )
+                .await?;
+
+            if let Some(protocol) = protocols.first() {
+                let descriptor = match &protocol.descriptor {
+                    Descriptor::ProtocolsConfigure(desc) => desc,
+                    _ => return Err(MessageStoreError::BackendError(anyhow!("Invalid protocol"))),
+                };
+
+                if let Some(definition) = &descriptor.definition {
+                    // Enforce protocol read rules.
+                    let mut who = vec![ActionWho::Anyone];
+
+                    if authorized {
+                        who.push(ActionWho::Recipient);
+                    }
+
+                    let mut protocol_conditions = Conditions::new_or();
+
+                    for (i, (key, structure)) in definition.structure.iter().enumerate() {
+                        let mut read_conditions = Conditions::new_and();
+
+                        for action in &structure.actions {
+                            if action.can != ActionCan::Read {
+                                continue;
+                            }
+
+                            if let Some(of) = &action.of {
+                                // TODO: Support 'of' parent structure key
+                                // Will need to traverse up contextId?
+                                if of != key {
+                                    warn!("Read action currently unsupported: {:?}", action);
+                                    continue;
+                                }
+                            }
+
+                            if action.who == ActionWho::Author {
+                                let mut author_conditions = Conditions::new_or();
+
+                                if let Some(author) = &author {
+                                    let bind = format!("protocol_structure_author_{}", i);
+                                    binds.insert(bind.clone(), author.to_string());
+
+                                    author_conditions.add(format!("author = ${}", bind));
+                                }
+
+                                if authorized {
+                                    binds.insert("tenant".to_string(), tenant.clone());
+                                    author_conditions.add("author = $tenant".to_string());
+                                }
+
+                                read_conditions.add(author_conditions.to_string());
+                            } else if who.contains(&action.who) {
+                                read_conditions.add("true".to_string());
+                            }
+                        }
+
+                        let mut structure_conditions = Conditions::new_and();
+
+                        let bind = format!("protocol_structure_{}", i);
+                        binds.insert(bind.clone(), key.clone());
+                        let eq = if read_conditions.is_empty() {
+                            "!=".to_string()
+                        } else {
+                            "=".to_string()
+                        };
+                        structure_conditions
+                            .add(format!("message.descriptor.protocolPath {} ${}", eq, bind));
+                        structure_conditions.add(read_conditions.to_string());
+
+                        protocol_conditions.add(structure_conditions.to_string());
+                    }
+
+                    conditions.add(protocol_conditions.to_string());
+                }
+            }
+        }
+
+        if let Some(protocol_version) = filter.protocol_version {
+            binds.insert("protocol_version".to_string(), protocol_version.to_string());
+            conditions.add("message.descriptor.protocolVersion = $protocol_version".to_string());
+        }
+
+        if let Some(record_id) = filter.record_id {
+            binds.insert("record_id".to_string(), record_id.to_string());
+            conditions.add("record_id = $record_id".to_string());
         }
 
         let condition_statement = if conditions.is_empty() {
             "".to_string()
         } else {
-            format!(" WHERE ({})", conditions.join(") AND ("))
+            format!(" WHERE {}", conditions)
         };
 
-        let query = db
-            .query(format!(
-                "SELECT * FROM type::table($table){}",
-                condition_statement
-            ))
-            .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
-            .bind(("record_id", filter.record_id));
+        let query_string = format!("SELECT * FROM type::table($table){}", condition_statement);
+        debug!("Querying records: {}", query_string);
+
+        let mut query = db
+            .query(query_string)
+            .bind(("table", Table::from(MESSAGE_TABLE.to_string())));
+
+        for (key, value) in binds {
+            query = query.bind((key, value));
+        }
 
         let mut res = query
             .await
@@ -352,6 +465,7 @@ struct DbDataCidRefs {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
+    author: Option<String>,
     data_cid: Option<String>,
     date_created: OffsetDateTime,
     date_published: OffsetDateTime,

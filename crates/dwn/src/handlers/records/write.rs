@@ -37,6 +37,7 @@ pub async fn handle_records_write(
     let messages = message_store
         .query_records(
             target.clone(),
+            None,
             authorized,
             RecordsFilter {
                 record_id: Some(message.record_id.clone()),
@@ -64,7 +65,7 @@ pub async fn handle_records_write(
         || descriptor.protocol_path.is_some()
         || descriptor.protocol_version.is_some()
     {
-        let context_id =
+        let _context_id =
             message
                 .context_id
                 .as_ref()
@@ -172,6 +173,8 @@ pub async fn handle_records_write(
                 ));
             }
         }
+
+        // TODO: Validate context id
     }
 
     let entry_id = message.entry_id()?;

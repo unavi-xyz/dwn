@@ -83,6 +83,7 @@ pub trait MessageStore: Send + Sync {
     fn query_records(
         &self,
         tenant: String,
+        author: Option<&str>,
         authorized: bool,
         filter: RecordsFilter,
     ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;

@@ -37,6 +37,7 @@ pub async fn handle_records_delete(
     let messages = message_store
         .query_records(
             target.clone(),
+            None,
             authorized,
             RecordsFilter {
                 record_id: Some(descriptor.record_id.clone()),

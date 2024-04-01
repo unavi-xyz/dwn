@@ -7,6 +7,7 @@ use surrealdb::{
 
 pub mod data;
 pub mod message;
+mod ql;
 
 pub struct SurrealStore<T: Connection> {
     pub db: Surreal<T>,

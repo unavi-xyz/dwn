@@ -132,6 +132,16 @@ impl Message {
         Ok(())
     }
 
+    /// Returns the author of the message.
+    /// The author is the key used in the authorization JWS.
+    pub fn author(&self) -> Option<String> {
+        self.authorization
+            .as_ref()
+            .and_then(|jws| jws.signatures.first())
+            .and_then(|entry| DIDURL::from_str(&entry.protected.key_id).ok())
+            .map(|did_url| did_url.did)
+    }
+
     pub fn entry_id(&self) -> Result<String, EncodeError> {
         EntryIdGenerator::generate(&self.descriptor)
     }

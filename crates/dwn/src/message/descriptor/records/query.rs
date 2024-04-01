@@ -1,4 +1,5 @@
 use iana_media_types::MediaType;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
@@ -53,7 +54,7 @@ pub struct RecordsFilter {
     pub parent_id: Option<String>,
     pub protocol: Option<String>,
     #[serde(rename = "protocolVersion")]
-    pub protocol_version: Option<String>,
+    pub protocol_version: Option<Version>,
     pub recipient: Option<String>,
     #[serde(rename = "recordId")]
     pub record_id: Option<String>,
