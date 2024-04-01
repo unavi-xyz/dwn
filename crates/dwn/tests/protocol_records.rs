@@ -299,3 +299,84 @@ async fn test_author_read() {
     assert_eq!(query.status.code, 200);
     assert_eq!(query.entries.len(), 0);
 }
+
+#[tokio::test]
+#[traced_test]
+async fn test_anyone_write_recipient_read() {
+    let store = SurrealStore::new().await.unwrap();
+    let dwn = Arc::new(DWN::from(store));
+
+    let alice = Actor::new_did_key(dwn.clone()).unwrap();
+    let bob = Actor::new_did_key(dwn).unwrap();
+
+    // Bob registers protocol.
+    let mut definition = chat_protocol();
+    let actions = &mut definition.structure.get_mut(STRUCTURE).unwrap().actions;
+
+    actions.push(Action {
+        who: ActionWho::Anyone,
+        of: Some(STRUCTURE.to_string()),
+        can: ActionCan::Write,
+    });
+
+    actions.push(Action {
+        who: ActionWho::Recipient,
+        of: Some(STRUCTURE.to_string()),
+        can: ActionCan::Read,
+    });
+
+    let register = bob
+        .register_protocol(definition.clone())
+        .protocol_version(Version::new(0, 1, 0))
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(register.status.code, 200);
+
+    // Alice creates a chat for Bob.
+    let data = "Hello Bob.".as_bytes().to_vec();
+    let record = alice
+        .create_record()
+        .data(data.clone())
+        .data_format(MediaType::Application(Application::Json))
+        .protocol(
+            PROTOCOL.to_string(),
+            Version::new(0, 1, 0),
+            STRUCTURE.to_string(),
+        )
+        .target(bob.did.clone())
+        .published(true)
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(record.reply.status.code, 200);
+
+    // Alice cannot read chats.
+    let filter = RecordsFilter {
+        protocol: Some(PROTOCOL.to_string()),
+        protocol_version: Some(Version::new(0, 1, 0)),
+        ..Default::default()
+    };
+    let query = alice
+        .query_records(filter.clone())
+        .target(bob.did.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 0);
+
+    // Bob can read his chat.
+    let query = bob.query_records(filter.clone()).process().await.unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+
+    let entry = query.entries.first().unwrap();
+    let read = bob
+        .read_record(entry.record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
+}

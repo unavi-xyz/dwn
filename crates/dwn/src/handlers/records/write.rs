@@ -3,7 +3,7 @@ use crate::{
     handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{
-            protocols::ProtocolsFilter,
+            protocols::{ActionCan, ActionWho, ProtocolsFilter},
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -19,10 +19,6 @@ pub async fn handle_records_write(
     DwnRequest { target, message }: DwnRequest,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
-
-    if !authorized {
-        return Err(HandleMessageError::Unauthorized);
-    }
 
     let descriptor = match &message.descriptor {
         Descriptor::RecordsWrite(descriptor) => descriptor,
@@ -60,6 +56,8 @@ pub async fn handle_records_write(
     }
 
     // Validate protocol rules.
+    let mut can_write = authorized;
+
     if message.context_id.is_some()
         || descriptor.protocol.is_some()
         || descriptor.protocol_path.is_some()
@@ -129,13 +127,9 @@ pub async fn handle_records_write(
         )?;
 
         // Get structure from definition.
-        let _structure = definition.structure.get(protocol_path).ok_or(
+        let structure = definition.structure.get(protocol_path).ok_or(
             HandleMessageError::InvalidDescriptor("Protocol path not found".to_string()),
         )?;
-
-        // Ensure write permissions.
-        // TODO: support anyone write
-        // TODO: Support 'of'
 
         // Get type from definition.
         let structure_type =
@@ -169,7 +163,27 @@ pub async fn handle_records_write(
             }
         }
 
+        // Ensure write permissions.
+
+        // TODO: Support 'of'
         // TODO: Validate context id
+
+        if !can_write {
+            for action in &structure.actions {
+                if action.can != ActionCan::Write {
+                    continue;
+                }
+
+                if action.who == ActionWho::Anyone {
+                    can_write = true;
+                    break;
+                }
+            }
+        };
+    }
+
+    if !can_write {
+        return Err(HandleMessageError::Unauthorized);
     }
 
     let entry_id = message.entry_id()?;
