@@ -53,7 +53,7 @@ async fn test_configure_protocol() {
     assert_eq!(register.status.code, 200);
 
     let filter = ProtocolsFilter {
-        protocol: "test-protocol".to_string(),
+        protocol: definition.protocol.clone(),
         versions: vec!["0.1.0".to_string()],
     };
 
@@ -68,7 +68,7 @@ async fn test_configure_protocol() {
 
     assert_eq!(
         descriptor.definition.as_ref().unwrap().protocol,
-        "test-protocol"
+        definition.protocol
     );
     assert_eq!(descriptor.protocol_version, Some("0.1.0".to_string()));
 }

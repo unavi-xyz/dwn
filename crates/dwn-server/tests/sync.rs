@@ -28,7 +28,11 @@ async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
         let listener = TcpListener::bind(url).await.unwrap();
         axum::serve(listener, router).await.unwrap();
     });
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+    // Wait for the server to start.
+    while port_scanner::scan_port(port) {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
 
     // Create another DWN.
     let store_kyoto = SurrealStore::new().await.unwrap();
