@@ -41,6 +41,7 @@ pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     signed: bool,
     target: Option<String>,
 
+    final_context_id: Option<String>,
     final_entry_id: String,
     final_record_id: String,
 }
@@ -67,6 +68,7 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
     }
 
     fn post_build(&mut self, message: &mut Message) -> Result<(), PrepareError> {
+        self.final_context_id = message.context_id.clone();
         self.final_entry_id = message.entry_id()?;
         self.final_record_id = message.record_id.clone();
         Ok(())
@@ -126,6 +128,7 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
                 .take()
                 .map(|id| format!("{}/", id))
                 .unwrap_or_default();
+
             msg.context_id = Some(format!("{}{}", parent_context_id, msg.record_id));
         }
 
@@ -159,6 +162,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             signed: true,
             target: None,
 
+            final_context_id: None,
             final_entry_id: String::new(),
             final_record_id: String::new(),
         }
@@ -233,6 +237,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         };
 
         Ok(WriteResponse {
+            context_id: self.final_context_id,
             entry_id: self.final_entry_id,
             record_id: self.final_record_id,
             reply,
@@ -240,7 +245,9 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
     }
 }
 
+#[derive(Debug)]
 pub struct WriteResponse {
+    pub context_id: Option<String>,
     pub entry_id: String,
     pub record_id: String,
     pub reply: StatusReply,

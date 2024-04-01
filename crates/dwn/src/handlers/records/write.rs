@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use crate::{
     encode::encode_cbor,
     handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{
-            protocols::{ActionCan, ActionWho, ProtocolsFilter},
+            protocols::{ActionCan, ActionWho, ProtocolStructure, ProtocolsFilter},
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -63,7 +65,7 @@ pub async fn handle_records_write(
         || descriptor.protocol_path.is_some()
         || descriptor.protocol_version.is_some()
     {
-        let _context_id =
+        let context_id =
             message
                 .context_id
                 .as_ref()
@@ -127,9 +129,10 @@ pub async fn handle_records_write(
         )?;
 
         // Get structure from definition.
-        let structure = definition.structure.get(protocol_path).ok_or(
-            HandleMessageError::InvalidDescriptor("Protocol path not found".to_string()),
-        )?;
+        let (structure, structure_parents) =
+            find_protocol_path(&definition.structure, protocol_path).ok_or(
+                HandleMessageError::InvalidDescriptor("Protocol structure not found".to_string()),
+            )?;
 
         // Get type from definition.
         let structure_type =
@@ -163,23 +166,109 @@ pub async fn handle_records_write(
             }
         }
 
-        // Ensure write permissions.
+        let mut context = Vec::new();
 
-        // TODO: Support 'of'
-        // TODO: Validate context id
+        let mut context_ids = context_id.split('/').collect::<Vec<_>>();
+        context_ids.pop();
 
-        if !can_write {
-            for action in &structure.actions {
-                if action.can != ActionCan::Write {
-                    continue;
-                }
+        if context_ids.len() != structure_parents.len() {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Context id does not match protocol path".to_string(),
+            ));
+        }
 
-                if action.who == ActionWho::Anyone {
-                    can_write = true;
-                    break;
+        for (i, record_id) in context_ids.iter().enumerate() {
+            let messages = message_store
+                .query_records(
+                    target.clone(),
+                    None,
+                    authorized,
+                    RecordsFilter {
+                        record_id: Some(record_id.to_string()),
+                        date_sort: Some(FilterDateSort::CreatedDescending),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+
+            if messages.is_empty() {
+                return Err(HandleMessageError::InvalidDescriptor(
+                    "Context record not found".to_string(),
+                ));
+            }
+
+            let message = &messages[0];
+
+            // Validate that message matches the expected protocol path.
+            let expected = structure_parents[i];
+
+            let path = match &message.descriptor {
+                Descriptor::RecordsWrite(desc) => desc.protocol_path.clone(),
+                _ => None,
+            };
+
+            if path != Some(expected.to_string()) {
+                return Err(HandleMessageError::InvalidDescriptor(
+                    "Context record does not match protocol path".to_string(),
+                ));
+            }
+
+            context.push(message.clone());
+        }
+
+        // Can only write root level protocol records by default.
+        // If this is a child protocol sructure, we must meet the permission requirements.
+        if !context.is_empty() {
+            can_write = false;
+        }
+
+        let author = message.author();
+
+        // Set write permissions.
+        for action in &structure.actions {
+            if action.can != ActionCan::Write {
+                continue;
+            }
+
+            if action.who == ActionWho::Anyone {
+                can_write = true;
+                break;
+            }
+
+            let author = match author.as_deref() {
+                Some(author) => author,
+                None => continue,
+            };
+
+            if let Some(of) = &action.of {
+                // Walk up context until we find 'of'.
+                for context_msg in &context {
+                    let context_path = match context_msg.descriptor {
+                        Descriptor::RecordsWrite(ref desc) => desc.protocol_path.clone(),
+                        _ => None,
+                    };
+
+                    let path = match context_path {
+                        Some(path) => path,
+                        None => continue,
+                    };
+
+                    if path == of.as_str() {
+                        // Found 'of'.
+                        can_write = match action.who {
+                            ActionWho::Author => match context_msg.author().as_deref() {
+                                Some(context_msg_author) => author == context_msg_author,
+                                None => false,
+                            },
+                            ActionWho::Recipient => author == target,
+                            ActionWho::Anyone => unreachable!(),
+                        };
+
+                        break;
+                    }
                 }
             }
-        };
+        }
     }
 
     if !can_write {
@@ -285,4 +374,22 @@ pub async fn handle_records_write(
         status: Status::ok(),
     }
     .into())
+}
+
+fn find_protocol_path<'a>(
+    map: &'a HashMap<String, ProtocolStructure>,
+    protocol_path: &str,
+) -> Option<(&'a ProtocolStructure, Vec<&'a str>)> {
+    for (key, value) in map {
+        if key == protocol_path {
+            return Some((value, Vec::new()));
+        }
+
+        if let Some((found, mut parents)) = find_protocol_path(&value.children, protocol_path) {
+            parents.push(key.as_str());
+            return Some((found, parents));
+        }
+    }
+
+    None
 }
