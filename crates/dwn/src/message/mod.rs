@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     encode::{encode_cbor, EncodeError},
-    message::auth::{AuthPayload, SignatureEntry, Jws},
+    message::auth::{AuthPayload, Jws, SignatureEntry},
 };
 
 use self::{auth::SignatureVerifyError, descriptor::Descriptor};
