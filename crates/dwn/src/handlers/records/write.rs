@@ -3,7 +3,7 @@ use crate::{
     handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{
-            protocols::{ActionCan, ActionWho, ProtocolsFilter},
+            protocols::ProtocolsFilter,
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -129,18 +129,13 @@ pub async fn handle_records_write(
         )?;
 
         // Get structure from definition.
-        let structure = definition.structure.get(protocol_path).ok_or(
+        let _structure = definition.structure.get(protocol_path).ok_or(
             HandleMessageError::InvalidDescriptor("Protocol path not found".to_string()),
         )?;
 
         // Ensure write permissions.
-        if !structure.actions.iter().any(|a| {
-            a.can == ActionCan::Write
-                && (a.who == ActionWho::Anyone
-                    || (a.who == ActionWho::Author && a.of == Some(protocol_path.clone())))
-        }) {
-            return Err(HandleMessageError::Unauthorized);
-        }
+        // TODO: support anyone write
+        // TODO: Support 'of'
 
         // Get type from definition.
         let structure_type =
