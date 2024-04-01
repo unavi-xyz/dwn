@@ -45,7 +45,7 @@ async fn test_publish() {
 
     // The record can only be queried with authorization.
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
@@ -56,7 +56,7 @@ async fn test_publish() {
     assert_eq!(query.entries.len(), 1);
 
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
@@ -98,7 +98,7 @@ async fn test_publish() {
 
     // Can query with or without authorization.
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
@@ -110,7 +110,7 @@ async fn test_publish() {
     assert_eq!(query.entries[0].record_id, record_id.clone());
 
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })

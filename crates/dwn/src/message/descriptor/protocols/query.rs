@@ -1,3 +1,4 @@
+use semver::Version;
 use serde::{Deserialize, Serialize};
 
 use crate::message::descriptor::{Interface, Method};
@@ -23,5 +24,5 @@ impl ProtocolsQuery {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolsFilter {
     pub protocol: String,
-    pub versions: Vec<String>,
+    pub versions: Vec<Version>,
 }

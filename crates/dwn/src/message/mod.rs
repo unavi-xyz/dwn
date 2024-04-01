@@ -31,6 +31,8 @@ pub struct DwnRequest {
 pub struct Message {
     pub attestation: Option<Jws<String>>,
     pub authorization: Option<Jws<AuthPayload>>,
+    #[serde(rename = "contextId")]
+    pub context_id: Option<String>,
     pub data: Option<Data>,
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]
@@ -90,6 +92,7 @@ impl Message {
         Self {
             attestation: None,
             authorization: None,
+            context_id: None,
             data: None,
             descriptor: descriptor.into(),
             record_id: "".to_string(),
@@ -265,6 +268,7 @@ mod tests {
         let message = Message {
             attestation: None,
             authorization: None,
+            context_id: None,
             data: Some(Data::Base64("hello".to_string())),
             descriptor: Descriptor::RecordsWrite(Default::default()),
             record_id: "world".to_string(),

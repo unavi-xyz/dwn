@@ -40,7 +40,7 @@ async fn test_records() {
 
     // Query the record.
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
@@ -61,7 +61,7 @@ async fn test_records() {
 
     // Query the deleted record.
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })
@@ -137,7 +137,7 @@ async fn test_records() {
     // Query the record.
     // Only the most recent update message should be returned.
     let query = actor
-        .query_record(RecordsFilter {
+        .query_records(RecordsFilter {
             record_id: Some(record_id.clone()),
             ..Default::default()
         })

@@ -3,6 +3,7 @@ use crate::{
     handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{
+            protocols::{ActionCan, ActionWho, ProtocolsFilter},
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -23,7 +24,14 @@ pub async fn handle_records_write(
         return Err(HandleMessageError::Unauthorized);
     }
 
-    let entry_id = message.entry_id()?;
+    let descriptor = match &message.descriptor {
+        Descriptor::RecordsWrite(descriptor) => descriptor,
+        _ => {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Not a RecordsWrite message".to_string(),
+            ))
+        }
+    };
 
     // Get messages for the record.
     let messages = message_store
@@ -40,6 +48,134 @@ pub async fn handle_records_write(
 
     let initial_entry = messages.last();
 
+    let mut checkpoint_entry = messages
+        .iter()
+        .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)));
+
+    if let Some(initial_entry) = initial_entry {
+        if checkpoint_entry.is_none() {
+            checkpoint_entry = Some(initial_entry);
+        }
+    }
+
+    // Validate protocol rules.
+    if message.context_id.is_some()
+        || descriptor.protocol.is_some()
+        || descriptor.protocol_path.is_some()
+        || descriptor.protocol_version.is_some()
+    {
+        let context_id =
+            message
+                .context_id
+                .as_ref()
+                .ok_or(HandleMessageError::InvalidDescriptor(
+                    "No context id".to_string(),
+                ))?;
+
+        let protocol =
+            descriptor
+                .protocol
+                .as_ref()
+                .ok_or(HandleMessageError::InvalidDescriptor(
+                    "No protocol".to_string(),
+                ))?;
+
+        let protocol_path =
+            descriptor
+                .protocol_path
+                .as_ref()
+                .ok_or(HandleMessageError::InvalidDescriptor(
+                    "No protocol path".to_string(),
+                ))?;
+
+        let protocol_version =
+            descriptor
+                .protocol_version
+                .as_ref()
+                .ok_or(HandleMessageError::InvalidDescriptor(
+                    "No protocol version".to_string(),
+                ))?;
+
+        // Get protocol from message store.
+        let protocols = message_store
+            .query_protocols(
+                target.clone(),
+                authorized,
+                ProtocolsFilter {
+                    protocol: protocol.clone(),
+                    versions: vec![protocol_version.clone()],
+                },
+            )
+            .await?;
+
+        let protocol = protocols
+            .first()
+            .ok_or(HandleMessageError::InvalidDescriptor(
+                "Protocol not found".to_string(),
+            ))?;
+
+        let protocol_descriptor = match &protocol.descriptor {
+            Descriptor::ProtocolsConfigure(descriptor) => descriptor,
+            _ => {
+                return Err(HandleMessageError::InvalidDescriptor(
+                    "Invalid protocol descriptor".to_string(),
+                ))
+            }
+        };
+
+        let definition = protocol_descriptor.definition.as_ref().ok_or(
+            HandleMessageError::InvalidDescriptor("No protocol definition".to_string()),
+        )?;
+
+        // Get structure from definition.
+        let structure = definition.structure.get(protocol_path).ok_or(
+            HandleMessageError::InvalidDescriptor("Protocol path not found".to_string()),
+        )?;
+
+        // Ensure write permissions.
+        if !structure.actions.iter().any(|a| {
+            a.can == ActionCan::Write
+                && (a.who == ActionWho::Anyone
+                    || (a.who == ActionWho::Author && a.of == Some(protocol_path.clone())))
+        }) {
+            return Err(HandleMessageError::Unauthorized);
+        }
+
+        // Get type from definition.
+        let structure_type =
+            definition
+                .types
+                .get(protocol_path)
+                .ok_or(HandleMessageError::InvalidDescriptor(
+                    "Protocol type not found".to_string(),
+                ))?;
+
+        // Ensure data format matches.
+        let data_format = match descriptor.data_format.clone() {
+            Some(data_format) => Some(data_format),
+            None => messages.iter().find_map(|m| match &m.descriptor {
+                Descriptor::RecordsWrite(desc) => desc.data_format.clone(),
+                _ => None,
+            }),
+        };
+
+        if !structure_type.data_format.is_empty() {
+            if let Some(data_format) = data_format {
+                if !structure_type.data_format.contains(&data_format) {
+                    return Err(HandleMessageError::InvalidDescriptor(
+                        "Data format does not match protocol type".to_string(),
+                    ));
+                }
+            } else {
+                return Err(HandleMessageError::InvalidDescriptor(
+                    "No data format".to_string(),
+                ));
+            }
+        }
+    }
+
+    let entry_id = message.entry_id()?;
+
     if entry_id == message.record_id {
         if initial_entry.is_some() {
             // Initial entry already exists, cease processing.
@@ -54,18 +190,9 @@ pub async fn handle_records_write(
             .put(target.clone(), message, data_store)
             .await?;
     } else {
-        let initial_entry = initial_entry.ok_or(HandleMessageError::InvalidDescriptor(
-            "Initial entry not found".to_string(),
+        let checkpoint_entry = checkpoint_entry.ok_or(HandleMessageError::InvalidDescriptor(
+            "Checkpoint entry not found".to_string(),
         ))?;
-
-        let descriptor = match &message.descriptor {
-            Descriptor::RecordsWrite(descriptor) => descriptor,
-            _ => {
-                return Err(HandleMessageError::InvalidDescriptor(
-                    "Not a RecordsWrite message".to_string(),
-                ))
-            }
-        };
 
         let parent_id =
             descriptor
@@ -76,11 +203,6 @@ pub async fn handle_records_write(
                 ))?;
 
         // TODO: Ensure immutable values remain unchanged.
-
-        let checkpoint_entry = messages
-            .iter()
-            .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
-            .unwrap_or(initial_entry);
 
         let checkpoint_entry_id = checkpoint_entry.entry_id()?;
 

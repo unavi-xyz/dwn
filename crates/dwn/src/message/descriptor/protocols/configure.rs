@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use iana_media_types::MediaType;
+use semver::Version;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::message::descriptor::{Interface, Method};
@@ -15,7 +17,7 @@ pub struct ProtocolsConfigure {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_configuration: Option<String>,
     #[serde(rename = "protocolVersion")]
-    pub protocol_version: String,
+    pub protocol_version: Version,
 }
 
 impl Default for ProtocolsConfigure {
@@ -26,7 +28,7 @@ impl Default for ProtocolsConfigure {
 
             definition: None,
             last_configuration: None,
-            protocol_version: "0.0.0".to_string(),
+            protocol_version: Version::new(0, 0, 0),
         }
     }
 }
@@ -35,14 +37,14 @@ impl Default for ProtocolsConfigure {
 pub struct ProtocolDefinition {
     pub protocol: String,
     pub published: bool,
-    pub types: HashMap<String, ProtocolType>,
+    pub types: HashMap<String, StructureType>,
     pub structure: HashMap<String, ProtocolStructure>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
-pub struct ProtocolType {
+pub struct StructureType {
     #[serde(rename = "dataFormat")]
-    pub data_format: Vec<String>,
+    pub data_format: Vec<MediaType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema: Option<String>,
 }

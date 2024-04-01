@@ -1,3 +1,5 @@
+use semver::Version;
+
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{MessageReply, StatusReply},
@@ -13,7 +15,7 @@ pub struct ProtocolsConfigureBuilder<'a, D: DataStore, M: MessageStore> {
     authorized: bool,
     definition: Option<ProtocolDefinition>,
     last_configuration: Option<String>,
-    protocol_version: String,
+    protocol_version: Version,
     target: Option<String>,
 }
 
@@ -55,7 +57,7 @@ impl<'a, D: DataStore, M: MessageStore> ProtocolsConfigureBuilder<'a, D, M> {
             authorized: true,
             definition,
             last_configuration: None,
-            protocol_version: "0.0.0".to_string(),
+            protocol_version: Version::new(0, 0, 0),
             target: None,
         }
     }
@@ -69,7 +71,7 @@ impl<'a, D: DataStore, M: MessageStore> ProtocolsConfigureBuilder<'a, D, M> {
 
     /// Set the protocol version to be configured.
     /// Defaults to "0.0.0".
-    pub fn protocol_version(mut self, version: String) -> Self {
+    pub fn protocol_version(mut self, version: Version) -> Self {
         self.protocol_version = version;
         self
     }

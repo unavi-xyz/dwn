@@ -1,3 +1,4 @@
+use iana_media_types::MediaType;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
@@ -12,9 +13,8 @@ pub struct RecordsWrite {
     interface: Interface,
     method: Method,
 
-    #[serde(rename = "contextId")]
-    pub context_id: Option<String>,
     pub data_cid: Option<String>,
+    pub data_format: Option<MediaType>,
     #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
     pub date_published: Option<OffsetDateTime>,
     pub encryption: Option<Encryption>,
@@ -23,6 +23,8 @@ pub struct RecordsWrite {
     #[serde(rename = "parentId")]
     pub parent_id: Option<String>,
     pub protocol: Option<String>,
+    #[serde(rename = "protocolPath")]
+    pub protocol_path: Option<String>,
     #[serde(rename = "protocolVersion")]
     pub protocol_version: Option<Version>,
     pub published: Option<bool>,
@@ -47,13 +49,14 @@ impl Default for RecordsWrite {
             interface: Interface::Records,
             method: Method::Write,
 
-            context_id: None,
             data_cid: None,
+            data_format: None,
             date_published: Some(time),
             encryption: None,
             message_timestamp: time,
             parent_id: None,
             protocol: None,
+            protocol_path: None,
             protocol_version: None,
             published: None,
             schema: None,

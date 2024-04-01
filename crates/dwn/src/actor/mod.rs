@@ -194,7 +194,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         RecordsDeleteBuilder::new(self, record_id)
     }
 
-    pub fn query_record(&self, filter: RecordsFilter) -> RecordsQueryBuilder<D, M> {
+    pub fn query_records(&self, filter: RecordsFilter) -> RecordsQueryBuilder<D, M> {
         RecordsQueryBuilder::new(self, filter)
     }
 
@@ -202,8 +202,12 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         RecordsReadBuilder::new(self, record_id)
     }
 
-    pub fn update_record(&self, record_id: String, parent_id: String) -> RecordsWriteBuilder<D, M> {
-        RecordsWriteBuilder::new_update(self, record_id, parent_id)
+    pub fn update_record(
+        &self,
+        record_id: String,
+        parent_entry_id: String,
+    ) -> RecordsWriteBuilder<D, M> {
+        RecordsWriteBuilder::new_update(self, record_id, parent_entry_id)
     }
 
     pub fn register_protocol(

@@ -1,5 +1,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use iana_media_types::MediaType;
 use openssl::{error::ErrorStack, rand::rand_bytes};
+use semver::Version;
 use time::OffsetDateTime;
 
 use crate::{
@@ -26,10 +28,16 @@ pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
     authorized: bool,
     data: Option<Vec<u8>>,
+    data_format: Option<MediaType>,
     encryption: Option<&'a Encryption>,
+    parent_context_id: Option<String>,
     parent_id: Option<String>,
-    published: bool,
+    protocol: Option<String>,
+    protocol_path: Option<String>,
+    protocol_version: Option<Version>,
+    published: Option<bool>,
     record_id: Option<String>,
+    schema: Option<String>,
     signed: bool,
     target: Option<String>,
 
@@ -66,9 +74,18 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
 
     fn create_message(&mut self) -> Result<Message, PrepareError> {
         let mut descriptor = RecordsWrite::default();
+        descriptor.data_format = self.data_format.take();
         descriptor.message_timestamp = OffsetDateTime::now_utc();
         descriptor.parent_id = self.parent_id.take();
-        descriptor.published = Some(self.published);
+        descriptor.protocol = self.protocol.take();
+        descriptor.protocol_path = self.protocol_path.take();
+        descriptor.protocol_version = self.protocol_version.take();
+        descriptor.published = self.published;
+        descriptor.schema = self.schema.take();
+
+        let has_protocol = descriptor.protocol.is_some()
+            || descriptor.protocol_path.is_some()
+            || descriptor.protocol_version.is_some();
 
         let mut data = None;
 
@@ -93,6 +110,7 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
         let mut msg = Message {
             attestation: None,
             authorization: None,
+            context_id: None,
             data,
             descriptor: descriptor.into(),
             record_id: self.record_id.take().unwrap_or_default(),
@@ -100,6 +118,15 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
 
         if msg.record_id.is_empty() {
             msg.record_id = msg.entry_id()?;
+        }
+
+        if has_protocol {
+            let parent_context_id = self
+                .parent_context_id
+                .take()
+                .map(|id| format!("{}/", id))
+                .unwrap_or_default();
+            msg.context_id = Some(format!("{}{}", parent_context_id, msg.record_id));
         }
 
         if self.signed {
@@ -119,10 +146,16 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             actor,
             authorized: true,
             data: None,
+            data_format: None,
             encryption: None,
+            parent_context_id: None,
             parent_id: None,
-            published: false,
+            protocol: None,
+            protocol_path: None,
+            protocol_version: None,
+            published: None,
             record_id: None,
+            schema: None,
             signed: true,
             target: None,
 
@@ -144,9 +177,27 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         self
     }
 
+    /// Format of the data.
+    pub fn data_format(mut self, data_format: MediaType) -> Self {
+        self.data_format = Some(data_format);
+        self
+    }
+
     /// Encryption to use on the data.
     pub fn encryption(mut self, encryption: &'a Encryption) -> Self {
         self.encryption = Some(encryption);
+        self
+    }
+
+    pub fn parent_context_id(mut self, parent_context_id: String) -> Self {
+        self.parent_context_id = Some(parent_context_id);
+        self
+    }
+
+    pub fn protocol(mut self, protocol: String, version: Version, path: String) -> Self {
+        self.protocol = Some(protocol);
+        self.protocol_version = Some(version);
+        self.protocol_path = Some(path);
         self
     }
 
@@ -154,7 +205,15 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
     /// This makes the message publicly readable.
     /// Defaults to false.
     pub fn published(mut self, published: bool) -> Self {
-        self.published = published;
+        self.published = Some(published);
+        self
+    }
+
+    /// URI of a JSON schema for the data.
+    /// All future updates to this record must conform to this schema.
+    /// Can only be set once in the first write.
+    pub fn schema(mut self, schema: String) -> Self {
+        self.schema = Some(schema);
         self
     }
 

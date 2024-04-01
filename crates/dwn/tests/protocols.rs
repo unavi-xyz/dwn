@@ -4,14 +4,16 @@ use dwn::{
     actor::Actor,
     message::descriptor::{
         protocols::{
-            Action, ActionCan, ActionWho, ProtocolDefinition, ProtocolStructure, ProtocolType,
-            ProtocolsFilter,
+            Action, ActionCan, ActionWho, ProtocolDefinition, ProtocolStructure, ProtocolsFilter,
+            StructureType,
         },
         Descriptor,
     },
     store::SurrealStore,
     DWN,
 };
+use iana_media_types::{Application, MediaType};
+use semver::Version;
 use tracing_test::traced_test;
 
 #[tokio::test]
@@ -30,8 +32,8 @@ async fn test_configure_protocol() {
 
     definition.types.insert(
         "test".to_string(),
-        ProtocolType {
-            data_format: vec!["application/json".to_string()],
+        StructureType {
+            data_format: vec![MediaType::Application(Application::Json)],
             ..Default::default()
         },
     );
@@ -46,7 +48,7 @@ async fn test_configure_protocol() {
 
     let register = actor
         .register_protocol(definition.clone())
-        .protocol_version("0.1.0".to_string())
+        .protocol_version(Version::new(0, 1, 0))
         .process()
         .await
         .unwrap();
@@ -54,7 +56,7 @@ async fn test_configure_protocol() {
 
     let filter = ProtocolsFilter {
         protocol: definition.protocol.clone(),
-        versions: vec!["0.1.0".to_string()],
+        versions: vec![Version::new(0, 1, 0)],
     };
 
     let query = actor.query_protocols(filter).process().await.unwrap();
@@ -70,7 +72,7 @@ async fn test_configure_protocol() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.1.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
 }
 
 #[tokio::test]
@@ -174,7 +176,7 @@ async fn test_protocol_version_query() {
 
     let register_1 = actor
         .register_protocol(definition.clone())
-        .protocol_version("0.1.0".to_string())
+        .protocol_version(Version::new(0, 1, 0))
         .process()
         .await
         .unwrap();
@@ -182,7 +184,7 @@ async fn test_protocol_version_query() {
 
     let register_2 = actor
         .register_protocol(definition.clone())
-        .protocol_version("0.2.0".to_string())
+        .protocol_version(Version::new(0, 2, 0))
         .process()
         .await
         .unwrap();
@@ -191,7 +193,7 @@ async fn test_protocol_version_query() {
     // Filter 0.1.0.
     let filter = ProtocolsFilter {
         protocol: definition.protocol.clone(),
-        versions: vec!["0.1.0".to_string()],
+        versions: vec![Version::new(0, 1, 0)],
     };
 
     let query = actor.query_protocols(filter).process().await.unwrap();
@@ -207,12 +209,12 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.1.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
 
     // Filter 0.2.0.
     let filter = ProtocolsFilter {
         protocol: definition.protocol.clone(),
-        versions: vec!["0.2.0".to_string()],
+        versions: vec![Version::new(0, 2, 0)],
     };
 
     let query = actor.query_protocols(filter).process().await.unwrap();
@@ -228,12 +230,12 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.2.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
 
     // Filter both.
     let filter = ProtocolsFilter {
         protocol: definition.protocol.clone(),
-        versions: vec!["0.1.0".to_string(), "0.2.0".to_string()],
+        versions: vec![Version::new(0, 1, 0), Version::new(0, 2, 0)],
     };
 
     let query = actor.query_protocols(filter).process().await.unwrap();
@@ -249,7 +251,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.1.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
 
     let descriptor = match &query.entries[1].descriptor {
         Descriptor::ProtocolsConfigure(descriptor) => descriptor,
@@ -260,7 +262,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.2.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
 
     // Filter any version.
     let filter = ProtocolsFilter {
@@ -281,7 +283,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.1.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
 
     let descriptor = match &query.entries[1].descriptor {
         Descriptor::ProtocolsConfigure(descriptor) => descriptor,
@@ -292,12 +294,12 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, "0.2.0".to_string());
+    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
 
     // Filter non-existent version.
     let filter = ProtocolsFilter {
         protocol: definition.protocol.clone(),
-        versions: vec!["0.3.0".to_string()],
+        versions: vec![Version::new(0, 3, 0)],
     };
 
     let query = actor.query_protocols(filter).process().await.unwrap();
