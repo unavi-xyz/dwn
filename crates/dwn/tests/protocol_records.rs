@@ -17,7 +17,7 @@ async fn test_author_write() {
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
-    let bob = Actor::new_did_key(dwn).unwrap();
+    let _bob = Actor::new_did_key(dwn).unwrap();
 
     // Register protocol.
     let mut definition = ProtocolDefinition {
@@ -51,7 +51,7 @@ async fn test_author_write() {
     assert_eq!(register.status.code, 200);
 
     // Create record.
-    let record = alice
+    let _record = alice
         .create_record()
         .published(true)
         .process()
