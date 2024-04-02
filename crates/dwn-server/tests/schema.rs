@@ -1,7 +1,12 @@
 use std::sync::Arc;
 
 use axum::{routing::get, Json, Router};
-use dwn::{actor::Actor, message::Data, store::SurrealStore, DWN};
+use dwn::{
+    actor::{records::Encryption, Actor},
+    message::Data,
+    store::SurrealStore,
+    DWN,
+};
 use serde_json::json;
 use tokio::net::TcpListener;
 
@@ -41,7 +46,7 @@ async fn test_records_schema() {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 
-    // Record must follow the schema.
+    // Data must follow the schema.
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 
     let create = actor
@@ -63,7 +68,7 @@ async fn test_records_schema() {
         .unwrap();
     assert_eq!(create.reply.status.code, 200);
 
-    // Updates must follow the schema.
+    // Data must follow the schema when updating.
     let data = r#"{"wrong_key": "Hello again!"}"#.bytes().collect::<Vec<_>>();
 
     let update = actor
@@ -94,6 +99,17 @@ async fn test_records_schema() {
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
         .schema("http://localhost:1234/new-schema.json".to_string())
+        .process()
+        .await;
+    assert!(update.is_err());
+
+    // Data cannot be encrypted
+    let encryption = Encryption::generate_aes256().unwrap();
+    let update = actor
+        .update_record(create.record_id.clone(), create.entry_id.clone())
+        .data(data.clone())
+        .schema(schema_url.clone())
+        .encryption(&encryption)
         .process()
         .await;
     assert!(update.is_err());
