@@ -9,7 +9,7 @@ use surrealdb::{
     Connection,
 };
 use time::OffsetDateTime;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::{
     encode::encode_cbor,
@@ -210,9 +210,28 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let author = message.author().map(|a| a.to_string());
 
+        let context = message
+            .context_id
+            .clone()
+            .map(|context_id| {
+                context_id
+                    .split('/')
+                    .rev()
+                    .skip(1)
+                    .map(|parent_id| {
+                        Thing::from((
+                            Table::from(MESSAGE_TABLE.to_string()).to_string(),
+                            Id::String(parent_id.to_string()),
+                        ))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
                 author,
+                context,
                 data_cid,
                 date_created,
                 date_published,
@@ -330,12 +349,6 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
                 if let Some(definition) = &descriptor.definition {
                     // Enforce protocol read rules.
-                    let mut who = vec![ActionWho::Anyone];
-
-                    if authorized {
-                        who.push(ActionWho::Recipient);
-                    }
-
                     let mut protocol_conditions = Conditions::new_or();
 
                     for (i, (key, structure)) in definition.structure.iter().enumerate() {
@@ -346,33 +359,42 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                                 continue;
                             }
 
+                            let mut ctx = String::new();
+
                             if let Some(of) = &action.of {
-                                // TODO: Support 'of' parent structure key
-                                // Will need to traverse up contextId?
                                 if of != key {
-                                    warn!("Read action currently unsupported: {:?}", action);
-                                    continue;
+                                    let bind = format!("protocol_structure_of_{}", i);
+                                    binds.insert(bind.clone(), of.to_string());
+
+                                    read_conditions.add(format!(
+                                        "context->message.descriptor.protocolPath = ${}",
+                                        bind
+                                    ));
+
+                                    ctx = "context->".to_string();
                                 }
                             }
 
-                            if action.who == ActionWho::Author {
-                                let mut author_conditions = Conditions::new_or();
-
-                                if let Some(author) = &author {
-                                    let bind = format!("protocol_structure_author_{}", i);
-                                    binds.insert(bind.clone(), author.to_string());
-
-                                    author_conditions.add(format!("author = ${}", bind));
+                            match action.who {
+                                ActionWho::Anyone => {
+                                    read_conditions.add("true".to_string());
                                 }
+                                ActionWho::Author => {
+                                    let mut author_conditions = Conditions::new_or();
 
-                                if authorized {
-                                    binds.insert("tenant".to_string(), tenant.clone());
-                                    author_conditions.add("author = $tenant".to_string());
+                                    if author.is_some() {
+                                        author_conditions.add(format!("{}author = $author", ctx));
+                                    }
+
+                                    if authorized {
+                                        author_conditions.add(format!("{}author = $tenant", ctx));
+                                    }
+
+                                    read_conditions.add(author_conditions.to_string());
                                 }
-
-                                read_conditions.add(author_conditions.to_string());
-                            } else if who.contains(&action.who) {
-                                read_conditions.add("true".to_string());
+                                ActionWho::Recipient => {
+                                    read_conditions.add(format!("{}tenant = $author", ctx));
+                                }
                             }
                         }
 
@@ -414,11 +436,13 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         };
 
         let query_string = format!("SELECT * FROM type::table($table){}", condition_statement);
-        debug!("Querying records: {}", query_string);
+        debug!("{}", query_string);
 
         let mut query = db
             .query(query_string)
-            .bind(("table", Table::from(MESSAGE_TABLE.to_string())));
+            .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
+            .bind(("author", author))
+            .bind(("tenant", tenant));
 
         for (key, value) in binds {
             query = query.bind((key, value));
@@ -466,6 +490,7 @@ struct DbDataCidRefs {
 #[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
     author: Option<String>,
+    context: Vec<Thing>,
     data_cid: Option<String>,
     date_created: OffsetDateTime,
     date_published: OffsetDateTime,

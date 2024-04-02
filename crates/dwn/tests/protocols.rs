@@ -77,6 +77,73 @@ async fn test_configure_protocol() {
 
 #[tokio::test]
 #[traced_test]
+async fn test_invalid_protocol() {
+    let store = SurrealStore::new().await.unwrap();
+    let dwn = Arc::new(DWN::from(store));
+
+    let alice = Actor::new_did_key(dwn.clone()).unwrap();
+
+    // Can't register Anyone Read with of.
+    let mut definition = ProtocolDefinition {
+        protocol: "test-protocol".to_string(),
+        published: true,
+        ..Default::default()
+    };
+
+    definition
+        .structure
+        .insert("test".to_string(), ProtocolStructure::default());
+
+    definition
+        .structure
+        .get_mut("test")
+        .unwrap()
+        .actions
+        .push(Action {
+            who: ActionWho::Anyone,
+            of: Some("test".to_string()),
+            can: ActionCan::Read,
+        });
+
+    let register = alice
+        .register_protocol(definition.clone())
+        .protocol_version(Version::new(0, 1, 0))
+        .process()
+        .await;
+    assert!(register.is_err());
+
+    // Can't register Anyone Write with of.
+    let mut definition = ProtocolDefinition {
+        protocol: "test-protocol".to_string(),
+        published: true,
+        ..Default::default()
+    };
+
+    definition
+        .structure
+        .insert("test".to_string(), ProtocolStructure::default());
+
+    definition
+        .structure
+        .get_mut("test")
+        .unwrap()
+        .actions
+        .push(Action {
+            who: ActionWho::Anyone,
+            of: Some("test".to_string()),
+            can: ActionCan::Write,
+        });
+
+    let register = alice
+        .register_protocol(definition.clone())
+        .protocol_version(Version::new(0, 1, 0))
+        .process()
+        .await;
+    assert!(register.is_err());
+}
+
+#[tokio::test]
+#[traced_test]
 async fn test_protocol_name_query() {
     let store = SurrealStore::new().await.unwrap();
     let dwn = Arc::new(DWN::from(store));

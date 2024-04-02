@@ -1,6 +1,9 @@
 use crate::{
     handlers::{MessageReply, Status, StatusReply},
-    message::{descriptor::Descriptor, DwnRequest},
+    message::{
+        descriptor::{protocols::ActionWho, Descriptor},
+        DwnRequest,
+    },
     store::{DataStore, MessageStore},
     HandleMessageError,
 };
@@ -22,6 +25,18 @@ pub async fn handle_protocols_configure(
             return Err(HandleMessageError::InvalidDescriptor(
                 "Not a ProtocolsConfigure message".to_string(),
             ))
+        }
+    };
+
+    if let Some(definition) = &descriptor.definition {
+        for structure in definition.structure.values() {
+            for action in &structure.actions {
+                if action.who == ActionWho::Anyone && action.of.is_some() {
+                    return Err(HandleMessageError::InvalidDescriptor(
+                        "Action 'of' is not allowed with 'Anyone'".to_string(),
+                    ));
+                };
+            }
         }
     };
 

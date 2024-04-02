@@ -119,7 +119,7 @@ async fn test_anyone_read() {
         .actions
         .push(Action {
             who: ActionWho::Anyone,
-            of: Some(STRUCTURE.to_string()),
+            of: None,
             can: ActionCan::Read,
         });
 
@@ -315,7 +315,7 @@ async fn test_anyone_write_recipient_read() {
 
     actions.push(Action {
         who: ActionWho::Anyone,
-        of: Some(STRUCTURE.to_string()),
+        of: None,
         can: ActionCan::Write,
     });
 
