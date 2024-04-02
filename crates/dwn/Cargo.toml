@@ -29,7 +29,6 @@ semver = { version = "1.0.22", features = ["serde"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_ipld_dagcbor = "0.6.0"
 serde_json.workspace = true
-serde_with = "3.4.0"
 thiserror = "1.0.57"
 time = { version = "0.3.31", features = ["serde-well-known"] }
 tracing.workspace = true

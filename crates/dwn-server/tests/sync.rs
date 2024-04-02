@@ -41,7 +41,6 @@ async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
     let alice_kyoto = Actor {
         attestation: alice_osaka.attestation.clone(),
         authorization: alice_osaka.authorization.clone(),
-        client: alice_osaka.client.clone(),
         did: alice_osaka.did.clone(),
         dwn: dwn_kyoto,
         remotes: Vec::new(),

@@ -1,33 +1,41 @@
 use iana_media_types::MediaType;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 use time::OffsetDateTime;
 
 use crate::message::descriptor::{Interface, Method};
 
 pub use semver::Version;
 
-#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsWrite {
     interface: Interface,
     method: Method,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data_cid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data_format: Option<MediaType>,
     #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub date_published: Option<OffsetDateTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub encryption: Option<Encryption>,
     #[serde(rename = "messageTimestamp", with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
     #[serde(rename = "parentId")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol: Option<String>,
     #[serde(rename = "protocolPath")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol_path: Option<String>,
     #[serde(rename = "protocolVersion")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol_version: Option<Version>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub published: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub schema: Option<String>,
 }
 

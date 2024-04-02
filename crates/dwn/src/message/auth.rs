@@ -10,18 +10,18 @@ use didkit::{
     Document, ResolutionInputMetadata, VerificationRelationship, DIDURL, DID_METHODS,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_with::skip_serializing_none;
 use thiserror::Error;
 use tracing::debug;
 
-#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AuthPayload {
     #[serde(rename = "attestationCid")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub attestation_cid: Option<String>,
     #[serde(rename = "descriptorCid")]
     pub descriptor_cid: String,
     #[serde(rename = "permissionsGrantCid")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions_grant_cid: Option<String>,
 }
 

@@ -10,8 +10,6 @@ pub enum EncodeError {
     Serde(#[from] SerdeError),
     #[error("Failed to encode block: {0}")]
     Encode(anyhow::Error),
-    #[error("Failed to decode block: {0}")]
-    Decode(anyhow::Error),
 }
 
 /// Encodes data to a DAG-CBOR block.

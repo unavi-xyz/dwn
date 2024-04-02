@@ -1,15 +1,14 @@
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 
 use crate::message::Message;
 
 pub mod protocols;
 pub mod records;
 
-#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Status {
     pub code: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
 }
 

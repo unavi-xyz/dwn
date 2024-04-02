@@ -3,7 +3,6 @@ use std::str::FromStr;
 use didkit::{VerificationRelationship, DIDURL, JWK};
 use libipld_core::error::SerdeError;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::{
@@ -26,13 +25,16 @@ pub struct DwnRequest {
     pub target: String,
 }
 
-#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Message {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub attestation: Option<Jws<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub authorization: Option<Jws<AuthPayload>>,
     #[serde(rename = "contextId")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub context_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Data>,
     pub descriptor: Descriptor,
     #[serde(rename = "recordId")]

@@ -136,6 +136,7 @@ mod tests {
 
     fn default_descriptors() -> Vec<Descriptor> {
         vec![
+            Descriptor::ProtocolsConfigure(ProtocolsConfigure::default()),
             Descriptor::RecordsDelete(RecordsDelete::default()),
             Descriptor::RecordsQuery(RecordsQuery::default()),
             Descriptor::RecordsRead(RecordsRead::default()),

@@ -69,8 +69,7 @@ pub async fn handle_records_delete(
     }
 
     // Delete all messages for the record.
-    // Except the initial entry.
-    for m in messages.iter().skip(1) {
+    for m in messages.iter() {
         let block = encode_cbor(m)?;
         message_store
             .delete(&target, block.cid().to_string(), data_store)
