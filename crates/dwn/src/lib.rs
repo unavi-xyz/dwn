@@ -51,6 +51,7 @@ use handlers::{
     MessageReply,
 };
 use message::{descriptor::Descriptor, DwnRequest, Message, ValidateError};
+use reqwest::Client;
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
@@ -64,6 +65,7 @@ pub mod store;
 pub use encode::EncodeError;
 
 pub struct DWN<D: DataStore, M: MessageStore> {
+    pub client: Client,
     pub data_store: D,
     pub message_store: M,
 }
@@ -71,6 +73,7 @@ pub struct DWN<D: DataStore, M: MessageStore> {
 impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
     fn from(store: T) -> Self {
         Self {
+            client: Client::new(),
             data_store: store.clone(),
             message_store: store,
         }
@@ -80,6 +83,7 @@ impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
 impl<D: DataStore, M: MessageStore> DWN<D, M> {
     pub fn new(data_store: D, message_store: M) -> Self {
         Self {
+            client: Client::new(),
             data_store,
             message_store,
         }
@@ -105,7 +109,8 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             }
             Descriptor::RecordsQuery(_) => handle_records_query(&self.message_store, request).await,
             Descriptor::RecordsWrite(_) => {
-                handle_records_write(&self.data_store, &self.message_store, request).await
+                handle_records_write(&self.client, &self.data_store, &self.message_store, request)
+                    .await
             }
             _ => Err(HandleMessageError::UnsupportedInterface),
         }
@@ -120,14 +125,20 @@ pub enum HandleMessageError {
     UnsupportedInterface,
     #[error(transparent)]
     ValidateError(#[from] ValidateError),
-    #[error("Invalid descriptor")]
+    #[error("Invalid descriptor: {0}")]
     InvalidDescriptor(String),
+    #[error("Failed to validate schema: {0}")]
+    SchemaValidation(String),
     #[error(transparent)]
     DataStoreError(#[from] DataStoreError),
     #[error(transparent)]
     MessageStoreError(#[from] MessageStoreError),
     #[error(transparent)]
     CborEncode(#[from] EncodeError),
+    #[error(transparent)]
+    Base64Decode(#[from] base64::DecodeError),
+    #[error(transparent)]
+    SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
     SendError(#[from] Box<SendError<Message>>),
     #[error(transparent)]

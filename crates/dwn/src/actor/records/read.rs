@@ -79,6 +79,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
 
                     let reply = self
                         .actor
+                        .dwn
                         .client
                         .post(remote.url())
                         .json(&request)

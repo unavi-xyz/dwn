@@ -2,7 +2,6 @@ use std::{collections::HashSet, sync::Arc};
 
 use didkit::JWK;
 use openssl::error::ErrorStack;
-use reqwest::Client;
 use thiserror::Error;
 
 use crate::{
@@ -40,7 +39,6 @@ use self::{
 pub struct Actor<D: DataStore, M: MessageStore> {
     pub attestation: VerifiableCredential,
     pub authorization: VerifiableCredential,
-    pub client: Client,
     pub did: String,
     pub dwn: Arc<DWN<D, M>>,
     pub remotes: Vec<Remote>,
@@ -65,7 +63,6 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
                 jwk: did_key.jwk,
                 key_id: did_key.key_id,
             },
-            client: Client::new(),
             did: did_key.did,
             dwn,
             remotes: Vec::new(),
@@ -119,6 +116,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
                 // TODO: Can RecordsRead return a delete message?
                 // TODO: Test if CRDT can handle multiple writes / deletes in remote.
                 handle_records_write(
+                    &self.dwn.client,
                     &self.dwn.data_store,
                     &self.dwn.message_store,
                     DwnRequest {
@@ -177,7 +175,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             message,
         };
 
-        self.client
+        self.dwn
+            .client
             .post(url)
             .json(&request)
             .send()

@@ -1,5 +1,11 @@
 use std::collections::HashMap;
 
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use jsonschema::JSONSchema;
+use reqwest::Client;
+use serde_json::Value;
+use tracing::debug;
+
 use crate::{
     encode::encode_cbor,
     handlers::{MessageReply, Status, StatusReply},
@@ -9,13 +15,14 @@ use crate::{
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
-        DwnRequest,
+        Data, DwnRequest,
     },
     store::{DataStore, MessageStore},
     HandleMessageError,
 };
 
 pub async fn handle_records_write(
+    client: &Client,
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
     DwnRequest { target, message }: DwnRequest,
@@ -54,6 +61,49 @@ pub async fn handle_records_write(
     if let Some(initial_entry) = initial_entry {
         if checkpoint_entry.is_none() {
             checkpoint_entry = Some(initial_entry);
+        }
+
+        // Validate schema.
+        let initial_schema = match &initial_entry.descriptor {
+            Descriptor::RecordsWrite(desc) => desc.schema.clone(),
+            _ => {
+                return Err(HandleMessageError::InvalidDescriptor(
+                    "Initial entry is not a RecordsWrite message".to_string(),
+                ))
+            }
+        };
+
+        if initial_schema != descriptor.schema {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Schema does not match initial entry".to_string(),
+            ));
+        }
+    }
+
+    // Validate data matches schema.
+    if let Some(schema_url) = &descriptor.schema {
+        if let Some(Data::Base64(data)) = &message.data {
+            debug!("Fetching schema: {}", schema_url);
+            let schema = client.get(schema_url).send().await?.json::<Value>().await?;
+            println!(
+                "Fetched schema: {}",
+                serde_json::to_string_pretty(&schema).unwrap()
+            );
+
+            let compiled = JSONSchema::compile(&schema).map_err(|_| {
+                HandleMessageError::SchemaValidation("Failed to compile schema".to_string())
+            })?;
+
+            let data = URL_SAFE_NO_PAD.decode(data)?;
+            let data = serde_json::from_slice(&data)?;
+
+            compiled.validate(&data).map_err(|_| {
+                HandleMessageError::SchemaValidation("Data does not match schema".to_string())
+            })?;
+        } else {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Can not validate schema against encrypted data".to_string(),
+            ));
         }
     }
 
