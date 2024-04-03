@@ -349,8 +349,6 @@ pub async fn handle_records_write(
                     "No parent id".to_string(),
                 ))?;
 
-        // TODO: Ensure immutable values remain unchanged.
-
         let checkpoint_entry_id = checkpoint_entry.entry_id()?;
 
         // Ensure parent id matches the latest checkpoint entry.
