@@ -65,10 +65,16 @@ pub struct RecordsFilter {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct FilterDateCreated {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub from: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub to: Option<String>,
+    #[serde(
+        with = "time::serde::rfc3339::option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub from: Option<OffsetDateTime>,
+    #[serde(
+        with = "time::serde::rfc3339::option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub to: Option<OffsetDateTime>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -97,8 +103,8 @@ mod tests {
             data_format: Some(MediaType::Application(Application::Json)),
             date_sort: Some(FilterDateSort::CreatedAscending),
             message_timestamp: Some(FilterDateCreated {
-                from: Some("2021-01-01T00:00:00Z".to_string()),
-                to: Some("2021-12-31T23:59:59Z".to_string()),
+                from: Some(OffsetDateTime::now_utc()),
+                to: Some(OffsetDateTime::now_utc()),
             }),
             parent_id: Some("z6Mk".to_string()),
             protocol: Some("https://w3id.org/did/v1".to_string()),

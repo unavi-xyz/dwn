@@ -31,8 +31,7 @@ pub struct Message {
     pub attestation: Option<Jws<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authorization: Option<Jws<AuthPayload>>,
-    #[serde(rename = "contextId")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "contextId", skip_serializing_if = "Option::is_none")]
     pub context_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Data>,

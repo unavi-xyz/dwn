@@ -8,7 +8,7 @@ use surrealdb::{
     sql::{Id, Table, Thing},
     Connection,
 };
-use time::OffsetDateTime;
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use tracing::debug;
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
     message::{
         descriptor::{
             protocols::{ActionCan, ActionWho, ProtocolsFilter},
-            records::{FilterDateSort, RecordsFilter},
+            records::{FilterDateCreated, FilterDateSort, RecordsFilter},
             Descriptor,
         },
         Data, EncryptedData, Message,
@@ -193,13 +193,13 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let record_id = message.record_id.clone();
 
-        let date_created = match &message.descriptor {
+        let message_timestamp = match &message.descriptor {
             Descriptor::RecordsDelete(desc) => Some(desc.message_timestamp),
             Descriptor::RecordsWrite(desc) => Some(desc.message_timestamp),
             _ => None,
         };
 
-        let date_created = date_created.unwrap_or_else(OffsetDateTime::now_utc);
+        let message_timestamp = message_timestamp.unwrap_or_else(OffsetDateTime::now_utc);
 
         let date_published = match &message.descriptor {
             Descriptor::RecordsWrite(desc) => desc.date_published,
@@ -233,7 +233,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 author,
                 context,
                 data_cid,
-                date_created,
+                message_timestamp,
                 date_published,
                 message,
                 record_id,
@@ -292,7 +292,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .take(0)
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
-        db_messages.sort_by(|a, b| a.date_created.cmp(&b.date_created));
+        db_messages.sort_by(|a, b| a.message_timestamp.cmp(&b.message_timestamp));
 
         Ok(db_messages
             .into_iter()
@@ -429,13 +429,48 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             conditions.add("record_id = $record_id".to_string());
         }
 
+        if let Some(FilterDateCreated { from, to }) = filter.message_timestamp {
+            if let Some(from) = from {
+                let from = from.format(&Rfc3339).map_err(|err| {
+                    MessageStoreError::BackendError(anyhow!("Failed to format date: {}", err))
+                })?;
+                binds.insert("from".to_string(), from.to_string());
+                conditions.add("message_timestamp >= $from".to_string());
+            }
+
+            if let Some(to) = to {
+                let to = to.format(&Rfc3339).map_err(|err| {
+                    MessageStoreError::BackendError(anyhow!("Failed to format date: {}", err))
+                })?;
+                binds.insert("to".to_string(), to.to_string());
+                conditions.add("message_timestamp <= $to".to_string());
+            }
+        };
+
         let condition_statement = if conditions.is_empty() {
             "".to_string()
         } else {
             format!(" WHERE {}", conditions)
         };
 
-        let query_string = format!("SELECT * FROM type::table($table){}", condition_statement);
+        let sort = match filter.date_sort {
+            Some(FilterDateSort::CreatedAscending) => "message_timestamp ASC".to_string(),
+            Some(FilterDateSort::CreatedDescending) => "message_timestamp DESC".to_string(),
+            Some(FilterDateSort::PublishedAscending) => "date_published ASC".to_string(),
+            Some(FilterDateSort::PublishedDescending) => "date_published DESC".to_string(),
+            None => "".to_string(),
+        };
+
+        let sort = if sort.is_empty() {
+            "".to_string()
+        } else {
+            format!(" ORDER BY {}", sort)
+        };
+
+        let query_string = format!(
+            "SELECT * FROM type::table($table){}{}",
+            condition_statement, sort
+        );
         debug!("{}", query_string);
 
         let mut query = db
@@ -452,28 +487,9 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .await
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
 
-        let mut db_messages: Vec<DbMessage> = res
+        let db_messages: Vec<DbMessage> = res
             .take(0)
             .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
-
-        // TODO: Sort in query
-
-        if let Some(sort) = filter.date_sort {
-            match sort {
-                FilterDateSort::CreatedAscending => {
-                    db_messages.sort_by(|a, b| a.date_created.cmp(&b.date_created));
-                }
-                FilterDateSort::CreatedDescending => {
-                    db_messages.sort_by(|a, b| b.date_created.cmp(&a.date_created));
-                }
-                FilterDateSort::PublishedAscending => {
-                    db_messages.sort_by(|a, b| a.date_published.cmp(&b.date_published));
-                }
-                FilterDateSort::PublishedDescending => {
-                    db_messages.sort_by(|a, b| b.date_published.cmp(&a.date_published));
-                }
-            }
-        }
 
         Ok(db_messages
             .into_iter()
@@ -492,9 +508,11 @@ struct DbMessage {
     author: Option<String>,
     context: Vec<Thing>,
     data_cid: Option<String>,
-    date_created: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     date_published: OffsetDateTime,
     message: Message,
+    #[serde(with = "time::serde::rfc3339")]
+    message_timestamp: OffsetDateTime,
     record_id: String,
     tenant: String,
 }

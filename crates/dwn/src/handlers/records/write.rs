@@ -85,10 +85,6 @@ pub async fn handle_records_write(
         if let Some(Data::Base64(data)) = &message.data {
             debug!("Fetching schema: {}", schema_url);
             let schema = client.get(schema_url).send().await?.json::<Value>().await?;
-            println!(
-                "Fetched schema: {}",
-                serde_json::to_string_pretty(&schema).unwrap()
-            );
 
             let compiled = JSONSchema::compile(&schema).map_err(|_| {
                 HandleMessageError::SchemaValidation("Failed to compile schema".to_string())
