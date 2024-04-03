@@ -3,6 +3,7 @@ use std::{collections::HashSet, sync::Arc};
 use didkit::JWK;
 use openssl::error::ErrorStack;
 use thiserror::Error;
+use tracing::debug;
 
 use crate::{
     encode::EncodeError,
@@ -13,7 +14,7 @@ use crate::{
     message::{
         descriptor::{
             protocols::{ProtocolDefinition, ProtocolsFilter},
-            records::RecordsFilter,
+            records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
         AuthError, DwnRequest, Message, SignError,
@@ -86,7 +87,9 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         // Push to remotes.
         for remote in &self.remotes {
             while let Ok(message) = remote.receiver.write().await.try_recv() {
-                self.send_message(message, remote.url()).await?;
+                if let Err(e) = self.send_message(message, remote.url()).await {
+                    debug!("Failed to send message to remote DWN: {:?}", e);
+                }
             }
         }
 
@@ -108,28 +111,46 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             let url = remote.url();
 
             for record_id in record_ids.iter() {
-                let message = self.read_record(record_id.clone()).build()?;
+                let query = self
+                    .query_records(RecordsFilter {
+                        record_id: Some(record_id.clone()),
+                        date_sort: Some(FilterDateSort::CreatedDescending),
+                        ..Default::default()
+                    })
+                    .build()?;
 
-                let reply = match self.send_message(message, url).await? {
-                    MessageReply::RecordsRead(reply) => reply,
+                let reply = match self.send_message(query, url).await? {
+                    MessageReply::Query(reply) => reply,
                     _ => return Err(SyncError::ProcessMessage(ProcessMessageError::InvalidReply)),
                 };
 
-                // Process the reply.
-                // TODO: Can RecordsRead return a delete message?
-                handle_records_write(
-                    &self.dwn.client,
-                    &self.dwn.data_store,
-                    &self.dwn.message_store,
-                    DwnRequest {
-                        target: self.did.clone(),
-                        message: *reply.record,
-                    },
-                    HandleWriteOptions {
-                        ignore_parent_id: true,
-                    },
-                )
-                .await?;
+                if let Some(latest) = reply.entries.first() {
+                    match &latest.descriptor {
+                        Descriptor::RecordsWrite(_) => {
+                            handle_records_write(
+                                &self.dwn.client,
+                                &self.dwn.data_store,
+                                &self.dwn.message_store,
+                                DwnRequest {
+                                    target: self.did.clone(),
+                                    message: latest.clone(),
+                                },
+                                HandleWriteOptions {
+                                    ignore_parent_id: true,
+                                },
+                            )
+                            .await?;
+                        }
+                        _ => {
+                            self.dwn
+                                .process_message(DwnRequest {
+                                    target: self.did.clone(),
+                                    message: latest.clone(),
+                                })
+                                .await?;
+                        }
+                    }
+                }
             }
         }
 

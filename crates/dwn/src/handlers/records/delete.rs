@@ -76,7 +76,7 @@ pub async fn handle_records_delete(
             .await?;
     }
 
-    // Store the message.
+    // Store the delete message.
     message_store.put(target, message, data_store).await?;
 
     Ok(StatusReply {

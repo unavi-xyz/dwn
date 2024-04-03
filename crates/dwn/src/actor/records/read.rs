@@ -1,7 +1,10 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     handlers::{MessageReply, RecordsReadReply},
-    message::{descriptor::records::RecordsRead, DwnRequest, Message},
+    message::{
+        descriptor::{records::RecordsRead, Descriptor},
+        Data, DwnRequest, Message,
+    },
     store::{DataStore, MessageStore},
     HandleMessageError,
 };
@@ -59,52 +62,88 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
     }
 
     pub async fn process(&mut self) -> Result<RecordsReadReply, ProcessMessageError> {
-        let reply = match MessageBuilder::process(self).await {
-            Ok(MessageReply::RecordsRead(reply)) => reply,
+        match MessageBuilder::process(self).await {
+            Ok(MessageReply::RecordsRead(reply)) => {
+                let data_cid = match &reply.record.descriptor {
+                    Descriptor::RecordsWrite(descriptor) => descriptor.data_cid.clone(),
+                    _ => None,
+                };
+
+                let missing_data = if data_cid.is_some() {
+                    match &reply.record.data {
+                        Some(Data::Base64(data)) => data.is_empty(),
+                        Some(Data::Encrypted(encrypted)) => encrypted.ciphertext.is_empty(),
+                        None => false,
+                    }
+                } else {
+                    false
+                };
+
+                // If we don't have the data, check remote.
+                if missing_data {
+                    if let Some(found) = self.read_remote().await? {
+                        return Ok(found);
+                    }
+                }
+
+                Ok(reply)
+            }
             Ok(_) => unreachable!(),
             Err(err) => {
-                let message = self.final_message.as_ref().unwrap();
-
-                // Check remotes for record.
-                for remote in &self.actor.remotes {
+                // Check remote.
+                if let Some(found) = self.read_remote().await? {
+                    // Store the record locally.
+                    // TODO: Only store data if under some size
                     let target = self
                         .target
                         .clone()
                         .unwrap_or_else(|| self.actor.did.clone());
 
-                    let request = DwnRequest {
-                        target: target.clone(),
-                        message: message.clone(),
-                    };
-
-                    let reply = self
-                        .actor
+                    self.actor
                         .dwn
-                        .client
-                        .post(remote.url())
-                        .json(&request)
-                        .send()
-                        .await?
-                        .json::<MessageReply>()
-                        .await;
+                        .message_store
+                        .put(target, *found.record.clone(), &self.actor.dwn.data_store)
+                        .await
+                        .map_err(HandleMessageError::MessageStoreError)?;
 
-                    if let Ok(MessageReply::RecordsRead(reply)) = reply {
-                        // Store the record locally.
-                        self.actor
-                            .dwn
-                            .message_store
-                            .put(target, *reply.record.clone(), &self.actor.dwn.data_store)
-                            .await
-                            .map_err(HandleMessageError::MessageStoreError)?;
-
-                        return Ok(reply);
-                    }
+                    return Ok(found);
                 }
 
-                return Err(err);
+                Err(err)
             }
-        };
+        }
+    }
 
-        Ok(reply)
+    async fn read_remote(&self) -> Result<Option<RecordsReadReply>, ProcessMessageError> {
+        let target = self
+            .target
+            .clone()
+            .unwrap_or_else(|| self.actor.did.clone());
+
+        let message = self.final_message.as_ref().unwrap();
+
+        for remote in &self.actor.remotes {
+            let request = DwnRequest {
+                target: target.clone(),
+                message: message.clone(),
+            };
+
+            let reply = self
+                .actor
+                .dwn
+                .client
+                .post(remote.url())
+                .json(&request)
+                .send()
+                .await?
+                .json::<MessageReply>()
+                .await?;
+
+            if let MessageReply::RecordsRead(reply) = reply {
+                return Ok(Some(reply));
+            }
+        }
+
+        Ok(None)
     }
 }

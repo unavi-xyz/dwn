@@ -23,8 +23,7 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct HandleWriteOptions {
-    /// Ignore the parent id, allowing the message to be written even if it does not match the
-    /// latest checkpoint entry. Used during syncing to force overwrite stale records.
+    /// Ignore the parent id, allowing the message to be written even if the parent message is not found.
     pub ignore_parent_id: bool,
 }
 

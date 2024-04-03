@@ -41,7 +41,9 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsDeleteBuilder<
     }
 
     fn create_message(&mut self) -> Result<Message, PrepareError> {
-        Ok(Message::new(RecordsDelete::new(self.record_id.clone())))
+        let mut msg = Message::new(RecordsDelete::new(self.record_id.clone()));
+        msg.record_id = self.record_id.clone();
+        Ok(msg)
     }
 }
 

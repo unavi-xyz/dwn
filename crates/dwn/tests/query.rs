@@ -232,3 +232,39 @@ async fn test_filter_message_timestamp() {
         assert_eq!(record.record_id, records[base + i]);
     }
 }
+
+#[traced_test]
+#[tokio::test]
+async fn test_query_records_delete() {
+    let store = SurrealStore::new().await.unwrap();
+    let dwn = Arc::new(DWN::from(store));
+    let actor = Actor::new_did_key(dwn).unwrap();
+
+    // Create a new record.
+    let data = "Hello, world!".bytes().collect::<Vec<_>>();
+    let create = actor.create_record().data(data).process().await.unwrap();
+
+    let record_id = create.record_id.clone();
+
+    // Delete the record.
+    let delete = actor
+        .delete_record(record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(delete.reply.status.code, 200);
+
+    // Query the RecordsDelete message.
+    let query = actor
+        .query_records(RecordsFilter {
+            ..Default::default()
+        })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+
+    let entry = &query.entries[0];
+    assert_eq!(entry.record_id, record_id);
+}

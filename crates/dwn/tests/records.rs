@@ -59,21 +59,14 @@ async fn test_records() {
         .unwrap();
     assert_eq!(delete.reply.status.code, 200);
 
-    // Query the deleted record.
-    let query = actor
-        .query_records(RecordsFilter {
-            record_id: Some(record_id.clone()),
-            ..Default::default()
-        })
+    // Try to read the deleted record.
+    let read = actor
+        .read_record(record_id.clone())
         .process()
         .await
         .unwrap();
-    assert_eq!(query.status.code, 200);
-    assert_eq!(query.entries.len(), 0);
-
-    // Try to read the deleted record.
-    let read = actor.read_record(record_id.clone()).process().await;
-    assert!(read.is_err());
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, None);
 
     // Create a new record.
     let create = actor
