@@ -57,7 +57,6 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         };
 
         // Ensure the message belongs to the tenant.
-        // TODO: How to delete messages from your dwn that are not yours?
         if message.tenant != tenant {
             return Err(MessageStoreError::NotFound);
         }

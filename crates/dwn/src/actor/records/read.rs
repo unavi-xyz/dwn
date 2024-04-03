@@ -93,7 +93,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                 // Check remote.
                 if let Some(found) = self.read_remote().await? {
                     // Store the record locally.
-                    // TODO: Only store data if under some size
+                    // TODO: Only store data locally if under some size
                     let target = self
                         .target
                         .clone()

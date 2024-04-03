@@ -96,8 +96,6 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         // Pull from remotes.
         let mut record_ids = HashSet::new();
 
-        // TODO: Pull other tenants, not just self.did
-        // This is to support the case where you are connected to another tenant's remote.
         for message in self
             .dwn
             .message_store
