@@ -6,7 +6,10 @@ use thiserror::Error;
 
 use crate::{
     encode::EncodeError,
-    handlers::{records::write::handle_records_write, MessageReply, StatusReply},
+    handlers::{
+        records::write::{handle_records_write, HandleWriteOptions},
+        MessageReply, StatusReply,
+    },
     message::{
         descriptor::{
             protocols::{ProtocolDefinition, ProtocolsFilter},
@@ -114,7 +117,6 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
 
                 // Process the reply.
                 // TODO: Can RecordsRead return a delete message?
-                // TODO: Test if CRDT can handle multiple writes / deletes in remote.
                 handle_records_write(
                     &self.dwn.client,
                     &self.dwn.data_store,
@@ -122,6 +124,9 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
                     DwnRequest {
                         target: self.did.clone(),
                         message: *reply.record,
+                    },
+                    HandleWriteOptions {
+                        ignore_parent_id: true,
                     },
                 )
                 .await?;

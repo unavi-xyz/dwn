@@ -45,8 +45,10 @@
 use handlers::{
     protocols::{handle_protocols_configure, handle_protocols_query},
     records::{
-        delete::handle_records_delete, query::handle_records_query, read::handle_records_read,
-        write::handle_records_write,
+        delete::handle_records_delete,
+        query::handle_records_query,
+        read::handle_records_read,
+        write::{handle_records_write, HandleWriteOptions},
     },
     MessageReply,
 };
@@ -109,8 +111,14 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
             }
             Descriptor::RecordsQuery(_) => handle_records_query(&self.message_store, request).await,
             Descriptor::RecordsWrite(_) => {
-                handle_records_write(&self.client, &self.data_store, &self.message_store, request)
-                    .await
+                handle_records_write(
+                    &self.client,
+                    &self.data_store,
+                    &self.message_store,
+                    request,
+                    HandleWriteOptions::default(),
+                )
+                .await
             }
             _ => Err(HandleMessageError::UnsupportedInterface),
         }

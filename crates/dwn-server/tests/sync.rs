@@ -141,7 +141,7 @@ async fn test_sync_push() {
 }
 
 #[tokio::test]
-async fn test_sync_pull() {
+async fn test_sync_pull_single() {
     let TestContext {
         mut alice_kyoto,
         alice_osaka,
@@ -201,4 +201,77 @@ async fn test_sync_pull() {
         .unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&new_data)));
+}
+
+#[tokio::test]
+async fn test_sync_pull_many() {
+    let TestContext {
+        mut alice_kyoto,
+        alice_osaka,
+        osaka_url,
+    } = setup_test().await;
+
+    // Add the Osaka DWN as a remote.
+    alice_kyoto.add_remote(osaka_url);
+
+    // Create a record in Osaka.
+    let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
+    let create = alice_osaka
+        .create_record()
+        .data(data.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(create.reply.status.code, 200);
+
+    // Read the record in Kyoto.
+    // This will store the record locally.
+    let read = alice_kyoto
+        .read_record(create.record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
+
+    // Update the record in Osaka.
+    let new_data = "Hello again from Osaka!".bytes().collect::<Vec<_>>();
+    let update = alice_osaka
+        .update_record(create.record_id.clone(), create.entry_id.clone())
+        .data(new_data.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(update.reply.status.code, 200);
+
+    // Update the record in Osaka again.
+    let newer_data = "Hello once more from Osaka!".bytes().collect::<Vec<_>>();
+    let update = alice_osaka
+        .update_record(create.record_id.clone(), update.entry_id.clone())
+        .data(newer_data.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(update.reply.status.code, 200);
+
+    // Kyoto should not have the updated records yet.
+    let read = alice_kyoto
+        .read_record(create.record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
+
+    // Sync data.
+    alice_kyoto.sync().await.unwrap();
+
+    // Kyoto should have the updated record now.
+    let read = alice_kyoto
+        .read_record(create.record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&newer_data)));
 }

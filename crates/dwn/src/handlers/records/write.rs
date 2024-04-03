@@ -21,11 +21,19 @@ use crate::{
     HandleMessageError,
 };
 
+#[derive(Debug, Default)]
+pub struct HandleWriteOptions {
+    /// Ignore the parent id, allowing the message to be written even if it does not match the
+    /// latest checkpoint entry. Used during syncing to force overwrite stale records.
+    pub ignore_parent_id: bool,
+}
+
 pub async fn handle_records_write(
     client: &Client,
     data_store: &impl DataStore,
     message_store: &impl MessageStore,
     DwnRequest { target, message }: DwnRequest,
+    options: HandleWriteOptions,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
 
@@ -352,7 +360,7 @@ pub async fn handle_records_write(
         let checkpoint_entry_id = checkpoint_entry.entry_id()?;
 
         // Ensure parent id matches the latest checkpoint entry.
-        if *parent_id != checkpoint_entry_id {
+        if !options.ignore_parent_id && *parent_id != checkpoint_entry_id {
             return Err(HandleMessageError::InvalidDescriptor(
                 "Parent id does not match latest checkpoint entry".to_string(),
             ));
