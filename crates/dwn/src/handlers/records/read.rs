@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 
@@ -10,13 +8,11 @@ use crate::{
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
-        Data, DwnRequest, EncryptedData, Message,
+        Data, DwnRequest, EncryptedData,
     },
     store::{DataStore, MessageStore},
     HandleMessageError,
 };
-
-use super::util::create_entry_id_map;
 
 pub async fn handle_records_read(
     data_store: &impl DataStore,
@@ -47,9 +43,14 @@ pub async fn handle_records_read(
         )
         .await?;
 
-    let mut record = messages
+    let mut latest = messages
         .iter()
-        .find(|m| matches!(m.descriptor, Descriptor::RecordsDelete(_)))
+        .find(|m| {
+            matches!(
+                m.descriptor,
+                Descriptor::RecordsDelete(_) | Descriptor::RecordsWrite(_)
+            )
+        })
         .or(messages.last())
         .ok_or(HandleMessageError::InvalidDescriptor(
             "Record not found".to_string(),
@@ -57,29 +58,28 @@ pub async fn handle_records_read(
         .to_owned();
 
     // Read data.
-    // TODO: Simplify this, without RecordsCommit this is not needed
-    let entry_id_map = create_entry_id_map(&messages)?;
-    let record_entry_id = record.entry_id()?;
-    let data_cid = get_data_cid(&record_entry_id, &entry_id_map);
-
-    let data_bytes = match data_cid {
-        Some(data_cid) => {
-            let data_cid = Cid::try_from(data_cid).map_err(|e| {
-                HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
-            })?;
-            let res = data_store.get(data_cid.to_string()).await?;
-            res.map(|res| res.data)
+    let data_bytes = match &latest.descriptor {
+        Descriptor::RecordsWrite(descriptor) => {
+            if let Some(data_cid) = &descriptor.data_cid {
+                let data_cid = Cid::try_from(data_cid.as_str()).map_err(|e| {
+                    HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
+                })?;
+                let res = data_store.get(data_cid.to_string()).await?;
+                res.map(|res| res.data)
+            } else {
+                None
+            }
         }
-        None => None,
+        _ => None,
     };
 
     if let Some(bytes) = data_bytes {
-        match &record.data {
+        match &latest.data {
             Some(Data::Base64(_)) => {
-                record.data = Some(Data::new_base64(&bytes));
+                latest.data = Some(Data::new_base64(&bytes));
             }
             Some(Data::Encrypted(data)) => {
-                record.data = Some(Data::Encrypted(EncryptedData {
+                latest.data = Some(Data::Encrypted(EncryptedData {
                     ciphertext: URL_SAFE_NO_PAD.encode(&bytes),
                     iv: data.iv.clone(),
                     protected: data.protected.clone(),
@@ -92,19 +92,8 @@ pub async fn handle_records_read(
     }
 
     Ok(RecordsReadReply {
-        record: Box::new(record),
+        record: Box::new(latest),
         status: Status::ok(),
     }
     .into())
-}
-
-/// Get the data CID for a given entry ID.
-/// This will search up the chain of parent messages until it finds a RecordsWrite message.
-fn get_data_cid(entry_id: &str, messages: &HashMap<String, &Message>) -> Option<String> {
-    let entry = messages.get(entry_id)?;
-
-    match &entry.descriptor {
-        Descriptor::RecordsWrite(desc) => desc.data_cid.clone(),
-        _ => None,
-    }
 }
