@@ -2,6 +2,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use didkit::JWK;
 use openssl::error::ErrorStack;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::debug;
 
@@ -48,7 +49,7 @@ pub struct Actor<D: DataStore, M: MessageStore> {
     pub remotes: Vec<Remote>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct VerifiableCredential {
     pub jwk: JWK,
     pub key_id: String,
