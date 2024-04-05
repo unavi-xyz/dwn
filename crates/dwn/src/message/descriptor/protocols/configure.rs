@@ -13,8 +13,7 @@ pub struct ProtocolsConfigure {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub definition: Option<ProtocolDefinition>,
-    #[serde(rename = "lastConfiguration")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "lastConfiguration", skip_serializing_if = "Option::is_none")]
     pub last_configuration: Option<String>,
     #[serde(rename = "protocolVersion")]
     pub protocol_version: Version,
