@@ -11,10 +11,6 @@ pub async fn handle_protocols_query(
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
 
-    if !authorized {
-        return Err(HandleMessageError::Unauthorized);
-    }
-
     let descriptor = match message.descriptor {
         Descriptor::ProtocolsQuery(descriptor) => descriptor,
         _ => {
