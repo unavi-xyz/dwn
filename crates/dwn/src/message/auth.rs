@@ -115,9 +115,9 @@ async fn resolve_vc_map(did_url: &DIDURL) -> Result<VerificationMethodMap, Signa
         VerificationMethod::RelativeDIDURL(url) => {
             resolve_vc_map(&DIDURL {
                 did: did_url.did.clone(),
-                query: url.query.clone(),
                 fragment: url.fragment.clone(),
                 path_abempty: url.path.to_string(),
+                query: url.query.clone(),
             })
             .await?
         }

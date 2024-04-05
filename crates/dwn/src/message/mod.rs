@@ -4,6 +4,7 @@ use didkit::{VerificationRelationship, DIDURL, JWK};
 use libipld_core::error::SerdeError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::debug;
 
 use crate::{
     encode::{encode_cbor, EncodeError},
@@ -82,8 +83,8 @@ pub enum ValidateError {
     SignatureVerify(#[from] SignatureVerifyError),
     #[error(transparent)]
     Serde(#[from] serde_json::Error),
-    #[error("Invalid signature")]
-    InvalidSignature,
+    #[error("Invalid signature: {0}")]
+    InvalidSignature(&'static str),
     #[error(transparent)]
     Encode(#[from] EncodeError),
 }
@@ -168,7 +169,8 @@ impl Message {
 
     /// Checks whether the key used in the authorization JWS is an authorization key for the given DID.
     pub async fn is_authorized(&self, did: &str) -> bool {
-        if self.validate_authorization().await.is_err() {
+        if let Err(e) = self.validate_authorization().await {
+            debug!("Failed to validate authorization JWS: {}", e);
             return false;
         }
 
@@ -188,6 +190,8 @@ impl Message {
             }
         }
 
+        debug!("No valid signature for DID {}", did);
+
         false
     }
 
@@ -203,22 +207,22 @@ impl Message {
             let attestation = self
                 .attestation
                 .as_ref()
-                .ok_or(ValidateError::InvalidSignature)?;
+                .ok_or(ValidateError::InvalidSignature("no attestation"))?;
 
             let attestation_cid = encode_cbor(&attestation.payload)?.cid().to_string();
 
             if cid != &attestation_cid {
-                return Err(ValidateError::InvalidSignature);
+                return Err(ValidateError::InvalidSignature("attestation CID mismatch"));
             }
         } else if self.attestation.is_some() {
-            return Err(ValidateError::InvalidSignature);
+            return Err(ValidateError::InvalidSignature("attestation CID missing"));
         }
 
         // Verify descriptor CID matches
         let descriptor_cid = encode_cbor(&self.descriptor)?.cid().to_string();
 
         if jws.payload.descriptor_cid != descriptor_cid {
-            return Err(ValidateError::InvalidSignature);
+            return Err(ValidateError::InvalidSignature("descriptor CID mismatch"));
         }
 
         // Verify payload signature
