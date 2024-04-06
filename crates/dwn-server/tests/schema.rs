@@ -8,11 +8,13 @@ use dwn::{
     DWN,
 };
 use serde_json::json;
+use surrealdb::{engine::local::Mem, Surreal};
 use tokio::net::TcpListener;
 
 #[tokio::test]
 async fn test_records_schema() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();

@@ -14,12 +14,14 @@ use dwn::{
 };
 use iana_media_types::{Application, MediaType};
 use semver::Version;
+use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
 
 #[tokio::test]
 #[traced_test]
 async fn test_configure_protocol() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();
@@ -78,7 +80,8 @@ async fn test_configure_protocol() {
 #[tokio::test]
 #[traced_test]
 async fn test_invalid_protocol() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
@@ -145,7 +148,8 @@ async fn test_invalid_protocol() {
 #[tokio::test]
 #[traced_test]
 async fn test_protocol_name_query() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();
@@ -230,7 +234,8 @@ async fn test_protocol_name_query() {
 #[tokio::test]
 #[traced_test]
 async fn test_protocol_version_query() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();

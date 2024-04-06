@@ -9,6 +9,7 @@ use dwn::{
     DWN,
 };
 use semver::Version;
+use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
 
 const PROTOCOL: &str = "post-protocol";
@@ -16,7 +17,8 @@ const PROTOCOL: &str = "post-protocol";
 #[tokio::test]
 #[traced_test]
 async fn test_child_anyone_write() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();

@@ -6,6 +6,7 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
+use surrealdb::{engine::local::Mem, Surreal};
 use time::OffsetDateTime;
 use tracing_test::traced_test;
 
@@ -20,7 +21,8 @@ fn gen_data(i: usize) -> Vec<u8> {
 #[traced_test]
 #[tokio::test]
 async fn test_filter_date_sort() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
     let actor = Actor::new_did_key(dwn).unwrap();
 
@@ -101,7 +103,8 @@ async fn test_filter_date_sort() {
 #[traced_test]
 #[tokio::test]
 async fn test_filter_message_timestamp() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
     let actor = Actor::new_did_key(dwn).unwrap();
 
@@ -236,7 +239,8 @@ async fn test_filter_message_timestamp() {
 #[traced_test]
 #[tokio::test]
 async fn test_query_records_delete() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
     let actor = Actor::new_did_key(dwn).unwrap();
 

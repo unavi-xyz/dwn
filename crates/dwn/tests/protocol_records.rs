@@ -16,6 +16,7 @@ use dwn::{
 };
 use iana_media_types::{Application, MediaType};
 use semver::Version;
+use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
 
 const PROTOCOL: &str = "chat-protocol";
@@ -46,7 +47,8 @@ fn chat_protocol() -> ProtocolDefinition {
 #[tokio::test]
 #[traced_test]
 async fn test_no_read() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
@@ -104,7 +106,8 @@ async fn test_no_read() {
 #[tokio::test]
 #[traced_test]
 async fn test_anyone_read() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
@@ -191,7 +194,8 @@ async fn test_anyone_read() {
 #[tokio::test]
 #[traced_test]
 async fn test_author_read() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
@@ -303,7 +307,8 @@ async fn test_author_read() {
 #[tokio::test]
 #[traced_test]
 async fn test_anyone_write_recipient_read() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();

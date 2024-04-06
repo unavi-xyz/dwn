@@ -1,9 +1,6 @@
 //! Data and message store implementations using a SurrealDB database.
 
-use surrealdb::{
-    engine::local::{Db, Mem},
-    Connection, Surreal,
-};
+use surrealdb::{Connection, Surreal};
 
 pub mod data;
 pub mod message;
@@ -14,16 +11,7 @@ pub struct SurrealStore<T: Connection> {
     pub namepace: String,
 }
 
-impl<T: Connection> From<Surreal<T>> for SurrealStore<T> {
-    fn from(db: Surreal<T>) -> Self {
-        Self {
-            db,
-            namepace: "dwn".to_string(),
-        }
-    }
-}
-
-impl<T: Connection> Clone for SurrealStore<T> {
+impl<C: Connection> Clone for SurrealStore<C> {
     fn clone(&self) -> Self {
         Self {
             db: self.db.clone(),
@@ -32,11 +20,8 @@ impl<T: Connection> Clone for SurrealStore<T> {
     }
 }
 
-impl SurrealStore<Db> {
-    /// Creates a new in-memory SurrealDB instance.
-    pub async fn new() -> Result<Self, anyhow::Error> {
-        let surreal = Surreal::new::<Mem>(()).await?;
-
+impl<C: Connection> SurrealStore<C> {
+    pub async fn new(surreal: Surreal<C>) -> Result<Self, anyhow::Error> {
         Ok(Self {
             db: surreal,
             namepace: "dwn".to_string(),

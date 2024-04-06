@@ -6,6 +6,7 @@ use dwn::{
     store::{DataStore, MessageStore, SurrealStore},
     DWN,
 };
+use surrealdb::{engine::local::Mem, Surreal};
 use tokio::net::TcpListener;
 
 struct TestContext<D: DataStore, M: MessageStore> {
@@ -18,7 +19,8 @@ async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
     let port = port_scanner::request_open_port().unwrap();
 
     // Start a DWN server.
-    let store_osaka = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store_osaka = SurrealStore::new(db).await.unwrap();
     let dwn_osaka = Arc::new(DWN::from(store_osaka));
     let alice_osaka = Actor::new_did_key(dwn_osaka.clone()).unwrap();
 
@@ -35,7 +37,8 @@ async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
     }
 
     // Create another DWN.
-    let store_kyoto = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store_kyoto = SurrealStore::new(db).await.unwrap();
     let dwn_kyoto = Arc::new(DWN::from(store_kyoto.clone()));
 
     let alice_kyoto = Actor {

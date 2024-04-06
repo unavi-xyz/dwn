@@ -6,12 +6,14 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
+use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
 
 #[traced_test]
 #[tokio::test]
 async fn test_encrypt() {
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     let actor = Actor::new_did_key(dwn).unwrap();
