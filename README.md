@@ -10,11 +10,13 @@ Rust implementation of a [Decentralized Web Node](https://identity.foundation/de
 use std::sync::Arc;
 
 use dwn::{actor::Actor, message::Data, store::SurrealStore, DWN};
+use surrealdb::{Surreal, engine::local::Mem};
 
 #[tokio::main]
 async fn main() {
     // Create a DWN, using in-memory SurrealDB for storage.
-    let store = SurrealStore::new().await.unwrap();
+    let db = Surreal::new::<Mem>(()).await.unwrap();
+    let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
     // Create an actor to send messages.
