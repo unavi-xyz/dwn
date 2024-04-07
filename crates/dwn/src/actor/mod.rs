@@ -1,7 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
 use didkit::JWK;
-use openssl::error::ErrorStack;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::debug;
@@ -278,6 +277,4 @@ pub enum PrepareError {
     Sign(#[from] SignError),
     #[error(transparent)]
     Encode(#[from] EncodeError),
-    #[error(transparent)]
-    OpenSSL(#[from] ErrorStack),
 }

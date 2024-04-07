@@ -13,6 +13,7 @@ s3 = ["dep:rust-s3"]
 surrealdb = ["dep:surrealdb", "dep:tokio"]
 
 [dependencies]
+aes-gcm = "0.10.3"
 anyhow = "1.0.80"
 async-recursion = "1.0.5"
 base64 = "0.22.0"
@@ -23,8 +24,8 @@ jsonschema = { version = "0.17.1", default-features = false, features = ["draft2
 libipld = { version = "0.16.0", features = ["serde-codec"] }
 libipld-cbor = "0.16.0"
 libipld-core = { version = "0.16.0", features = ["serde", "serde-codec", "multibase"] }
-openssl = "0.10.64"
 reqwest = { version = "0.12.2", features = ["json"] }
+rustls = "0.23.4"
 semver = { version = "1.0.22", features = ["serde"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_ipld_dagcbor = "0.6.0"

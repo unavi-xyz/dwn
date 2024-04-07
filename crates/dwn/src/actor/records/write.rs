@@ -1,6 +1,6 @@
+use aes_gcm::{aead::OsRng, Aes256Gcm, KeyInit};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use iana_media_types::MediaType;
-use openssl::{error::ErrorStack, rand::rand_bytes};
 use semver::Version;
 use time::OffsetDateTime;
 
@@ -17,9 +17,8 @@ pub enum Encryption {
 }
 
 impl Encryption {
-    pub fn generate_aes256() -> Result<Self, ErrorStack> {
-        let mut key = vec![0; 32]; // AES-256 key size
-        rand_bytes(&mut key)?;
+    pub fn generate_aes256() -> Self {
+        let key = Aes256Gcm::generate_key(OsRng);
         Ok(Self::Aes256Gcm(key))
     }
 }

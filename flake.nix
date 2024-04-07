@@ -15,8 +15,17 @@
     };
   };
 
-  outputs = { self, nixpkgs, crane, flake-utils, rust-overlay, ... }:
-    flake-utils.lib.eachDefaultSystem (localSystem:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      crane,
+      flake-utils,
+      rust-overlay,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      localSystem:
       let
         pkgs = import nixpkgs {
           inherit localSystem;
@@ -34,13 +43,20 @@
 
           strictDeps = true;
 
-          buildInputs = with pkgs;
-            [ openssl ] ++ lib.optionals pkgs.stdenv.isDarwin [
+          buildInputs =
+            with pkgs;
+            [ openssl ]
+            ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.darwin.apple_sdk.frameworks.Security
               pkgs.libiconv
             ];
 
-          nativeBuildInputs = with pkgs; [ clang pkg-config ];
+          nativeBuildInputs = with pkgs; [
+            clang
+            cmake
+            pkg-config
+            rustPlatform.bindgenHook
+          ];
 
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
         };
@@ -59,26 +75,37 @@
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
         };
 
-        cargoArtifacts =
-          craneLib.buildDepsOnly (commonArgs // { pname = "deps"; });
+        cargoArtifacts = craneLib.buildDepsOnly (commonArgs // { pname = "deps"; });
 
-        cargoClippy = craneLib.cargoClippy (commonArgs // {
-          inherit cargoArtifacts;
-          pname = "clippy";
-        });
+        cargoClippy = craneLib.cargoClippy (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+            pname = "clippy";
+          }
+        );
 
-        cargoDoc = craneLib.cargoDoc (commonArgs // {
-          inherit cargoArtifacts;
-          pname = "doc";
-        });
+        cargoDoc = craneLib.cargoDoc (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+            pname = "doc";
+          }
+        );
 
-        dwn-server = craneLib.buildPackage (commonArgs // {
-          inherit cargoArtifacts;
-          pname = "dwn-server";
-          cargoExtraArgs = "-p dwn-server";
-        });
-      in {
-        checks = { inherit dwn-server cargoClippy cargoDoc; };
+        dwn-server = craneLib.buildPackage (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+            pname = "dwn-server";
+            cargoExtraArgs = "-p dwn-server";
+          }
+        );
+      in
+      {
+        checks = {
+          inherit dwn-server cargoClippy cargoDoc;
+        };
 
         apps = rec {
           dwn-server = flake-utils.lib.mkApp {
@@ -108,47 +135,51 @@
         devShells = {
           default = craneLib.devShell commonShell;
 
-          backend = craneLib.devShell (commonShell // {
-            shellHook = ''
-              # Start minio
-              mkdir -p $PWD/minio
-              ${pkgs.minio}/bin/minio server $PWD/minio > $PWD/minio/minio.log 2>&1 &
-              MINIO_PID=$!
+          backend = craneLib.devShell (
+            commonShell
+            // {
+              shellHook = ''
+                # Start minio
+                mkdir -p $PWD/minio
+                ${pkgs.minio}/bin/minio server $PWD/minio > $PWD/minio/minio.log 2>&1 &
+                MINIO_PID=$!
 
-              # Wait for server to start
-              while ! curl -s http://localhost:9000/minio/health/live > /dev/null; do
-                if [ $count -eq 10 ]; then
-                  echo "Failed to start Minio server"
-                  exit 1
-                fi
-                count=$((count+1))
-                sleep 1
-              done
+                # Wait for server to start
+                while ! curl -s http://localhost:9000/minio/health/live > /dev/null; do
+                  if [ $count -eq 10 ]; then
+                    echo "Failed to start Minio server"
+                    exit 1
+                  fi
+                  count=$((count+1))
+                  sleep 1
+                done
 
-              echo "Minio server started with PID $MINIO_PID"
+                echo "Minio server started with PID $MINIO_PID"
 
-              # Create bucket
-              mc alias set minio http://localhost:9000 minioadmin minioadmin 
-              mc mb minio/dwn > /dev/null 2>&1
+                # Create bucket
+                mc alias set minio http://localhost:9000 minioadmin minioadmin 
+                mc mb minio/dwn > /dev/null 2>&1
 
-              finish()
-              {
-                echo "Shutting down Minio server, PID $MINIO_PID"
-                kill -9 $MINIO_PID
-                wait $MINIO_PID
-              }
+                finish()
+                {
+                  echo "Shutting down Minio server, PID $MINIO_PID"
+                  kill -9 $MINIO_PID
+                  wait $MINIO_PID
+                }
 
-              trap finish EXIT
+                trap finish EXIT
 
-              $SHELL
-            '';
+                $SHELL
+              '';
 
-            S3_ACCESS_KEY_ID = "minioadmin";
-            S3_BUCKET_NAME = "dwn";
-            S3_ENDPOINT = "http://localhost:9000";
-            S3_REGION = "us-east-1";
-            S3_SECRET_ACCESS_KEY = "minioadmin";
-          });
+              S3_ACCESS_KEY_ID = "minioadmin";
+              S3_BUCKET_NAME = "dwn";
+              S3_ENDPOINT = "http://localhost:9000";
+              S3_REGION = "us-east-1";
+              S3_SECRET_ACCESS_KEY = "minioadmin";
+            }
+          );
         };
-      });
+      }
+    );
 }
