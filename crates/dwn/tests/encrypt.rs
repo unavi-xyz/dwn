@@ -20,7 +20,7 @@ async fn test_encrypt() {
 
     // Create an encrypted record.
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
-    let encryption = Encryption::generate_aes256().unwrap();
+    let encryption = Encryption::generate_aes256();
 
     let create = actor
         .create_record()

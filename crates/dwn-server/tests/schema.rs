@@ -106,7 +106,7 @@ async fn test_records_schema() {
     assert!(update.is_err());
 
     // Data cannot be encrypted
-    let encryption = Encryption::generate_aes256().unwrap();
+    let encryption = Encryption::generate_aes256();
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
