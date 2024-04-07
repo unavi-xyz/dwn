@@ -88,7 +88,12 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
         // Push to remotes.
         for remote in &self.remotes {
             while let Ok(message) = remote.receiver.write().await.try_recv() {
-                if let Err(e) = self.send_message(message, remote.url()).await {
+                let request = DwnRequest {
+                    message,
+                    target: self.did.clone(),
+                };
+
+                if let Err(e) = self.send(request, remote.url()).await {
                     debug!("Failed to send message to remote DWN: {:?}", e);
                 }
             }
@@ -110,7 +115,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             let url = remote.url();
 
             for record_id in record_ids.iter() {
-                let query = self
+                let message = self
                     .query_records(RecordsFilter {
                         record_id: Some(record_id.clone()),
                         date_sort: Some(FilterDateSort::CreatedDescending),
@@ -118,7 +123,12 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
                     })
                     .build()?;
 
-                let reply = match self.send_message(query, url).await? {
+                let request = DwnRequest {
+                    message,
+                    target: self.did.clone(),
+                };
+
+                let reply = match self.send(request, url).await? {
                     MessageReply::Query(reply) => reply,
                     _ => return Err(SyncError::ProcessMessage(ProcessMessageError::InvalidReply)),
                 };
@@ -190,16 +200,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     }
 
     /// Sends a message to a remote DWN.
-    async fn send_message(
-        &self,
-        message: Message,
-        url: &str,
-    ) -> Result<MessageReply, reqwest::Error> {
-        let request = DwnRequest {
-            target: self.did.clone(),
-            message,
-        };
-
+    async fn send(&self, request: DwnRequest, url: &str) -> Result<MessageReply, reqwest::Error> {
         self.dwn
             .client
             .post(url)

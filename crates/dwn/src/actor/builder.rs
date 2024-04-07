@@ -1,4 +1,9 @@
+use didkit::{
+    ssi::{did::ServiceEndpoint, vc::OneOrMany},
+    Document, ResolutionInputMetadata, ResolutionMetadata, DID_METHODS,
+};
 use thiserror::Error;
+use tracing::warn;
 
 use crate::{
     encode::EncodeError,
@@ -51,6 +56,28 @@ pub trait MessageBuilder: Sized {
         Ok(())
     }
 
+    /// Send the message to a DID's DWN.
+    #[allow(async_fn_in_trait)]
+    async fn send(&mut self, did: &str) -> Result<MessageReply, ProcessMessageError> {
+        let message = self.build()?;
+
+        let actor = self.get_actor();
+        let target = self.get_target().unwrap_or_else(|| actor.did.clone());
+        let request = DwnRequest { message, target };
+
+        let dwn_url = match resolve_dwn(did).await? {
+            Some(url) => url,
+            None => {
+                return Err(ProcessMessageError::ResolveDid(
+                    ResolveDidError::Resolution(format!("Failed to resolve DWN for {}", did)),
+                ));
+            }
+        };
+
+        let reply = actor.send(request, &dwn_url).await?;
+        Ok(reply)
+    }
+
     /// Process the message with the local DWN.
     #[allow(async_fn_in_trait)]
     async fn process(&mut self) -> Result<MessageReply, ProcessMessageError> {
@@ -81,7 +108,73 @@ pub enum ProcessMessageError {
     #[error(transparent)]
     HandleMessageError(#[from] HandleMessageError),
     #[error(transparent)]
+    ResolveDid(#[from] ResolveDidError),
+    #[error(transparent)]
     RequestError(#[from] reqwest::Error),
     #[error("Invalid reply")]
     InvalidReply,
+}
+
+const DWN_SERVICE_TYPE: &str = "DWN";
+
+async fn resolve_dwn(did: &str) -> Result<Option<String>, ResolveDidError> {
+    let document = resolve_did(did).await?;
+
+    Ok(document.service.and_then(|services| {
+        services.iter().find_map(|service| {
+            let types = match &service.type_ {
+                OneOrMany::One(t) => vec![t.to_owned()],
+                OneOrMany::Many(t) => t.to_owned(),
+            };
+
+            if !types.iter().any(|t| t == DWN_SERVICE_TYPE) {
+                return None;
+            }
+
+            let endpoint =
+                service
+                    .service_endpoint
+                    .as_ref()
+                    .and_then(|endpoint| match endpoint {
+                        OneOrMany::One(e) => Some(e),
+                        OneOrMany::Many(e) => e.first(),
+                    })?;
+
+            match endpoint {
+                ServiceEndpoint::URI(uri) => Some(uri.to_owned()),
+                ServiceEndpoint::Map(_) => {
+                    warn!("DWN service endpoint is not a URI.");
+                    None
+                }
+            }
+        })
+    }))
+}
+
+#[derive(Debug, Error)]
+pub enum ResolveDidError {
+    #[error("Failed to parse DID: {0}")]
+    DidParse(&'static str),
+    #[error("Failed to resolve DID: {0}")]
+    Resolution(String),
+}
+
+async fn resolve_did(did: &str) -> Result<Document, ResolveDidError> {
+    match DID_METHODS
+        .get_method(did)
+        .map_err(ResolveDidError::DidParse)?
+        .to_resolver()
+        .resolve(did, &ResolutionInputMetadata::default())
+        .await
+    {
+        (
+            ResolutionMetadata {
+                error: Some(err), ..
+            },
+            _,
+            _,
+        ) => Err(ResolveDidError::Resolution(err)),
+        (_, Some(doc), _) => Ok(doc),
+        _ => Err(ResolveDidError::Resolution("Unexpected result".to_string())),
+    }
 }
