@@ -19,7 +19,7 @@ pub enum Encryption {
 impl Encryption {
     pub fn generate_aes256() -> Self {
         let key = Aes256Gcm::generate_key(OsRng);
-        Ok(Self::Aes256Gcm(key))
+        Self::Aes256Gcm(key.to_vec())
     }
 }
 
@@ -93,7 +93,8 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
         if let Some(bytes) = self.data.take() {
             match self.encryption {
                 Some(Encryption::Aes256Gcm(key)) => {
-                    let encrypted = EncryptedData::encrypt_aes(&bytes, key)?;
+                    let encrypted = EncryptedData::encrypt_aes(&bytes, key)
+                        .map_err(|_| PrepareError::Encryption)?;
                     data = Some(Data::Encrypted(encrypted));
                 }
                 None => {

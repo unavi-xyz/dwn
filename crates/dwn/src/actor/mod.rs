@@ -277,4 +277,6 @@ pub enum PrepareError {
     Sign(#[from] SignError),
     #[error(transparent)]
     Encode(#[from] EncodeError),
+    #[error("Encryption error")]
+    Encryption,
 }
