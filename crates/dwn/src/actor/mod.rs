@@ -41,6 +41,7 @@ use self::{
 /// Identity actor.
 /// Holds a DID and associated keys.
 /// Provides methods for interacting with the DID's DWN.
+#[derive(Clone)]
 pub struct Actor<D: DataStore, M: MessageStore> {
     pub attestation: VerifiableCredential,
     pub authorization: VerifiableCredential,

@@ -8,6 +8,13 @@ pub struct Remote {
     url: String,
 }
 
+impl Clone for Remote {
+    fn clone(&self) -> Self {
+        let capacity = self.sender.capacity();
+        Self::new_with_capacity(self.url.clone(), capacity)
+    }
+}
+
 impl Remote {
     /// Create a new remote with a message queue size of 100.
     pub fn new(url: String) -> Self {
