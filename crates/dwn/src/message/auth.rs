@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use async_recursion::async_recursion;
 use didkit::{
     ssi::{
         did::{VerificationMethod, VerificationMethodMap},
@@ -97,7 +96,6 @@ async fn resolve_vc(
     resolve_vc_map(did_url).await
 }
 
-#[async_recursion]
 async fn resolve_vc_map(did_url: &DIDURL) -> Result<VerificationMethodMap, SignatureVerifyError> {
     let doc = resolve_did_document(did_url).await?;
 
@@ -113,15 +111,39 @@ async fn resolve_vc_map(did_url: &DIDURL) -> Result<VerificationMethodMap, Signa
     let method_map = match method {
         VerificationMethod::Map(m) => m.to_owned(),
         VerificationMethod::RelativeDIDURL(url) => {
-            resolve_vc_map(&DIDURL {
+            let url = DIDURL {
                 did: did_url.did.clone(),
                 fragment: url.fragment.clone(),
                 path_abempty: url.path.to_string(),
                 query: url.query.clone(),
-            })
-            .await?
+            };
+
+            verification_methods
+                .iter()
+                .find(|m| m.get_id(&url.did) == url.to_string())
+                .and_then(|m| {
+                    if let VerificationMethod::Map(m) = m {
+                        Some(m.to_owned())
+                    } else {
+                        None
+                    }
+                })
+                .ok_or(SignatureVerifyError::MethodNotFound)?
         }
-        VerificationMethod::DIDURL(url) => resolve_vc_map(url).await?,
+        VerificationMethod::DIDURL(url) => resolve_did_document(url)
+            .await?
+            .verification_method
+            .ok_or(SignatureVerifyError::MethodNotFound)?
+            .iter()
+            .find(|m| m.get_id(&url.did) == url.to_string())
+            .and_then(|m| {
+                if let VerificationMethod::Map(m) = m {
+                    Some(m.to_owned())
+                } else {
+                    None
+                }
+            })
+            .ok_or(SignatureVerifyError::MethodNotFound)?,
     };
 
     Ok(method_map)

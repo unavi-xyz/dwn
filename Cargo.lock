@@ -1976,7 +1976,6 @@ version = "0.0.5"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "async-recursion",
  "base64 0.22.0",
  "did-method-key",
  "didkit",
