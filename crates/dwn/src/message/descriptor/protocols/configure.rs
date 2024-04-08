@@ -35,6 +35,7 @@ impl Default for ProtocolsConfigure {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolDefinition {
     pub protocol: String,
+    #[serde(default)]
     pub published: bool,
     pub types: HashMap<String, StructureType>,
     pub structure: HashMap<String, ProtocolStructure>,
