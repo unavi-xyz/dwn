@@ -201,6 +201,8 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
 
     /// Sends a message to a remote DWN.
     async fn send(&self, request: DwnRequest, url: &str) -> Result<MessageReply, reqwest::Error> {
+        debug!("Sending message to {}", url);
+
         self.dwn
             .client
             .post(url)

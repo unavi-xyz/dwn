@@ -10,8 +10,10 @@ use dwn::{
 use serde_json::json;
 use surrealdb::{engine::local::Mem, Surreal};
 use tokio::net::TcpListener;
+use tracing_test::traced_test;
 
 #[tokio::test]
+#[traced_test]
 async fn test_records_schema() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();

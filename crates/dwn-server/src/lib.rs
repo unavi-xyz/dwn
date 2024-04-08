@@ -14,7 +14,7 @@ use dwn::{
     store::{DataStore, MessageStore},
     DWN,
 };
-use tracing::debug;
+use tracing::warn;
 
 pub fn router(
     dwn: Arc<
@@ -33,7 +33,7 @@ async fn handle_post(
     match dwn.process_message(request).await {
         Ok(reply) => Json(reply).into_response(),
         Err(err) => {
-            debug!("Error processing message: {:?}", err);
+            warn!("Error processing message: {:?}", err);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

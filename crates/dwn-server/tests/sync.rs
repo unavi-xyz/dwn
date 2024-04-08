@@ -8,6 +8,7 @@ use dwn::{
 };
 use surrealdb::{engine::local::Mem, Surreal};
 use tokio::net::TcpListener;
+use tracing_test::traced_test;
 
 struct TestContext<D: DataStore, M: MessageStore> {
     alice_kyoto: Actor<D, M>,
@@ -59,6 +60,7 @@ async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_read_remote() {
     let TestContext {
         mut alice_kyoto,
@@ -103,6 +105,7 @@ async fn test_read_remote() {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_sync_push() {
     let TestContext {
         mut alice_kyoto,
@@ -144,6 +147,7 @@ async fn test_sync_push() {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_sync_pull_update() {
     let TestContext {
         mut alice_kyoto,
@@ -207,6 +211,7 @@ async fn test_sync_pull_update() {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_sync_pull_many_updates() {
     let TestContext {
         mut alice_kyoto,
@@ -280,6 +285,7 @@ async fn test_sync_pull_many_updates() {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_sync_pull_delete() {
     let TestContext {
         mut alice_kyoto,
@@ -345,6 +351,7 @@ async fn test_sync_pull_delete() {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_sync_pull_delete_after_update() {
     let TestContext {
         mut alice_kyoto,
@@ -429,6 +436,7 @@ async fn test_sync_pull_delete_after_update() {
 }
 
 #[tokio::test]
+#[traced_test]
 async fn test_sync_pull_delete_after_local_update() {
     let TestContext {
         mut alice_kyoto,

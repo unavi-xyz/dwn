@@ -17,7 +17,7 @@ aes-gcm = "0.10.3"
 anyhow = "1.0.80"
 base64 = "0.22.0"
 did-method-key = "0.2.2"
-didkit = { version = "0.6.0", default-features = false, features = ["ed25519"] }
+didkit.workspace = true
 iana-media-types = "0.1.2"
 jsonschema = { version = "0.17.1", default-features = false, features = ["draft201909", "draft202012"] }
 libipld = { version = "0.16.0", features = ["serde-codec"] }
@@ -45,4 +45,4 @@ time = { version = "0.3.31", features = ["serde-well-known"] }
 [dev-dependencies]
 surrealdb = { workspace = true, features = ["kv-mem"] }
 tracing-subscriber.workspace = true
-tracing-test = "0.2.4"
+tracing-test.workspace = true

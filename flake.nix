@@ -117,7 +117,6 @@
           generate-readme = flake-utils.lib.mkApp {
             drv = pkgs.writeShellScriptBin "generate-readme" ''
               cd crates
-
               for folder in */; do
                 (cd $folder && cargo rdme)
               done

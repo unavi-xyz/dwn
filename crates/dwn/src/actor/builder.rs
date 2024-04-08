@@ -3,7 +3,7 @@ use didkit::{
     Document, ResolutionInputMetadata, ResolutionMetadata, DID_METHODS,
 };
 use thiserror::Error;
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::{
     encode::EncodeError,
@@ -73,6 +73,8 @@ pub trait MessageBuilder: Sized {
                 ));
             }
         };
+
+        debug!("Resolved {} to DWN {}", did, dwn_url);
 
         let reply = actor.send(request, &dwn_url).await?;
         Ok(reply)

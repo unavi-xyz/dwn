@@ -2005,6 +2005,7 @@ name = "dwn-server"
 version = "0.0.5"
 dependencies = [
  "axum",
+ "didkit",
  "dwn",
  "port_scanner",
  "serde_json",
@@ -2012,6 +2013,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "tracing-test",
 ]
 
 [[package]]
