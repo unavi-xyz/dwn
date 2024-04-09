@@ -1,10 +1,9 @@
-use iana_media_types::MediaType;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use crate::message::descriptor::{Interface, Method};
 
-pub use semver::Version;
+pub use {iana_media_types::MediaType, semver::Version};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct RecordsWrite {
