@@ -52,7 +52,6 @@ use handlers::{
         read::handle_records_read,
         write::{handle_records_write, HandleWriteOptions},
     },
-    MessageReply,
 };
 use message::{descriptor::Descriptor, DwnRequest, Message, ValidateError};
 use reqwest::Client;
@@ -67,6 +66,7 @@ pub mod message;
 pub mod store;
 
 pub use encode::EncodeError;
+pub use handlers::MessageReply;
 
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub client: Client,
