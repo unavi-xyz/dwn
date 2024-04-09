@@ -23,7 +23,7 @@ jsonschema = { version = "0.17.1", default-features = false, features = ["draft2
 libipld = { version = "0.16.0", features = ["serde-codec"] }
 libipld-cbor = "0.16.0"
 libipld-core = { version = "0.16.0", features = ["serde", "serde-codec", "multibase"] }
-reqwest = { version = "0.12.2", features = ["json"] }
+reqwest = { version = "0.12.2", default-features = false, features = ["rustls-tls", "charset", "http2", "macos-system-configuration", "json"] }
 rustls = { version = "0.23.4", default-features = false, features = ["ring", "logging", "std", "tls12"]}
 semver = { version = "1.0.22", features = ["serde"] }
 serde = { version = "1.0.197", features = ["derive"] }
