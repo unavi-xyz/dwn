@@ -36,7 +36,7 @@ surrealdb = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-time = { version = "0.3.31", features = ["serde-well-known", "wasm-bindgen"] }
+time = { version = "0.3.36", features = ["serde-well-known", "wasm-bindgen"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 time = { version = "0.3.31", features = ["serde-well-known"] }
