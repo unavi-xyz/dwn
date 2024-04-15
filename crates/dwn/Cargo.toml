@@ -14,7 +14,7 @@ surrealdb = ["dep:surrealdb", "dep:tokio"]
 
 [dependencies]
 aes-gcm = "0.10.3"
-anyhow = "1.0.80"
+anyhow = "1.0.82"
 base64 = "0.22.0"
 did-method-key = "0.2.2"
 didkit.workspace = true
