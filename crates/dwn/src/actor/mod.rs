@@ -7,10 +7,7 @@ use tracing::debug;
 
 use crate::{
     encode::EncodeError,
-    handlers::{
-        records::write::{handle_records_write, HandleWriteOptions},
-        MessageReply, StatusReply,
-    },
+    handlers::records::{handle_records_write, HandleWriteOptions},
     message::{
         descriptor::{
             protocols::{ProtocolDefinition, ProtocolsFilter},
@@ -19,6 +16,7 @@ use crate::{
         },
         AuthError, DwnRequest, Message, SignError,
     },
+    reply::{MessageReply, StatusReply},
     store::{DataStore, MessageStore, MessageStoreError},
     HandleMessageError, DWN,
 };

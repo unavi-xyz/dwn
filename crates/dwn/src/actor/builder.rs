@@ -7,8 +7,8 @@ use tracing::{debug, warn};
 
 use crate::{
     encode::EncodeError,
-    handlers::MessageReply,
     message::{AuthError, DwnRequest, Message},
+    reply::MessageReply,
     store::{DataStore, MessageStore},
     HandleMessageError,
 };

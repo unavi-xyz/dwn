@@ -1,10 +1,10 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{MessageReply, QueryReply},
     message::{
         descriptor::records::{RecordsFilter, RecordsQuery},
         Message,
     },
+    reply::{MessageReply, QueryReply},
     store::{DataStore, MessageStore},
 };
 

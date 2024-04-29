@@ -8,7 +8,6 @@ use tracing::debug;
 
 use crate::{
     encode::encode_cbor,
-    handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{
             protocols::{ActionCan, ActionWho, ProtocolStructure, ProtocolsFilter},
@@ -17,6 +16,7 @@ use crate::{
         },
         Data, DwnRequest,
     },
+    reply::{MessageReply, Status, StatusReply},
     store::{DataStore, MessageStore},
     HandleMessageError,
 };

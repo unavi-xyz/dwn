@@ -1,6 +1,6 @@
 use crate::{
-    handlers::{MessageReply, QueryReply, Status},
     message::{descriptor::Descriptor, DwnRequest},
+    reply::{MessageReply, QueryReply, Status},
     store::MessageStore,
     HandleMessageError,
 };

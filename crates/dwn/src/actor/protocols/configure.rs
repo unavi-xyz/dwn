@@ -2,11 +2,11 @@ use semver::Version;
 
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{MessageReply, StatusReply},
     message::{
         descriptor::protocols::{ProtocolDefinition, ProtocolsConfigure},
         Message,
     },
+    reply::{MessageReply, StatusReply},
     store::{DataStore, MessageStore},
 };
 

@@ -47,13 +47,12 @@
 use handlers::{
     protocols::{handle_protocols_configure, handle_protocols_query},
     records::{
-        delete::handle_records_delete,
-        query::handle_records_query,
-        read::handle_records_read,
-        write::{handle_records_write, HandleWriteOptions},
+        handle_records_delete, handle_records_query, handle_records_read, handle_records_write,
+        HandleWriteOptions,
     },
 };
 use message::{descriptor::Descriptor, DwnRequest, Message, ValidateError};
+use reply::MessageReply;
 use reqwest::Client;
 use store::{DataStore, DataStoreError, MessageStore, MessageStoreError};
 use thiserror::Error;
@@ -63,10 +62,10 @@ pub mod actor;
 mod encode;
 mod handlers;
 pub mod message;
+pub mod reply;
 pub mod store;
 
 pub use encode::EncodeError;
-pub use handlers::MessageReply;
 
 pub struct DWN<D: DataStore, M: MessageStore> {
     pub client: Client,

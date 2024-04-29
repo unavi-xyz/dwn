@@ -2,7 +2,6 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 
 use crate::{
-    handlers::{MessageReply, RecordsReadReply, Status},
     message::{
         descriptor::{
             records::{FilterDateSort, RecordsFilter},
@@ -10,6 +9,7 @@ use crate::{
         },
         Data, DwnRequest, EncryptedData,
     },
+    reply::{MessageReply, RecordsReadReply, Status},
     store::{DataStore, MessageStore},
     HandleMessageError,
 };

@@ -1,6 +1,5 @@
 use crate::{
     encode::encode_cbor,
-    handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{
             records::{FilterDateSort, RecordsFilter},
@@ -8,6 +7,7 @@ use crate::{
         },
         DwnRequest,
     },
+    reply::{MessageReply, Status, StatusReply},
     store::{DataStore, MessageStore},
     HandleMessageError,
 };

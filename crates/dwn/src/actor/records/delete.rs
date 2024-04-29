@@ -1,7 +1,7 @@
 use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
-    handlers::{MessageReply, StatusReply},
     message::{descriptor::records::RecordsDelete, Message},
+    reply::{MessageReply, StatusReply},
     store::{DataStore, MessageStore},
 };
 

@@ -1,9 +1,9 @@
 use crate::{
-    handlers::{MessageReply, Status, StatusReply},
     message::{
         descriptor::{protocols::ActionWho, Descriptor},
         DwnRequest,
     },
+    reply::{MessageReply, Status, StatusReply},
     store::{DataStore, MessageStore},
     HandleMessageError,
 };
