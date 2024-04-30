@@ -243,6 +243,22 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
             reply,
         })
     }
+
+    pub async fn send(mut self, did: &str) -> Result<WriteResponse, ProcessMessageError> {
+        let reply = MessageBuilder::send(&mut self, did).await?;
+
+        let reply = match reply {
+            MessageReply::Status(reply) => reply,
+            _ => return Err(ProcessMessageError::InvalidReply),
+        };
+
+        Ok(WriteResponse {
+            context_id: self.final_context_id,
+            entry_id: self.final_entry_id,
+            record_id: self.final_record_id,
+            reply,
+        })
+    }
 }
 
 #[derive(Debug)]
