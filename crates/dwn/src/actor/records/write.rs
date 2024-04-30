@@ -268,3 +268,28 @@ pub struct WriteResponse {
     pub record_id: String,
     pub reply: StatusReply,
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use surrealdb::{engine::local::Mem, Surreal};
+
+    use crate::{store::SurrealStore, DWN};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_record_ids_different() {
+        let db = Surreal::new::<Mem>(()).await.unwrap();
+        let store = SurrealStore::new(db).await.unwrap();
+        let dwn = Arc::new(DWN::from(store));
+
+        let actor = Actor::new_did_key(dwn).unwrap();
+
+        let one = actor.create_record().process().await.unwrap();
+        let two = actor.create_record().process().await.unwrap();
+
+        assert!(one.record_id != two.record_id);
+    }
+}
