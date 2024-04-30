@@ -72,6 +72,17 @@ async fn test_records_schema() {
         .unwrap();
     assert_eq!(create.reply.status.code, 200);
 
+    // Multiple records can use the same schema.
+    let create_two = actor
+        .create_record()
+        .data(data.clone())
+        .schema(schema_url.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(create_two.reply.status.code, 200);
+    assert!(create_two.record_id != create.record_id);
+
     // Data must follow the schema when updating.
     let data = r#"{"wrong_key": "Hello again!"}"#.bytes().collect::<Vec<_>>();
 
