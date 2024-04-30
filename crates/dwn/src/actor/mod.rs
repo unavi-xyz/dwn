@@ -97,7 +97,7 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             }
         }
 
-        // Pull from remotes.
+        // Pull all local records from remotes.
         let mut record_ids = HashSet::new();
 
         for message in self

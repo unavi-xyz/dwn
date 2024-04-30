@@ -45,6 +45,22 @@ pub async fn handle_records_write(
         }
     };
 
+    // Validate data format is present.
+    if message.data.is_some() && descriptor.data_format.is_none() {
+        return Err(HandleMessageError::InvalidDescriptor(
+            "Data format missing".to_string(),
+        ));
+    }
+
+    // Validate data CID is present.
+    // We do not validate the CID, because we may want to store a record
+    // without storing its associated data.
+    if message.data.is_some() && descriptor.data_cid.is_none() {
+        return Err(HandleMessageError::InvalidDescriptor(
+            "Data CID missing".to_string(),
+        ));
+    }
+
     // Get messages for the record.
     let messages = message_store
         .query_records(
@@ -85,13 +101,6 @@ pub async fn handle_records_write(
                 "Schema does not match initial entry".to_string(),
             ));
         }
-    }
-
-    // Validate data format is present.
-    if message.data.is_some() && descriptor.data_format.is_none() {
-        return Err(HandleMessageError::InvalidDescriptor(
-            "Data format missing".to_string(),
-        ));
     }
 
     // Validate data matches schema.
