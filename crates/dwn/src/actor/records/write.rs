@@ -275,12 +275,12 @@ mod tests {
 
     use surrealdb::{engine::local::Mem, Surreal};
 
-    use crate::{store::SurrealStore, DWN};
+    use crate::{encode::encode_cbor, store::SurrealStore, DWN};
 
     use super::*;
 
     #[tokio::test]
-    async fn test_record_ids_different() {
+    async fn test_records_different() {
         let db = Surreal::new::<Mem>(()).await.unwrap();
         let store = SurrealStore::new(db).await.unwrap();
         let dwn = Arc::new(DWN::from(store));
@@ -291,5 +291,15 @@ mod tests {
         let two = actor.create_record().process().await.unwrap();
 
         assert!(one.record_id != two.record_id);
+
+        let one = actor.create_record().create_message().unwrap();
+        let one_cbor = encode_cbor(&one).unwrap();
+        let one_cid = one_cbor.cid();
+
+        let two = actor.create_record().create_message().unwrap();
+        let two_cbor = encode_cbor(&two).unwrap();
+        let two_cid = two_cbor.cid();
+
+        assert!(one_cid != two_cid);
     }
 }
