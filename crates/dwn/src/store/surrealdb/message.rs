@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use surrealdb::{
@@ -19,7 +18,7 @@ use crate::{
             records::{FilterDateCreated, FilterDateSort, RecordsFilter},
             Descriptor,
         },
-        Data, EncryptedData, Message,
+        Message,
     },
     store::{DataStore, MessageStore, MessageStoreError},
 };
@@ -39,7 +38,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let db = self
             .message_db(tenant)
             .await
-            .map_err(MessageStoreError::BackendError)?;
+            .map_err(MessageStoreError::Backend)?;
 
         let id = Thing::from((
             Table::from(MESSAGE_TABLE.to_string()).to_string(),
@@ -49,7 +48,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let message: Option<DbMessage> = db
             .select(id.clone())
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         let message = match message {
             Some(message) => message,
@@ -64,7 +63,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         // Delete the message.
         db.delete::<Option<DbMessage>>(id)
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         if let Some(data_cid) = message.data_cid {
             let id = Thing::from((
@@ -75,7 +74,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             let db_data_ref: Option<DbDataCidRefs> = db
                 .select(id.clone())
                 .await
-                .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+                .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 if db_data_ref.ref_count > 1 {
@@ -85,12 +84,12 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                             ref_count: db_data_ref.ref_count - 1,
                         })
                         .await
-                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+                        .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
                 } else {
                     // Delete the data if this is the only reference.
                     db.delete::<Option<DbDataCidRefs>>(id)
                         .await
-                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+                        .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
                     data_store.delete(data_cid).await?;
                 }
@@ -111,27 +110,11 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         // TODO: Only store data in data store if over a certain size.
 
         if let Some(data) = message.data.take() {
-            // Keep the data type, but clear the data.
-            match &data {
-                Data::Base64(_) => {
-                    message.data = Some(Data::Base64(String::new()));
-                }
-                Data::Encrypted(data) => {
-                    message.data = Some(Data::Encrypted(EncryptedData {
-                        ciphertext: String::new(),
-                        iv: data.iv.clone(),
-                        tag: data.tag.clone(),
-                        protected: data.protected.clone(),
-                        recipients: data.recipients.clone(),
-                    }));
-                }
-            }
-
             // Check if the data is already stored.
             let db = self
                 .message_db(&tenant)
                 .await
-                .map_err(MessageStoreError::BackendError)?;
+                .map_err(MessageStoreError::Backend)?;
 
             let cid = data.cid()?.to_string();
 
@@ -143,7 +126,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             let db_data_ref: Option<DbDataCidRefs> = db
                 .select(id.clone())
                 .await
-                .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+                .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 // Add one to the reference count.
@@ -152,25 +135,16 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                         ref_count: db_data_ref.ref_count + 1,
                     })
                     .await
-                    .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+                    .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
             } else {
                 // Create a new data CID object.
                 db.create::<Option<DbDataCidRefs>>(id)
                     .content(DbDataCidRefs { ref_count: 1 })
                     .await
-                    .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
-
-                let bytes = match data {
-                    Data::Base64(data) => URL_SAFE_NO_PAD
-                        .decode(data.as_bytes())
-                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?,
-                    Data::Encrypted(data) => URL_SAFE_NO_PAD
-                        .decode(data.ciphertext.as_bytes())
-                        .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?,
-                };
+                    .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
                 // Store data in the data store.
-                data_store.put(cid.clone(), bytes).await?;
+                data_store.put(cid.clone(), data.try_into()?).await?;
             }
 
             data_cid = Some(cid);
@@ -182,7 +156,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let db = self
             .message_db(&tenant)
             .await
-            .map_err(MessageStoreError::BackendError)?;
+            .map_err(MessageStoreError::Backend)?;
 
         // Store the message.
         let id = Thing::from((
@@ -239,7 +213,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 tenant,
             })
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         Ok(*message_cid)
     }
@@ -253,7 +227,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let db = self
             .message_db(&tenant)
             .await
-            .map_err(MessageStoreError::BackendError)?;
+            .map_err(MessageStoreError::Backend)?;
 
         let mut conditions = Conditions::new_and();
         conditions.add("message.descriptor.interface = 'Protocols'".to_string());
@@ -285,11 +259,11 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let mut res = query
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         let mut db_messages: Vec<DbMessage> = res
             .take(0)
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         db_messages.sort_by(|a, b| a.message_timestamp.cmp(&b.message_timestamp));
 
@@ -309,7 +283,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let db = self
             .message_db(&tenant)
             .await
-            .map_err(MessageStoreError::BackendError)?;
+            .map_err(MessageStoreError::Backend)?;
 
         let mut binds = HashMap::new();
         let mut conditions = Conditions::new_and();
@@ -343,7 +317,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             if let Some(protocol) = protocols.first() {
                 let descriptor = match &protocol.descriptor {
                     Descriptor::ProtocolsConfigure(desc) => desc,
-                    _ => return Err(MessageStoreError::BackendError(anyhow!("Invalid protocol"))),
+                    _ => return Err(MessageStoreError::Backend(anyhow!("Invalid protocol"))),
                 };
 
                 if let Some(definition) = &descriptor.definition {
@@ -431,7 +405,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         if let Some(FilterDateCreated { from, to }) = filter.message_timestamp {
             if let Some(from) = from {
                 let from = from.format(&Rfc3339).map_err(|err| {
-                    MessageStoreError::BackendError(anyhow!("Failed to format date: {}", err))
+                    MessageStoreError::Backend(anyhow!("Failed to format date: {}", err))
                 })?;
                 binds.insert("from".to_string(), from.to_string());
                 conditions.add("message_timestamp >= $from".to_string());
@@ -439,7 +413,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
             if let Some(to) = to {
                 let to = to.format(&Rfc3339).map_err(|err| {
-                    MessageStoreError::BackendError(anyhow!("Failed to format date: {}", err))
+                    MessageStoreError::Backend(anyhow!("Failed to format date: {}", err))
                 })?;
                 binds.insert("to".to_string(), to.to_string());
                 conditions.add("message_timestamp <= $to".to_string());
@@ -484,11 +458,11 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let mut res = query
             .await
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         let db_messages: Vec<DbMessage> = res
             .take(0)
-            .map_err(|err| MessageStoreError::BackendError(anyhow!(err)))?;
+            .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         Ok(db_messages
             .into_iter()

@@ -52,13 +52,23 @@ pub async fn handle_records_write(
         ));
     }
 
-    // Validate data CID is present.
-    // We do not validate the CID, because we may want to store a record
-    // without storing its associated data.
-    if message.data.is_some() && descriptor.data_cid.is_none() {
-        return Err(HandleMessageError::InvalidDescriptor(
-            "Data CID missing".to_string(),
-        ));
+    // Validate data CID if data present.
+    if let Some(data) = &message.data {
+        let cid = data.cid()?;
+
+        let data_cid =
+            descriptor
+                .data_cid
+                .as_deref()
+                .ok_or(HandleMessageError::InvalidDescriptor(
+                    "Data CID missing".to_string(),
+                ))?;
+
+        if cid.to_string() != data_cid {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Data CID does not match data".to_string(),
+            ));
+        }
     }
 
     // Get messages for the record.

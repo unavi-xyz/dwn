@@ -1,10 +1,11 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use surrealdb::{
     sql::{Id, Table, Thing},
     Connection,
 };
 
-use crate::store::{DataStore, DataStoreError, GetDataResults, PutDataResults};
+use crate::store::{DataStore, DataStoreError, PutDataResults, StoredData};
 
 use super::SurrealStore;
 
@@ -18,32 +19,23 @@ impl<T: Connection> DataStore for SurrealStore<T> {
 
         db.delete::<Option<DbData>>(id)
             .await
-            .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
+            .map_err(|e| DataStoreError::BackendError(anyhow!(e)))?;
 
         Ok(())
     }
 
-    async fn get(&self, cid: String) -> Result<Option<GetDataResults>, DataStoreError> {
+    async fn get(&self, cid: String) -> Result<Option<StoredData>, DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
         let id = Thing::from((Table::from(DATA_TABLE_NAME).to_string(), Id::String(cid)));
 
-        let res: DbData = match db
-            .select(id)
-            .await
-            .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?
-        {
-            Some(res) => res,
-            None => return Ok(None),
-        };
+        let res: Result<Option<DbData>, _> = db.select(id).await;
 
-        Ok(Some(GetDataResults {
-            size: res.data.len(),
-            data: res.data,
-        }))
+        res.map(|r| r.map(|r| r.data))
+            .map_err(|e| DataStoreError::BackendError(anyhow!(e)))
     }
 
-    async fn put(&self, cid: String, data: Vec<u8>) -> Result<PutDataResults, DataStoreError> {
+    async fn put(&self, cid: String, data: StoredData) -> Result<PutDataResults, DataStoreError> {
         let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
 
         let id = Thing::from((
@@ -56,7 +48,7 @@ impl<T: Connection> DataStore for SurrealStore<T> {
         db.create::<Option<DbData>>(id)
             .content(DbData { cid, data })
             .await
-            .map_err(|e| DataStoreError::BackendError(anyhow::anyhow!(e)))?;
+            .map_err(|e| DataStoreError::BackendError(anyhow!(e)))?;
 
         Ok(PutDataResults { size })
     }
@@ -65,5 +57,5 @@ impl<T: Connection> DataStore for SurrealStore<T> {
 #[derive(Serialize, Deserialize, Debug)]
 struct DbData {
     cid: String,
-    data: Vec<u8>,
+    data: StoredData,
 }

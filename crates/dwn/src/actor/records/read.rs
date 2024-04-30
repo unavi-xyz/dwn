@@ -2,7 +2,7 @@ use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     message::{
         descriptor::{records::RecordsRead, Descriptor},
-        Data, DwnRequest, Message,
+        DwnRequest, Message,
     },
     reply::{MessageReply, RecordsReadReply},
     store::{DataStore, MessageStore},
@@ -69,18 +69,8 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                     _ => None,
                 };
 
-                let missing_data = if data_cid.is_some() {
-                    match &reply.record.data {
-                        Some(Data::Base64(data)) => data.is_empty(),
-                        Some(Data::Encrypted(encrypted)) => encrypted.ciphertext.is_empty(),
-                        None => false,
-                    }
-                } else {
-                    false
-                };
-
-                // If we don't have the data, check remote.
-                if missing_data {
+                // If we don't have the data, read from remote.
+                if data_cid.is_some() && reply.record.data.is_none() {
                     if let Some(found) = self.read_remote().await? {
                         return Ok(found);
                     }

@@ -1,4 +1,3 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use libipld::Cid;
 
 use crate::{
@@ -7,7 +6,7 @@ use crate::{
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
-        Data, DwnRequest, EncryptedData,
+        DwnRequest,
     },
     reply::{MessageReply, RecordsReadReply, Status},
     store::{DataStore, MessageStore},
@@ -58,14 +57,15 @@ pub async fn handle_records_read(
         .to_owned();
 
     // Read data.
-    let data_bytes = match &latest.descriptor {
+    latest.data = match &latest.descriptor {
         Descriptor::RecordsWrite(descriptor) => {
             if let Some(data_cid) = &descriptor.data_cid {
+                println!("Reading cid: {}", data_cid);
                 let data_cid = Cid::try_from(data_cid.as_str()).map_err(|e| {
                     HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
                 })?;
                 let res = data_store.get(data_cid.to_string()).await?;
-                res.map(|res| res.data)
+                res.map(|res| res.into())
             } else {
                 None
             }
@@ -73,23 +73,7 @@ pub async fn handle_records_read(
         _ => None,
     };
 
-    if let Some(bytes) = data_bytes {
-        match &latest.data {
-            Some(Data::Base64(_)) => {
-                latest.data = Some(Data::new_base64(&bytes));
-            }
-            Some(Data::Encrypted(data)) => {
-                latest.data = Some(Data::Encrypted(EncryptedData {
-                    ciphertext: URL_SAFE_NO_PAD.encode(&bytes),
-                    iv: data.iv.clone(),
-                    protected: data.protected.clone(),
-                    recipients: data.recipients.clone(),
-                    tag: data.tag.clone(),
-                }))
-            }
-            None => {}
-        }
-    }
+    println!("Read data: {:?}", latest.data);
 
     Ok(RecordsReadReply {
         record: Box::new(latest),

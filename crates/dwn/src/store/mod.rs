@@ -1,5 +1,6 @@
 use std::future::Future;
 
+use base64::DecodeError;
 use libipld::Cid;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -8,12 +9,13 @@ use crate::{
     encode::EncodeError,
     message::{
         descriptor::{protocols::ProtocolsFilter, records::RecordsFilter},
-        DecodeError, Message,
+        Message,
     },
 };
 
 #[cfg(feature = "s3")]
 mod s3;
+mod stored_data;
 #[cfg(feature = "surrealdb")]
 mod surrealdb;
 
@@ -21,6 +23,8 @@ mod surrealdb;
 pub use s3::S3;
 #[cfg(feature = "surrealdb")]
 pub use surrealdb::SurrealStore;
+
+use self::stored_data::StoredData;
 
 #[derive(Error, Debug)]
 pub enum DataStoreError {
@@ -37,19 +41,13 @@ pub trait DataStore: Send + Sync {
     fn get(
         &self,
         cid: String,
-    ) -> impl Future<Output = Result<Option<GetDataResults>, DataStoreError>> + Send + Sync;
+    ) -> impl Future<Output = Result<Option<StoredData>, DataStoreError>> + Send + Sync;
 
     fn put(
         &self,
         cid: String,
-        value: Vec<u8>,
+        value: StoredData,
     ) -> impl Future<Output = Result<PutDataResults, DataStoreError>> + Send + Sync;
-}
-
-#[derive(Debug)]
-pub struct GetDataResults {
-    pub size: usize,
-    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -94,19 +92,19 @@ pub enum MessageStoreError {
     #[error("Message missing data")]
     MissingData,
     #[error(transparent)]
-    MessageEncode(#[from] EncodeError),
+    Encode(#[from] EncodeError),
     #[error(transparent)]
-    DataEncodeError(#[from] libipld_core::error::SerdeError),
+    Decode(#[from] DecodeError),
+    #[error(transparent)]
+    DataEncode(#[from] libipld_core::error::SerdeError),
     #[error("Not found")]
     NotFound,
     #[error(transparent)]
-    MessageDecodeError(#[from] DecodeError),
-    #[error(transparent)]
     Cid(#[from] libipld::cid::Error),
     #[error("Failed to create block {0}")]
-    CreateBlockError(anyhow::Error),
+    CreateBlock(anyhow::Error),
     #[error("Failed to interact with backend: {0}")]
-    BackendError(anyhow::Error),
+    Backend(anyhow::Error),
     #[error(transparent)]
-    DataStoreError(#[from] DataStoreError),
+    DataStore(#[from] DataStoreError),
 }
