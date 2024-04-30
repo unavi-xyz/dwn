@@ -6,6 +6,7 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
+use iana_media_types::Application;
 use surrealdb::{engine::local::Mem, Surreal};
 use time::OffsetDateTime;
 use tracing_test::traced_test;
@@ -30,7 +31,13 @@ async fn test_filter_date_sort() {
 
     for i in 0..NUM_RECORDS {
         let data = gen_data(i);
-        let create = actor.create_record().data(data).process().await.unwrap();
+        let create = actor
+            .create_record()
+            .data(data)
+            .data_format(Application::Json.into())
+            .process()
+            .await
+            .unwrap();
         records.push(create.record_id.clone());
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
@@ -124,7 +131,13 @@ async fn test_filter_message_timestamp() {
         }
 
         let data = gen_data(i);
-        let create = actor.create_record().data(data).process().await.unwrap();
+        let create = actor
+            .create_record()
+            .data(data)
+            .data_format(Application::Json.into())
+            .process()
+            .await
+            .unwrap();
         records.push(create.record_id.clone());
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -246,7 +259,13 @@ async fn test_query_records_delete() {
 
     // Create a new record.
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
-    let create = actor.create_record().data(data).process().await.unwrap();
+    let create = actor
+        .create_record()
+        .data(data)
+        .data_format(Application::Json.into())
+        .process()
+        .await
+        .unwrap();
 
     let record_id = create.record_id.clone();
 

@@ -14,7 +14,7 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
-use iana_media_types::{Application, MediaType};
+use iana_media_types::Application;
 use semver::Version;
 use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
@@ -32,7 +32,7 @@ fn chat_protocol() -> ProtocolDefinition {
     definition.types.insert(
         STRUCTURE.to_string(),
         StructureType {
-            data_format: vec![MediaType::Application(Application::Json)],
+            data_format: vec![Application::Json.into()],
             ..Default::default()
         },
     );
@@ -70,7 +70,7 @@ async fn test_no_read() {
     let record = alice
         .create_record()
         .data(data.clone())
-        .data_format(MediaType::Application(Application::Json))
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
@@ -139,7 +139,7 @@ async fn test_anyone_read() {
     let record = alice
         .create_record()
         .data(data.clone())
-        .data_format(MediaType::Application(Application::Json))
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
@@ -217,7 +217,7 @@ async fn test_author_read() {
     let record = alice
         .create_record()
         .data(data.clone())
-        .data_format(MediaType::Application(Application::Json))
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
@@ -274,6 +274,7 @@ async fn test_author_read() {
     let update = alice
         .update_record(record.record_id.clone(), record.entry_id.clone())
         .data(data.clone())
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 2, 0),
@@ -343,7 +344,7 @@ async fn test_anyone_write_recipient_read() {
     let record = alice
         .create_record()
         .data(data.clone())
-        .data_format(MediaType::Application(Application::Json))
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),

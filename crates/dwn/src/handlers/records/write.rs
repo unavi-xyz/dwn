@@ -87,6 +87,13 @@ pub async fn handle_records_write(
         }
     }
 
+    // Validate data format is present.
+    if message.data.is_some() && descriptor.data_format.is_none() {
+        return Err(HandleMessageError::InvalidDescriptor(
+            "Data format missing".to_string(),
+        ));
+    }
+
     // Validate data matches schema.
     if let Some(schema_url) = &descriptor.schema {
         if let Some(Data::Base64(data)) = &message.data {
@@ -214,7 +221,7 @@ pub async fn handle_records_write(
                 }
             } else {
                 return Err(HandleMessageError::InvalidDescriptor(
-                    "No data format".to_string(),
+                    "Data format missing".to_string(),
                 ));
             }
         }

@@ -8,6 +8,7 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
+use iana_media_types::Application;
 use semver::Version;
 use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
@@ -74,6 +75,7 @@ async fn test_child_anyone_write() {
     let post = alice
         .create_record()
         .data(post_data.clone())
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
@@ -90,6 +92,7 @@ async fn test_child_anyone_write() {
     let comment = alice
         .create_record()
         .data(comment_data.clone())
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
@@ -106,6 +109,7 @@ async fn test_child_anyone_write() {
     let comment = alice
         .create_record()
         .data(comment_data.clone())
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
@@ -120,6 +124,7 @@ async fn test_child_anyone_write() {
     let comment = bob
         .create_record()
         .data(comment_data.clone())
+        .data_format(Application::Json.into())
         .protocol(
             PROTOCOL.to_string(),
             Version::new(0, 1, 0),
