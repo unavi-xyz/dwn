@@ -40,10 +40,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .await
             .map_err(MessageStoreError::Backend)?;
 
-        let id = Thing::from((
-            Table::from(MESSAGE_TABLE.to_string()).to_string(),
-            Id::String(cid),
-        ));
+        let id = Thing::from((Table::from(MESSAGE_TABLE).to_string(), Id::String(cid)));
 
         let message: Option<DbMessage> = db
             .select(id.clone())
@@ -71,7 +68,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 Id::String(data_cid.to_string()),
             ));
 
-            let db_data_ref: Option<DbDataCidRefs> = db
+            let db_data_ref: Option<DataRefs> = db
                 .select(id.clone())
                 .await
                 .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
@@ -79,15 +76,15 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             if let Some(db_data_ref) = db_data_ref {
                 if db_data_ref.ref_count > 1 {
                     // Decrement the reference count for the data CID.
-                    db.update::<Option<DbDataCidRefs>>(id)
-                        .content(DbDataCidRefs {
+                    db.update::<Option<DataRefs>>(id)
+                        .content(DataRefs {
                             ref_count: db_data_ref.ref_count - 1,
                         })
                         .await
                         .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
                 } else {
                     // Delete the data if this is the only reference.
-                    db.delete::<Option<DbDataCidRefs>>(id)
+                    db.delete::<Option<DataRefs>>(id)
                         .await
                         .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
@@ -110,12 +107,9 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         // TODO: Only store data in data store if over a certain size.
 
         if let Some(data) = message.data.take() {
-            // Check if the data is already stored.
-            let db = self
-                .message_db(&tenant)
-                .await
-                .map_err(MessageStoreError::Backend)?;
+            let db = self.data_db().await.map_err(MessageStoreError::Backend)?;
 
+            // Check if the data is already stored.
             let cid = data.cid()?.to_string();
 
             let id = Thing::from((
@@ -123,23 +117,23 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 Id::String(cid.clone()),
             ));
 
-            let db_data_ref: Option<DbDataCidRefs> = db
+            let db_data_ref: Option<DataRefs> = db
                 .select(id.clone())
                 .await
                 .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 // Add one to the reference count.
-                db.update::<Option<DbDataCidRefs>>(id)
-                    .content(DbDataCidRefs {
+                db.update::<Option<DataRefs>>(id.clone())
+                    .content(DataRefs {
                         ref_count: db_data_ref.ref_count + 1,
                     })
                     .await
                     .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
             } else {
                 // Create a new data CID object.
-                db.create::<Option<DbDataCidRefs>>(id)
-                    .content(DbDataCidRefs { ref_count: 1 })
+                db.create::<Option<DataRefs>>(id.clone())
+                    .content(DataRefs { ref_count: 1 })
                     .await
                     .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
@@ -150,17 +144,17 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             data_cid = Some(cid);
         }
 
-        let cbor = encode_cbor(&message)?;
-        let message_cid = cbor.cid();
-
         let db = self
             .message_db(&tenant)
             .await
             .map_err(MessageStoreError::Backend)?;
 
+        let cbor = encode_cbor(&message)?;
+        let message_cid = cbor.cid();
+
         // Store the message.
         let id = Thing::from((
-            Table::from(MESSAGE_TABLE.to_string()).to_string(),
+            Table::from(MESSAGE_TABLE).to_string(),
             Id::String(message_cid.to_string()),
         ));
 
@@ -200,6 +194,8 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     .collect()
             })
             .unwrap_or_default();
+
+        // TODO: When updating a record, if data changes delete old data / decrement ref
 
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
@@ -472,7 +468,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct DbDataCidRefs {
+struct DataRefs {
     ref_count: usize,
 }
 

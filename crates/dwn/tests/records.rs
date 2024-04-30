@@ -17,7 +17,7 @@ async fn test_records() {
     let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
-    let actor = Actor::new_did_key(dwn).unwrap();
+    let actor = Actor::new_did_key(dwn.clone()).unwrap();
 
     // Create a new record.
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
@@ -71,6 +71,17 @@ async fn test_records() {
         .unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, None);
+
+    // Create a record with the same data from another tenant.
+    let actor_two = Actor::new_did_key(dwn).unwrap();
+    let create_two = actor_two
+        .create_record()
+        .data(data.clone())
+        .data_format(Application::Json.into())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(create_two.reply.status.code, 200);
 
     // Create a new record.
     let create = actor

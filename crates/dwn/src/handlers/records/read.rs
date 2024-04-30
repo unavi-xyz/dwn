@@ -60,7 +60,6 @@ pub async fn handle_records_read(
     latest.data = match &latest.descriptor {
         Descriptor::RecordsWrite(descriptor) => {
             if let Some(data_cid) = &descriptor.data_cid {
-                println!("Reading cid: {}", data_cid);
                 let data_cid = Cid::try_from(data_cid.as_str()).map_err(|e| {
                     HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
                 })?;
@@ -72,8 +71,6 @@ pub async fn handle_records_read(
         }
         _ => None,
     };
-
-    println!("Read data: {:?}", latest.data);
 
     Ok(RecordsReadReply {
         record: Box::new(latest),

@@ -69,7 +69,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                     _ => None,
                 };
 
-                // If we don't have the data, read from remote.
+                // If we don't have the data, check remote.
                 if data_cid.is_some() && reply.record.data.is_none() {
                     if let Some(found) = self.read_remote().await? {
                         return Ok(found);
