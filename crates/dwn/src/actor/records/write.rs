@@ -67,9 +67,9 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
     }
 
     fn post_build(&mut self, message: &mut Message) -> Result<(), PrepareError> {
-        self.final_context_id = message.context_id.clone();
+        self.final_context_id.clone_from(&message.context_id);
         self.final_entry_id = message.entry_id()?;
-        self.final_record_id = message.record_id.clone();
+        self.final_record_id.clone_from(&message.record_id);
         Ok(())
     }
 

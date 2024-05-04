@@ -16,18 +16,12 @@ use dwn::{
 };
 use tracing::warn;
 
-pub fn router(
-    dwn: Arc<
-        DWN<impl DataStore + Send + Sync + 'static, impl MessageStore + Send + Sync + 'static>,
-    >,
-) -> Router {
+pub fn router(dwn: Arc<DWN<impl DataStore + 'static, impl MessageStore + 'static>>) -> Router {
     Router::new().route("/", post(handle_post)).with_state(dwn)
 }
 
 async fn handle_post(
-    State(dwn): State<
-        Arc<DWN<impl DataStore + Send + Sync + 'static, impl MessageStore + Send + Sync + 'static>>,
-    >,
+    State(dwn): State<Arc<DWN<impl DataStore + 'static, impl MessageStore + 'static>>>,
     Json(request): Json<DwnRequest>,
 ) -> Response {
     match dwn.process_message(request).await {

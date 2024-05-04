@@ -35,9 +35,9 @@ async fn test_send() {
     let alice_did = format!("did:web:localhost%3A{}", port);
     let mut alice_osaka = Actor::new_did_key(dwn_osaka.clone()).unwrap();
     let key_id = format!("{}#{}", alice_did, KEY_FRAGMENT);
-    alice_osaka.attestation.key_id = key_id.clone();
+    alice_osaka.attestation.key_id.clone_from(&key_id);
     alice_osaka.authorization.key_id = key_id;
-    alice_osaka.did = alice_did.clone();
+    alice_osaka.did.clone_from(&alice_did);
 
     // Host Osaka on a server.
     {

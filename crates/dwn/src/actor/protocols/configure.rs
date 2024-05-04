@@ -42,8 +42,10 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for ProtocolsConfigureBui
 
     fn create_message(&mut self) -> Result<Message, PrepareError> {
         let mut configure = ProtocolsConfigure::default();
-        configure.definition = self.definition.clone();
-        configure.last_configuration = self.last_configuration.clone();
+        configure.definition.clone_from(&self.definition);
+        configure
+            .last_configuration
+            .clone_from(&self.last_configuration);
         configure.protocol_version = self.protocol_version.clone();
 
         Ok(Message::new(configure))
