@@ -35,16 +35,15 @@ impl Default for ProtocolsConfigure {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct ProtocolDefinition {
     pub protocol: String,
-    #[serde(default)]
     pub published: bool,
-    pub types: HashMap<String, StructureType>,
     pub structure: HashMap<String, ProtocolStructure>,
+    pub types: HashMap<String, StructureType>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct StructureType {
-    #[serde(rename = "dataFormat")]
-    pub data_format: Vec<MediaType>,
+    #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
+    pub data_format: Option<Vec<MediaType>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema: Option<String>,
 }
@@ -114,7 +113,7 @@ pub struct Action {
     pub who: ActionWho,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub of: Option<String>,
-    pub can: ActionCan,
+    pub can: Vec<ActionCan>,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Eq, Serialize, PartialEq)]

@@ -224,24 +224,27 @@ pub async fn handle_records_write(
 
         // Ensure data format matches.
         let data_format = match descriptor.data_format.clone() {
-            Some(data_format) => Some(data_format),
+            Some(d) => Some(d),
             None => messages.iter().find_map(|m| match &m.descriptor {
                 Descriptor::RecordsWrite(desc) => desc.data_format.clone(),
                 _ => None,
             }),
         };
 
-        if !structure_type.data_format.is_empty() {
-            if let Some(data_format) = data_format {
-                if !structure_type.data_format.contains(&data_format) {
+        if let Some(structure_format) = &structure_type.data_format {
+            match &data_format {
+                Some(data_format) => {
+                    if !structure_format.contains(data_format) {
+                        return Err(HandleMessageError::InvalidDescriptor(
+                            "Data format does not match protocol definition".to_string(),
+                        ));
+                    }
+                }
+                None => {
                     return Err(HandleMessageError::InvalidDescriptor(
-                        "Data format does not match protocol type".to_string(),
+                        "Data format missing".to_string(),
                     ));
                 }
-            } else {
-                return Err(HandleMessageError::InvalidDescriptor(
-                    "Data format missing".to_string(),
-                ));
             }
         }
 
@@ -305,7 +308,7 @@ pub async fn handle_records_write(
 
         // Set write permissions.
         for action in &structure.actions {
-            if action.can != ActionCan::Write {
+            if !action.can.contains(&ActionCan::Write) {
                 continue;
             }
 

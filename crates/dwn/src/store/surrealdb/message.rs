@@ -324,7 +324,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                         let mut read_conditions = Conditions::new_and();
 
                         for action in &structure.actions {
-                            if action.can != ActionCan::Read {
+                            if !action.can.contains(&ActionCan::Read) {
                                 continue;
                             }
 
