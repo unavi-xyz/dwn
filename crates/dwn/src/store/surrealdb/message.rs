@@ -200,16 +200,18 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 if let Some(path) = &descriptor.protocol_path {
                     if let Some(definition) = definition {
                         if let Some(structure) = definition.structure.get(path) {
+                            let mut can_read_dids = Vec::new();
+                            let mut set_can_read = true;
+
                             for action in &structure.actions {
                                 if !action.can.contains(&ActionCan::Read) {
                                     continue;
                                 }
 
-                                let mut can_read_dids = Vec::new();
-
                                 match &action.who {
                                     ActionWho::Anyone => {
                                         // Ignore other actions, keep `can_read` as `None`.
+                                        set_can_read = false;
                                         break;
                                     }
                                     ActionWho::Author => {
@@ -230,7 +232,9 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                                         }
                                     }
                                 }
+                            }
 
+                            if set_can_read {
                                 can_read = Some(can_read_dids);
                             }
                         }
