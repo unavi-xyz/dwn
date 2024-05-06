@@ -172,7 +172,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             })
             .unwrap_or_default();
 
-        // Parse protocol, create `can_read` list.
+        // Parse protocol.
         let mut can_read = None;
 
         if let Descriptor::RecordsWrite(descriptor) = &message.descriptor {
@@ -197,8 +197,8 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     _ => unreachable!(),
                 };
 
-                if let Some(path) = &descriptor.protocol_path {
-                    if let Some(definition) = definition {
+                if let Some(definition) = definition {
+                    if let Some(path) = &descriptor.protocol_path {
                         if let Some(structure) = definition.structure.get(path) {
                             let mut can_read_dids = Vec::new();
                             let mut set_can_read = true;

@@ -207,6 +207,13 @@ pub async fn handle_records_write(
             HandleMessageError::InvalidDescriptor("No protocol definition".to_string()),
         )?;
 
+        // Ensure protocol is published if message is published.
+        if !definition.published && descriptor.published.unwrap_or_default() {
+            return Err(HandleMessageError::InvalidDescriptor(
+                "Protocol not published".to_string(),
+            ));
+        }
+
         // Get structure from definition.
         let (structure, structure_parents) =
             find_protocol_path(&definition.structure, protocol_path).ok_or(
