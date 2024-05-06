@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use dwn::{
     actor::{Actor, MessageBuilder},
-    message::descriptor::protocols::ProtocolDefinition,
+    message::descriptor::{protocols::ProtocolDefinition, records::RecordsFilter},
     store::SurrealStore,
     DWN,
 };
@@ -63,4 +63,31 @@ pub async fn test_recipient_read() {
         .unwrap();
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.record_id, create.record_id);
+
+    // Bob can query.
+    let query = bob
+        .query_records(RecordsFilter {
+            protocol: Some(definition.protocol.clone()),
+            ..Default::default()
+        })
+        .target(alice.did.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+    assert_eq!(query.entries[0].record_id, create.record_id);
+
+    // Alice can query.
+    let query = alice
+        .query_records(RecordsFilter {
+            protocol: Some(definition.protocol),
+            ..Default::default()
+        })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+    assert_eq!(query.entries[0].record_id, create.record_id);
 }

@@ -355,7 +355,10 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .map_err(MessageStoreError::Backend)?;
 
         let mut binds = HashMap::new();
+        binds.insert("tenant", tenant);
+
         let mut conditions = Conditions::new_and();
+        conditions.add("message.descriptor.interface = 'Records'".to_string());
 
         {
             // TODO: Do we need to verify author?
@@ -375,12 +378,12 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         }
 
         if let Some(protocol_version) = filter.protocol_version {
-            binds.insert("protocol_version".to_string(), protocol_version.to_string());
+            binds.insert("protocol_version", protocol_version.to_string());
             conditions.add("message.descriptor.protocolVersion = $protocol_version".to_string());
         }
 
         if let Some(record_id) = filter.record_id {
-            binds.insert("record_id".to_string(), record_id.to_string());
+            binds.insert("record_id", record_id.to_string());
             conditions.add("record_id = $record_id".to_string());
         }
 
@@ -389,7 +392,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 let from = from.format(&Rfc3339).map_err(|err| {
                     MessageStoreError::Backend(anyhow!("Failed to format date: {}", err))
                 })?;
-                binds.insert("from".to_string(), from.to_string());
+                binds.insert("from", from.to_string());
                 conditions.add("message_timestamp >= $from".to_string());
             }
 
@@ -397,7 +400,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 let to = to.format(&Rfc3339).map_err(|err| {
                     MessageStoreError::Backend(anyhow!("Failed to format date: {}", err))
                 })?;
-                binds.insert("to".to_string(), to.to_string());
+                binds.insert("to", to.to_string());
                 conditions.add("message_timestamp <= $to".to_string());
             }
         };
@@ -431,8 +434,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let mut query = db
             .query(query_string)
             .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
-            .bind(("author", author))
-            .bind(("tenant", tenant));
+            .bind(("author", author));
 
         for (key, value) in binds {
             query = query.bind((key, value));
