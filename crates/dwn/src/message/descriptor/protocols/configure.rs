@@ -40,6 +40,30 @@ pub struct ProtocolDefinition {
     pub types: HashMap<String, StructureType>,
 }
 
+impl ProtocolDefinition {
+    pub fn get_structure<'a>(&'a self, path: &str) -> Option<&'a ProtocolStructure> {
+        let parts = path.split('/');
+
+        let mut map = &self.structure;
+        let mut structure = None;
+
+        for part in parts {
+            match map.get(part) {
+                Some(s) => {
+                    map = &s.children;
+                    structure = Some(s);
+                }
+                None => {
+                    structure = None;
+                    break;
+                }
+            };
+        }
+
+        structure
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct StructureType {
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]

@@ -154,23 +154,34 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let cbor = encode_cbor(&message)?;
         let message_cid = cbor.cid();
 
-        let context = message
-            .context_id
-            .clone()
-            .map(|context_id| {
-                context_id
-                    .split('/')
-                    .rev()
-                    .skip(1)
-                    .map(|parent_id| {
-                        Thing::from((
-                            Table::from(MESSAGE_TABLE.to_string()).to_string(),
-                            Id::String(parent_id.to_string()),
-                        ))
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
+        let mut context = Vec::new();
+
+        if let Some(context_id) = message.context_id.clone() {
+            for parent_record_id in context_id.split('/').rev().skip(1) {
+                let parent_records = self
+                    .query_records(
+                        tenant.clone(),
+                        message.author().as_deref(),
+                        authorized,
+                        RecordsFilter {
+                            record_id: Some(parent_record_id.to_string()),
+                            date_sort: Some(FilterDateSort::CreatedAscending),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+
+                let parent_msg = parent_records.first().ok_or(MessageStoreError::NotFound)?;
+
+                let parent_cbor = encode_cbor(&parent_msg)?;
+                let parent_cid = parent_cbor.cid();
+
+                context.push(Thing::from((
+                    Table::from(MESSAGE_TABLE.to_string()).to_string(),
+                    Id::String(parent_cid.to_string()),
+                )));
+            }
+        }
 
         // Parse protocol.
         let mut can_read = None;
@@ -199,44 +210,99 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
                 if let Some(definition) = definition {
                     if let Some(path) = &descriptor.protocol_path {
-                        if let Some(structure) = definition.structure.get(path) {
-                            let mut can_read_dids = Vec::new();
-                            let mut set_can_read = true;
+                        let structure = definition
+                            .get_structure(path)
+                            .ok_or(MessageStoreError::NotFound)?;
 
-                            for action in &structure.actions {
-                                if !action.can.contains(&ActionCan::Read) {
-                                    continue;
+                        let mut can_read_dids = Vec::new();
+                        let mut set_can_read = true;
+
+                        for action in &structure.actions {
+                            if !action.can.contains(&ActionCan::Read) {
+                                continue;
+                            }
+
+                            match &action.who {
+                                ActionWho::Anyone => {
+                                    // Ignore other actions, keep `can_read` as `None`.
+                                    set_can_read = false;
+                                    break;
                                 }
+                                ActionWho::Author => {
+                                    if let Some(of) = &action.of {
+                                        // `of` will always be a subset of `path`.
+                                        // Get the extra parts of `path` and count them.
+                                        // That is how far up `context` we have to go.
+                                        let mut extra = path.strip_prefix(of).unwrap();
 
-                                match &action.who {
-                                    ActionWho::Anyone => {
-                                        // Ignore other actions, keep `can_read` as `None`.
-                                        set_can_read = false;
-                                        break;
-                                    }
-                                    ActionWho::Author => {
-                                        if let Some(_of) = &action.of {
-                                            // TODO: Walk up context, find author DID.
-                                        } else {
-                                            // Author can always read their own record.
-                                            // Nothing needs to happen here.
+                                        if extra.starts_with('/') {
+                                            extra = extra.strip_prefix('/').unwrap();
                                         }
+
+                                        let count = extra.split('/').count();
+
+                                        let id = &context[count - 1];
+
+                                        let message: Option<DbMessage> =
+                                            db.select(id).await.map_err(|err| {
+                                                MessageStoreError::Backend(anyhow!(err))
+                                            })?;
+
+                                        let message = message.ok_or(MessageStoreError::NotFound)?;
+
+                                        if let Some(author) = message.author {
+                                            can_read_dids.push(author);
+                                        } else {
+                                            debug!("Protocol reference has no author?");
+                                        }
+                                    } else {
+                                        // Author can always read their own record.
+                                        // Nothing needs to happen here.
                                     }
-                                    ActionWho::Recipient => {
-                                        if let Some(_of) = &action.of {
-                                            for thing in context.iter() {
-                                                println!("Thing: {:?}", thing);
+                                }
+                                ActionWho::Recipient => {
+                                    if let Some(of) = &action.of {
+                                        // `of` will always be a subset of `path`.
+                                        // Get the extra parts of `path` and count them.
+                                        // That is how far up `context` we have to go.
+                                        let mut extra = path.strip_prefix(of).unwrap();
+
+                                        if extra.starts_with('/') {
+                                            extra = extra.strip_prefix('/').unwrap();
+                                        }
+
+                                        let count = extra.split('/').count();
+
+                                        // Go one level higher to get the recipient.
+                                        // For root level structures this is the tenant.
+                                        if count < context.len() {
+                                            let id = &context[count];
+
+                                            let message: Option<DbMessage> =
+                                                db.select(id).await.map_err(|err| {
+                                                    MessageStoreError::Backend(anyhow!(err))
+                                                })?;
+
+                                            let message =
+                                                message.ok_or(MessageStoreError::NotFound)?;
+
+                                            if let Some(author) = message.author {
+                                                can_read_dids.push(author);
+                                            } else {
+                                                debug!("Protocol reference has no author?");
                                             }
                                         } else {
                                             can_read_dids.push(tenant.clone());
-                                        }
+                                        };
+                                    } else {
+                                        can_read_dids.push(tenant.clone());
                                     }
                                 }
                             }
+                        }
 
-                            if set_can_read {
-                                can_read = Some(can_read_dids);
-                            }
+                        if set_can_read {
+                            can_read = Some(can_read_dids);
                         }
                     }
                 }

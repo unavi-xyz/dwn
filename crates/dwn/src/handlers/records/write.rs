@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use jsonschema::JSONSchema;
 use reqwest::Client;
@@ -10,7 +8,7 @@ use crate::{
     encode::encode_cbor,
     message::{
         descriptor::{
-            protocols::{ActionCan, ActionWho, ProtocolStructure, ProtocolsFilter},
+            protocols::{ActionCan, ActionWho, ProtocolsFilter},
             records::{FilterDateSort, RecordsFilter},
             Descriptor,
         },
@@ -214,20 +212,16 @@ pub async fn handle_records_write(
             ));
         }
 
-        // Get structure from definition.
-        let (structure, structure_parents) =
-            find_protocol_path(&definition.structure, protocol_path).ok_or(
-                HandleMessageError::InvalidDescriptor("Protocol structure not found".to_string()),
-            )?;
+        let structure = definition.get_structure(protocol_path).ok_or(
+            HandleMessageError::InvalidDescriptor("Protocol structure not found".to_string()),
+        )?;
 
-        // Get type from definition.
-        let structure_type =
-            definition
-                .types
-                .get(protocol_path)
-                .ok_or(HandleMessageError::InvalidDescriptor(
-                    "Protocol type not found".to_string(),
-                ))?;
+        let structure_type = definition
+            .types
+            .get(protocol_path.split('/').last().unwrap())
+            .ok_or(HandleMessageError::InvalidDescriptor(
+                "Protocol type not found".to_string(),
+            ))?;
 
         // Ensure data format matches.
         let data_format = match descriptor.data_format.clone() {
@@ -260,7 +254,9 @@ pub async fn handle_records_write(
         let mut context_ids = context_id.split('/').collect::<Vec<_>>();
         context_ids.pop();
 
-        if context_ids.len() != structure_parents.len() {
+        let parents_path_len = protocol_path.split('/').count() - 1;
+
+        if context_ids.len() != parents_path_len {
             return Err(HandleMessageError::InvalidDescriptor(
                 "Context id does not match protocol path".to_string(),
             ));
@@ -289,7 +285,7 @@ pub async fn handle_records_write(
             let message = &messages[0];
 
             // Validate that message matches the expected protocol path.
-            let expected = structure_parents[i];
+            let expected = protocol_path.split('/').nth(i).unwrap();
 
             let path = match &message.descriptor {
                 Descriptor::RecordsWrite(desc) => desc.protocol_path.clone(),
@@ -463,22 +459,4 @@ pub async fn handle_records_write(
         status: Status::ok(),
     }
     .into())
-}
-
-fn find_protocol_path<'a>(
-    map: &'a HashMap<String, ProtocolStructure>,
-    protocol_path: &str,
-) -> Option<(&'a ProtocolStructure, Vec<&'a str>)> {
-    for (key, value) in map {
-        if key == protocol_path {
-            return Some((value, Vec::new()));
-        }
-
-        if let Some((found, mut parents)) = find_protocol_path(&value.children, protocol_path) {
-            parents.push(key.as_str());
-            return Some((found, parents));
-        }
-    }
-
-    None
 }
