@@ -1,0 +1,27 @@
+{
+  "protocol": "https://example.com/protocol.json",
+  "published": true,
+  "types": {
+    "post": {},
+    "reply": {}
+  },
+  "structure": {
+    "post": {
+      "$actions": [
+        {
+          "who": "anyone",
+          "can": ["read", "write"]
+        }
+      ],
+      "reply": {
+        "$actions": [
+          {
+            "who": "recipient",
+            "of": "post",
+            "can": ["write"]
+          }
+        ]
+      }
+    }
+  }
+}
