@@ -2,6 +2,6 @@
 
 <!-- cargo-rdme start -->
 
-Decentralized Web Node HTTP server, using [axum](https://github.com/tokio-rs/axum).
+[Decentralized Web Node](https://identity.foundation/decentralized-web-node/spec/) HTTP server.
 
 <!-- cargo-rdme end -->
