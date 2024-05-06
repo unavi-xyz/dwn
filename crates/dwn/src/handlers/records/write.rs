@@ -75,7 +75,7 @@ pub async fn handle_records_write(
     let messages = message_store
         .query_records(
             target.clone(),
-            None,
+            message.author().as_deref(),
             authorized,
             RecordsFilter {
                 record_id: Some(message.record_id.clone()),
@@ -263,7 +263,7 @@ pub async fn handle_records_write(
             let messages = message_store
                 .query_records(
                     target.clone(),
-                    None,
+                    message.author().as_deref(),
                     authorized,
                     RecordsFilter {
                         record_id: Some(record_id.to_string()),

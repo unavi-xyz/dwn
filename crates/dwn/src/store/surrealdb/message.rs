@@ -357,17 +357,21 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let mut binds = HashMap::new();
         let mut conditions = Conditions::new_and();
 
-        if !authorized {
-            conditions.add("message.descriptor.published = true".to_string());
-
+        {
+            // TODO: Do we need to verify author?
             let mut can_read = Conditions::new_or();
             can_read.add("can_read = NONE".to_string());
 
             if author.is_some() {
                 can_read.add("can_read CONTAINS $author".to_string());
+                can_read.add("author = $author".to_string());
             }
 
             conditions.add(can_read.to_string());
+        }
+
+        if !authorized {
+            conditions.add("message.descriptor.published = true".to_string());
         }
 
         if let Some(protocol_version) = filter.protocol_version {

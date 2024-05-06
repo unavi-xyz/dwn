@@ -8,8 +8,12 @@
     "post": {
       "$actions": [
         {
+          "who": "anyone",
+          "can": ["write"]
+        },
+        {
           "who": "recipient",
-          "can": ["read", "write"]
+          "can": ["read"]
         }
       ]
     }
