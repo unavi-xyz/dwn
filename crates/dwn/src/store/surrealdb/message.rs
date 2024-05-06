@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use libipld::Cid;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use surrealdb::{
     sql::{Id, Table, Thing},
@@ -98,6 +99,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
     async fn put(
         &self,
+        authorized: bool,
         tenant: String,
         mut message: Message,
         data_store: &impl DataStore,
@@ -152,7 +154,91 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let cbor = encode_cbor(&message)?;
         let message_cid = cbor.cid();
 
-        // Store the message.
+        let context = message
+            .context_id
+            .clone()
+            .map(|context_id| {
+                context_id
+                    .split('/')
+                    .rev()
+                    .skip(1)
+                    .map(|parent_id| {
+                        Thing::from((
+                            Table::from(MESSAGE_TABLE.to_string()).to_string(),
+                            Id::String(parent_id.to_string()),
+                        ))
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        // Parse protocol, create `can_read` list.
+        let mut can_read = None;
+
+        if let Descriptor::RecordsWrite(descriptor) = &message.descriptor {
+            if let Some(protocol) = descriptor.protocol.clone() {
+                let protocols = self
+                    .query_protocols(
+                        tenant.clone(),
+                        authorized,
+                        ProtocolsFilter {
+                            protocol,
+                            versions: vec![descriptor
+                                .protocol_version
+                                .clone()
+                                .unwrap_or(Version::new(0, 0, 0))],
+                        },
+                    )
+                    .await?;
+
+                let configure_msg = protocols.first().ok_or(MessageStoreError::NotFound)?;
+                let definition = match &configure_msg.descriptor {
+                    Descriptor::ProtocolsConfigure(config) => config.definition.clone(),
+                    _ => unreachable!(),
+                };
+
+                if let Some(path) = &descriptor.protocol_path {
+                    if let Some(definition) = definition {
+                        if let Some(structure) = definition.structure.get(path) {
+                            for action in &structure.actions {
+                                if !action.can.contains(&ActionCan::Read) {
+                                    continue;
+                                }
+
+                                let mut can_read_dids = Vec::new();
+
+                                match &action.who {
+                                    ActionWho::Anyone => {
+                                        // Ignore other actions, keep `can_read` as `None`.
+                                        break;
+                                    }
+                                    ActionWho::Author => {
+                                        if let Some(_of) = &action.of {
+                                            // TODO: Walk up context, find author DID.
+                                        } else {
+                                            // Author can always read their own record.
+                                            // Nothing needs to happen here.
+                                        }
+                                    }
+                                    ActionWho::Recipient => {
+                                        if let Some(_of) = &action.of {
+                                            for thing in context.iter() {
+                                                println!("Thing: {:?}", thing);
+                                            }
+                                        } else {
+                                            can_read_dids.push(tenant.clone());
+                                        }
+                                    }
+                                }
+
+                                can_read = Some(can_read_dids);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         let id = Thing::from((
             Table::from(MESSAGE_TABLE).to_string(),
             Id::String(message_cid.to_string()),
@@ -177,34 +263,17 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let author = message.author().map(|a| a.to_string());
 
-        let context = message
-            .context_id
-            .clone()
-            .map(|context_id| {
-                context_id
-                    .split('/')
-                    .rev()
-                    .skip(1)
-                    .map(|parent_id| {
-                        Thing::from((
-                            Table::from(MESSAGE_TABLE.to_string()).to_string(),
-                            Id::String(parent_id.to_string()),
-                        ))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-
         // TODO: When updating a record, if data changes delete old data / decrement ref
 
         db.create::<Option<DbMessage>>(id)
             .content(DbMessage {
                 author,
+                can_read,
                 context,
                 data_cid,
-                message_timestamp,
                 date_published,
                 message,
+                message_timestamp,
                 record_id,
                 tenant,
             })
@@ -286,106 +355,15 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         if !authorized {
             conditions.add("message.descriptor.published = true".to_string());
-        }
 
-        if let Some(protocol) = &filter.protocol {
-            binds.insert("protocol".to_string(), protocol.to_string());
-            conditions.add("message.descriptor.protocol = $protocol".to_string());
+            let mut can_read = Conditions::new_or();
+            can_read.add("can_read = NONE".to_string());
 
-            // Get protocol.
-            let mut versions = Vec::new();
-
-            if let Some(protocol_version) = &filter.protocol_version {
-                versions.push(protocol_version.clone());
+            if author.is_some() {
+                can_read.add("can_read CONTAINS $author".to_string());
             }
 
-            let protocols = self
-                .query_protocols(
-                    tenant.clone(),
-                    authorized,
-                    ProtocolsFilter {
-                        protocol: protocol.clone(),
-                        versions,
-                    },
-                )
-                .await?;
-
-            if let Some(protocol) = protocols.first() {
-                let descriptor = match &protocol.descriptor {
-                    Descriptor::ProtocolsConfigure(desc) => desc,
-                    _ => return Err(MessageStoreError::Backend(anyhow!("Invalid protocol"))),
-                };
-
-                if let Some(definition) = &descriptor.definition {
-                    // Enforce protocol read rules.
-                    let mut protocol_conditions = Conditions::new_or();
-
-                    for (i, (key, structure)) in definition.structure.iter().enumerate() {
-                        let mut read_conditions = Conditions::new_and();
-
-                        for action in &structure.actions {
-                            if !action.can.contains(&ActionCan::Read) {
-                                continue;
-                            }
-
-                            let mut ctx = String::new();
-
-                            if let Some(of) = &action.of {
-                                if of != key {
-                                    let bind = format!("protocol_structure_of_{}", i);
-                                    binds.insert(bind.clone(), of.to_string());
-
-                                    read_conditions.add(format!(
-                                        "context->message.descriptor.protocolPath = ${}",
-                                        bind
-                                    ));
-
-                                    ctx = "context->".to_string();
-                                }
-                            }
-
-                            match action.who {
-                                ActionWho::Anyone => {
-                                    read_conditions.add("true".to_string());
-                                }
-                                ActionWho::Author => {
-                                    let mut author_conditions = Conditions::new_or();
-
-                                    if author.is_some() {
-                                        author_conditions.add(format!("{}author = $author", ctx));
-                                    }
-
-                                    if authorized {
-                                        author_conditions.add(format!("{}author = $tenant", ctx));
-                                    }
-
-                                    read_conditions.add(author_conditions.to_string());
-                                }
-                                ActionWho::Recipient => {
-                                    read_conditions.add(format!("{}tenant = $author", ctx));
-                                }
-                            }
-                        }
-
-                        let mut structure_conditions = Conditions::new_and();
-
-                        let bind = format!("protocol_structure_{}", i);
-                        binds.insert(bind.clone(), key.clone());
-                        let eq = if read_conditions.is_empty() {
-                            "!=".to_string()
-                        } else {
-                            "=".to_string()
-                        };
-                        structure_conditions
-                            .add(format!("message.descriptor.protocolPath {} ${}", eq, bind));
-                        structure_conditions.add(read_conditions.to_string());
-
-                        protocol_conditions.add(structure_conditions.to_string());
-                    }
-
-                    conditions.add(protocol_conditions.to_string());
-                }
-            }
+            conditions.add(can_read.to_string());
         }
 
         if let Some(protocol_version) = filter.protocol_version {
@@ -474,7 +452,12 @@ struct DataRefs {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DbMessage {
+    // Author DID of the message.
     author: Option<String>,
+    // Restrict reading to this list of DIDs, created from the message protocol.
+    // If `None`, normal read rules apply.
+    can_read: Option<Vec<String>>,
+    // Protocol context.
     context: Vec<Thing>,
     data_cid: Option<String>,
     #[serde(with = "time::serde::rfc3339")]

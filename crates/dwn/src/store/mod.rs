@@ -66,6 +66,7 @@ pub trait MessageStore: Send + Sync {
 
     fn put(
         &self,
+        authorized: bool,
         tenant: String,
         message: Message,
         data_store: &impl DataStore,

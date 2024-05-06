@@ -44,7 +44,9 @@ pub async fn handle_protocols_configure(
         todo!("Check if the last configuration is valid");
     }
 
-    message_store.put(target, message, data_store).await?;
+    message_store
+        .put(authorized, target, message, data_store)
+        .await?;
 
     Ok(StatusReply {
         status: Status::ok(),

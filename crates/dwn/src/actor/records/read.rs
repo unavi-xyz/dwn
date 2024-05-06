@@ -92,7 +92,12 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                     self.actor
                         .dwn
                         .message_store
-                        .put(target, *found.record.clone(), &self.actor.dwn.data_store)
+                        .put(
+                            true,
+                            target,
+                            *found.record.clone(),
+                            &self.actor.dwn.data_store,
+                        )
                         .await
                         .map_err(HandleMessageError::MessageStoreError)?;
 

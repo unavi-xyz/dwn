@@ -38,6 +38,7 @@ pub async fn test_recipient_read_write() {
             Version::new(1, 0, 0),
             definition.structure.keys().next().unwrap().to_string(),
         )
+        .published(true)
         .target(alice.did.clone())
         .process()
         .await;
@@ -51,6 +52,7 @@ pub async fn test_recipient_read_write() {
             Version::new(1, 0, 0),
             definition.structure.keys().next().unwrap().to_string(),
         )
+        .published(true)
         .process()
         .await
         .unwrap();

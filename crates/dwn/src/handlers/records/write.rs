@@ -370,7 +370,7 @@ pub async fn handle_records_write(
 
         // Store message as initial entry.
         message_store
-            .put(target.clone(), message, data_store)
+            .put(authorized, target.clone(), message, data_store)
             .await?;
     } else {
         let checkpoint_entry = checkpoint_entry.ok_or(HandleMessageError::InvalidDescriptor(
@@ -420,7 +420,7 @@ pub async fn handle_records_write(
         if existing_writes.is_empty() {
             // Store message as new entry.
             message_store
-                .put(target.clone(), message, data_store)
+                .put(authorized, target.clone(), message, data_store)
                 .await?;
         } else if existing_writes.iter().all(|m| {
             let m_timestamp = match &m.descriptor {
@@ -446,7 +446,9 @@ pub async fn handle_records_write(
             }
 
             // Store message as new entry.
-            message_store.put(target, message, data_store).await?;
+            message_store
+                .put(authorized, target, message, data_store)
+                .await?;
         }
     }
 

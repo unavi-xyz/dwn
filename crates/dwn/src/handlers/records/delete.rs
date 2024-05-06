@@ -77,7 +77,9 @@ pub async fn handle_records_delete(
     }
 
     // Store the delete message.
-    message_store.put(target, message, data_store).await?;
+    message_store
+        .put(authorized, target, message, data_store)
+        .await?;
 
     Ok(StatusReply {
         status: Status::ok(),
