@@ -1,7 +1,13 @@
 use std::sync::Arc;
 
 use dwn::{
-    actor::Actor, message::descriptor::protocols::ProtocolDefinition, store::SurrealStore, DWN,
+    actor::{Actor, MessageBuilder},
+    message::descriptor::{
+        protocols::{ProtocolDefinition, ProtocolsFilter},
+        records::RecordsFilter,
+    },
+    store::SurrealStore,
+    DWN,
 };
 use semver::Version;
 use surrealdb::{engine::local::Mem, Surreal};
@@ -16,9 +22,10 @@ pub async fn test_unpublished() {
     let store = SurrealStore::new(db).await.unwrap();
     let dwn = Arc::new(DWN::from(store));
 
-    let actor = Actor::new_did_key(dwn.clone()).unwrap();
+    let alice = Actor::new_did_key(dwn.clone()).unwrap();
+    let bob = Actor::new_did_key(dwn).unwrap();
 
-    let reply = actor
+    let reply = alice
         .register_protocol(definition.clone())
         .protocol_version(Version::new(1, 0, 0))
         .process()
@@ -27,7 +34,7 @@ pub async fn test_unpublished() {
     assert_eq!(reply.status.code, 200);
 
     // Cannot create published record.
-    let create = actor
+    let create = alice
         .create_record()
         .protocol(
             definition.protocol.clone(),
@@ -40,7 +47,7 @@ pub async fn test_unpublished() {
     assert!(create.is_err());
 
     // Can create unpublished record.
-    let create = actor
+    let create = alice
         .create_record()
         .protocol(
             definition.protocol.clone(),
@@ -51,4 +58,54 @@ pub async fn test_unpublished() {
         .await
         .unwrap();
     assert_eq!(create.reply.status.code, 200);
+
+    // Alice can query protocol.
+    let query = alice
+        .query_protocols(ProtocolsFilter {
+            protocol: definition.protocol.clone(),
+            versions: vec![Version::new(1, 0, 0)],
+        })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+
+    // Bob cannot query protocol.
+    let query = bob
+        .query_protocols(ProtocolsFilter {
+            protocol: definition.protocol.clone(),
+            versions: vec![Version::new(1, 0, 0)],
+        })
+        .target(alice.did.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert!(query.entries.is_empty());
+
+    // Alice can query record.
+    let query = alice
+        .query_records(RecordsFilter {
+            protocol: Some(definition.protocol.clone()),
+            ..Default::default()
+        })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert_eq!(query.entries.len(), 1);
+    assert_eq!(query.entries[0].record_id, create.record_id);
+
+    // Bob cannot query record.
+    let query = bob
+        .query_records(RecordsFilter {
+            protocol: Some(definition.protocol),
+            ..Default::default()
+        })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert!(query.entries.is_empty());
 }
