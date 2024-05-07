@@ -30,7 +30,7 @@ async fn main() {
     let create = actor
         .create_record()
         .data(data.clone())
-        .data_format("application/json".to_string())
+        .data_format("text/plain".to_string())
         .process()
         .await
         .unwrap();
