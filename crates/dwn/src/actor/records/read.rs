@@ -109,6 +109,17 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
         }
     }
 
+    pub async fn send(mut self, did: &str) -> Result<RecordsReadReply, ProcessMessageError> {
+        let reply = MessageBuilder::send(&mut self, did).await?;
+
+        let reply = match reply {
+            MessageReply::RecordsRead(reply) => reply,
+            _ => return Err(ProcessMessageError::InvalidReply),
+        };
+
+        Ok(reply)
+    }
+
     async fn read_remote(&self) -> Result<Option<RecordsReadReply>, ProcessMessageError> {
         let target = self
             .target

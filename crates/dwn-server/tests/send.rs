@@ -125,5 +125,5 @@ async fn test_send() {
         .send(&alice_did)
         .await
         .unwrap();
-    assert_eq!(read.status().code, 200);
+    assert_eq!(read.status.code, 200);
 }
