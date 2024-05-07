@@ -12,7 +12,6 @@ use didkit::{
 };
 use dwn::{
     actor::{Actor, MessageBuilder},
-    message::descriptor::iana_media_types::Application,
     store::SurrealStore,
     DWN,
 };
@@ -104,7 +103,7 @@ async fn test_send() {
     let create = alice_osaka
         .create_record()
         .data(data.to_vec())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .published(true)
         .process()
         .await

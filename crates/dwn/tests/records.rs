@@ -6,7 +6,6 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
-use iana_media_types::Application;
 use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
 
@@ -25,7 +24,7 @@ async fn test_records() {
     let create = actor
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("text/plain".to_string())
         .process()
         .await
         .unwrap();
@@ -77,7 +76,7 @@ async fn test_records() {
     let create_two = actor_two
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("text/plain".to_string())
         .process()
         .await
         .unwrap();
@@ -87,7 +86,7 @@ async fn test_records() {
     let create = actor
         .create_record()
         .data("Hello, world!".bytes().collect::<Vec<_>>())
-        .data_format(Application::Json.into())
+        .data_format("text/plain".to_string())
         .process()
         .await
         .unwrap();
@@ -109,7 +108,7 @@ async fn test_records() {
     let update = actor
         .update_record(record_id.clone(), record_id.clone())
         .data(new_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("text/plain".to_string())
         .process()
         .await
         .unwrap();
@@ -130,7 +129,7 @@ async fn test_records() {
     let update = actor
         .update_record(record_id.clone(), update.entry_id)
         .data(newer_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("text/plain".to_string())
         .process()
         .await
         .unwrap();

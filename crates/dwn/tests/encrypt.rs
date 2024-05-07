@@ -6,7 +6,6 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
-use iana_media_types::Application;
 use surrealdb::{engine::local::Mem, Surreal};
 use tracing_test::traced_test;
 
@@ -26,7 +25,7 @@ async fn test_encrypt() {
     let create = actor
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("text/plain".to_string())
         .encryption(&encryption)
         .process()
         .await

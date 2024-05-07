@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use dwn::{
     actor::Actor,
-    message::{
-        descriptor::{iana_media_types::Application, Descriptor},
-        Data,
-    },
+    message::{descriptor::Descriptor, Data},
     store::{DataStore, MessageStore, SurrealStore},
     DWN,
 };
@@ -79,7 +76,7 @@ async fn test_read_remote() {
     let create = alice_osaka
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -125,7 +122,7 @@ async fn test_sync_push() {
     let create = alice_kyoto
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -168,7 +165,7 @@ async fn test_sync_pull_update() {
     let create = alice_osaka
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -189,7 +186,7 @@ async fn test_sync_pull_update() {
     let update = alice_osaka
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(new_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -234,7 +231,7 @@ async fn test_sync_pull_many_updates() {
     let create = alice_osaka
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -255,7 +252,7 @@ async fn test_sync_pull_many_updates() {
     let update = alice_osaka
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(new_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -266,7 +263,7 @@ async fn test_sync_pull_many_updates() {
     let update = alice_osaka
         .update_record(create.record_id.clone(), update.entry_id.clone())
         .data(newer_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -311,7 +308,7 @@ async fn test_sync_pull_delete() {
     let create = alice_osaka
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -378,7 +375,7 @@ async fn test_sync_pull_delete_after_update() {
     let create = alice_osaka
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -400,7 +397,7 @@ async fn test_sync_pull_delete_after_update() {
     let update = alice_osaka
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(new_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -465,7 +462,7 @@ async fn test_sync_pull_delete_after_local_update() {
     let create = alice_osaka
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();
@@ -486,7 +483,7 @@ async fn test_sync_pull_delete_after_local_update() {
     let update = alice_kyoto
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(new_data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{routing::get, Json, Router};
 use dwn::{
     actor::{records::Encryption, Actor},
-    message::{descriptor::iana_media_types::Application, Data},
+    message::Data,
     store::SurrealStore,
     DWN,
 };
@@ -56,7 +56,7 @@ async fn test_records_schema() {
     let create = actor
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema(schema_url.clone())
         .process()
         .await;
@@ -67,7 +67,7 @@ async fn test_records_schema() {
     let create = actor
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema(schema_url.clone())
         .process()
         .await
@@ -87,7 +87,7 @@ async fn test_records_schema() {
     let create_two = actor
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema(schema_url.clone())
         .process()
         .await
@@ -101,7 +101,7 @@ async fn test_records_schema() {
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await;
     assert!(update.is_err());
@@ -109,7 +109,7 @@ async fn test_records_schema() {
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema(schema_url.clone())
         .process()
         .await;
@@ -120,7 +120,7 @@ async fn test_records_schema() {
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await;
     assert!(update.is_err());
@@ -128,7 +128,7 @@ async fn test_records_schema() {
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema("http://localhost:1234/new-schema.json".to_string())
         .process()
         .await;
@@ -139,7 +139,7 @@ async fn test_records_schema() {
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema(schema_url.clone())
         .encryption(&encryption)
         .process()
@@ -149,7 +149,7 @@ async fn test_records_schema() {
     let update = actor
         .update_record(create.record_id.clone(), create.entry_id.clone())
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .schema(schema_url)
         .process()
         .await

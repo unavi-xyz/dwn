@@ -10,7 +10,6 @@ Rust implementation of a [Decentralized Web Node](https://identity.foundation/de
 use std::sync::Arc;
 
 use dwn::{actor::Actor, message::Data, store::SurrealStore, DWN};
-use iana_media_types::Application;
 use surrealdb::{Surreal, engine::local::Mem};
 
 #[tokio::main]
@@ -31,7 +30,7 @@ async fn main() {
     let create = actor
         .create_record()
         .data(data.clone())
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();

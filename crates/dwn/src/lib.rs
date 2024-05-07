@@ -6,7 +6,6 @@
 //! use std::sync::Arc;
 //!
 //! use dwn::{actor::Actor, message::Data, store::SurrealStore, DWN};
-//! use iana_media_types::Application;
 //! use surrealdb::{Surreal, engine::local::Mem};
 //!
 //! #[tokio::main]
@@ -27,7 +26,7 @@
 //!     let create = actor
 //!         .create_record()
 //!         .data(data.clone())
-//!         .data_format(Application::Json.into())
+//!         .data_format("text/plain".to_string())
 //!         .process()
 //!         .await
 //!         .unwrap();

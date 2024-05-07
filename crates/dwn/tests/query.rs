@@ -6,7 +6,6 @@ use dwn::{
     store::SurrealStore,
     DWN,
 };
-use iana_media_types::Application;
 use surrealdb::{engine::local::Mem, Surreal};
 use time::OffsetDateTime;
 use tracing_test::traced_test;
@@ -34,7 +33,7 @@ async fn test_filter_date_sort() {
         let create = actor
             .create_record()
             .data(data)
-            .data_format(Application::Json.into())
+            .data_format("application/json".to_string())
             .process()
             .await
             .unwrap();
@@ -134,7 +133,7 @@ async fn test_filter_message_timestamp() {
         let create = actor
             .create_record()
             .data(data)
-            .data_format(Application::Json.into())
+            .data_format("application/json".to_string())
             .process()
             .await
             .unwrap();
@@ -262,7 +261,7 @@ async fn test_query_records_delete() {
     let create = actor
         .create_record()
         .data(data)
-        .data_format(Application::Json.into())
+        .data_format("application/json".to_string())
         .process()
         .await
         .unwrap();

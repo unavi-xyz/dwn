@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use iana_media_types::MediaType;
 use semver::Version;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -67,7 +66,7 @@ impl ProtocolDefinition {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct StructureType {
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
-    pub data_format: Option<Vec<MediaType>>,
+    pub data_format: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema: Option<String>,
 }

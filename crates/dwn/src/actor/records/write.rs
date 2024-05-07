@@ -1,6 +1,5 @@
 use aes_gcm::{aead::OsRng, Aes256Gcm, KeyInit};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use iana_media_types::MediaType;
 use semver::Version;
 use time::OffsetDateTime;
 
@@ -27,7 +26,7 @@ pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     actor: &'a Actor<D, M>,
     authorized: bool,
     data: Option<Vec<u8>>,
-    data_format: Option<MediaType>,
+    data_format: Option<String>,
     encryption: Option<&'a Encryption>,
     parent_context_id: Option<String>,
     parent_id: Option<String>,
@@ -182,7 +181,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
     }
 
     /// Format of the data.
-    pub fn data_format(mut self, data_format: MediaType) -> Self {
+    pub fn data_format(mut self, data_format: String) -> Self {
         self.data_format = Some(data_format);
         self
     }

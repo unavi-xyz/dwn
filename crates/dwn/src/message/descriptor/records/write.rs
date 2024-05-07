@@ -1,4 +1,3 @@
-use iana_media_types::MediaType;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
@@ -14,7 +13,7 @@ pub struct RecordsWrite {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data_cid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub data_format: Option<MediaType>,
+    pub data_format: Option<String>,
     #[serde(rename = "datePublished", with = "time::serde::rfc3339::option")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_published: Option<OffsetDateTime>,

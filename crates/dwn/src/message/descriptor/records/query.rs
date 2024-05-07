@@ -1,4 +1,3 @@
-use iana_media_types::MediaType;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -44,7 +43,7 @@ pub struct RecordsFilter {
     #[serde(rename = "contextId", skip_serializing_if = "Option::is_none")]
     pub context_id: Option<String>,
     #[serde(rename = "dataFormat", skip_serializing_if = "Option::is_none")]
-    pub data_format: Option<MediaType>,
+    pub data_format: Option<String>,
     #[serde(rename = "dateSort", skip_serializing_if = "Option::is_none")]
     pub date_sort: Option<FilterDateSort>,
     #[serde(rename = "messageTimestamp", skip_serializing_if = "Option::is_none")]
@@ -91,8 +90,6 @@ pub enum FilterDateSort {
 
 #[cfg(test)]
 mod tests {
-    use iana_media_types::Application;
-
     use super::*;
 
     #[test]
@@ -100,7 +97,7 @@ mod tests {
         let filter = RecordsFilter {
             attester: Some("did:key:z6Mk".to_string()),
             context_id: Some("https://w3id.org/did/v1".to_string()),
-            data_format: Some(MediaType::Application(Application::Json)),
+            data_format: Some("application/json".to_string()),
             date_sort: Some(FilterDateSort::CreatedAscending),
             message_timestamp: Some(FilterDateCreated {
                 from: Some(OffsetDateTime::now_utc()),

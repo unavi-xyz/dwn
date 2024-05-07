@@ -10,8 +10,6 @@ use self::{
 pub mod protocols;
 pub mod records;
 
-pub use iana_media_types;
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Interface {
     Permissions,
