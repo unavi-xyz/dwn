@@ -12,6 +12,7 @@ use didkit::{
 };
 use dwn::{
     actor::{Actor, MessageBuilder},
+    message::descriptor::records::RecordsFilter,
     store::SurrealStore,
     DWN,
 };
@@ -119,10 +120,23 @@ async fn test_send() {
 
     // Send a message to alice via their DID.
     let read = bob_kyoto
-        .read_record(create.record_id)
+        .read_record(create.record_id.clone())
         .target(alice_did.clone())
         .send(&alice_did)
         .await
         .unwrap();
     assert_eq!(read.status.code, 200);
+
+    // Query via alice DID.
+    let query = bob_kyoto
+        .query_records(RecordsFilter {
+            record_id: Some(create.record_id),
+            ..Default::default()
+        })
+        .target(alice_did.clone())
+        .send(&alice_did)
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert!(!query.entries.is_empty());
 }
