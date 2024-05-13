@@ -400,7 +400,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .take(0)
             .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
-        db_messages.sort_by(|a, b| a.message_timestamp.cmp(&b.message_timestamp));
+        db_messages.sort_by(|a, b| b.message_timestamp.cmp(&a.message_timestamp));
 
         Ok(db_messages
             .into_iter()

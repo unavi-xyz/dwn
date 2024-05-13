@@ -532,6 +532,62 @@ async fn test_sync_pull_delete_after_local_update() {
 
 #[tokio::test]
 #[traced_test]
+async fn test_sync_update_pulled() {
+    let TestContext {
+        mut alice_kyoto,
+        alice_osaka,
+        osaka_url,
+    } = setup_test().await;
+
+    // Add the Osaka DWN as a remote.
+    alice_kyoto.add_remote(osaka_url);
+
+    // Create a record in Osaka.
+    let data = "Hello from Osaka!".bytes().collect::<Vec<_>>();
+    let create = alice_osaka
+        .create_record()
+        .data(data.clone())
+        .data_format("application/json".to_string())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(create.reply.status.code, 200);
+
+    // Read the record in Kyoto.
+    let read = alice_kyoto
+        .read_record(create.record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&data)));
+
+    // Update the record in Kyoto.
+    let new_data = "Hello from Kyoto!".bytes().collect::<Vec<_>>();
+    let update = alice_kyoto
+        .update_record(create.record_id.clone(), create.entry_id.clone())
+        .data(new_data.clone())
+        .data_format("application/json".to_string())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(update.reply.status.code, 200);
+
+    // Sync.
+    alice_kyoto.sync().await.unwrap();
+
+    // Read the update from Osaka.
+    let read = alice_osaka
+        .read_record(create.record_id.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(read.status.code, 200);
+    assert_eq!(read.record.data, Some(Data::new_base64(&new_data)));
+}
+
+#[tokio::test]
+#[traced_test]
 async fn test_sync_protocols() {
     let TestContext {
         mut alice_kyoto,

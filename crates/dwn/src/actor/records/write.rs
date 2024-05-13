@@ -279,7 +279,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_records_different() {
+    async fn test_records_ids_different() {
         let db = Surreal::new::<Mem>(()).await.unwrap();
         let store = SurrealStore::new(db).await.unwrap();
         let dwn = Arc::new(DWN::from(store));

@@ -191,7 +191,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
+    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
 
     let descriptor = match &query.entries[1].descriptor {
         Descriptor::ProtocolsConfigure(descriptor) => descriptor,
@@ -202,7 +202,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
+    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
 
     // Filter any version.
     let filter = ProtocolsFilter {
@@ -223,7 +223,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
+    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
 
     let descriptor = match &query.entries[1].descriptor {
         Descriptor::ProtocolsConfigure(descriptor) => descriptor,
@@ -234,7 +234,7 @@ async fn test_protocol_version_query() {
         descriptor.definition.as_ref().unwrap().protocol,
         definition.protocol
     );
-    assert_eq!(descriptor.protocol_version, Version::new(0, 2, 0));
+    assert_eq!(descriptor.protocol_version, Version::new(0, 1, 0));
 
     // Filter non-existent version.
     let filter = ProtocolsFilter {

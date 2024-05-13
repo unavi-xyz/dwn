@@ -380,6 +380,16 @@ pub async fn handle_records_write(
             "Checkpoint entry not found".to_string(),
         ))?;
 
+        let checkpoint_entry_id = checkpoint_entry.entry_id()?;
+
+        // If message is the checkpoint entry, cease processing.
+        if checkpoint_entry_id == entry_id {
+            return Ok(StatusReply {
+                status: Status::ok(),
+            }
+            .into());
+        }
+
         let parent_id =
             descriptor
                 .parent_id
@@ -387,8 +397,6 @@ pub async fn handle_records_write(
                 .ok_or(HandleMessageError::InvalidDescriptor(
                     "No parent id".to_string(),
                 ))?;
-
-        let checkpoint_entry_id = checkpoint_entry.entry_id()?;
 
         // Ensure parent id matches the latest checkpoint entry.
         if !options.ignore_parent_id && *parent_id != checkpoint_entry_id {
@@ -409,9 +417,10 @@ pub async fn handle_records_write(
 
         // Ensure message timestamp is greater than the latest checkpoint entry.
         if descriptor.message_timestamp <= checkpoint_time {
-            return Err(HandleMessageError::InvalidDescriptor(
-                "Message timestamp is not greater than the latest checkpoint entry".to_string(),
-            ));
+            return Err(HandleMessageError::InvalidDescriptor(format!(
+                "Message timestamp ({}) is not greater than the latest checkpoint entry ({})",
+                descriptor.message_timestamp, checkpoint_time
+            )));
         }
 
         let existing_writes = messages
