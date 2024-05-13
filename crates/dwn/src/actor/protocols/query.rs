@@ -62,4 +62,15 @@ impl<'a, D: DataStore, M: MessageStore> ProtocolsQueryBuilder<'a, D, M> {
 
         Ok(reply)
     }
+
+    pub async fn send(mut self, did: &str) -> Result<QueryReply, ProcessMessageError> {
+        let reply = MessageBuilder::send(&mut self, did).await?;
+
+        let reply = match reply {
+            MessageReply::Query(reply) => reply,
+            _ => return Err(ProcessMessageError::InvalidReply),
+        };
+
+        Ok(reply)
+    }
 }
