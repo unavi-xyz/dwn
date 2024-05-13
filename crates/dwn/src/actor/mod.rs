@@ -180,6 +180,9 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
     /// Process a message in the local DWN.
     async fn process_message(&self, message: Message) -> Result<MessageReply, HandleMessageError> {
         match &message.descriptor {
+            Descriptor::ProtocolsConfigure(_) => {
+                self.remote_queue(&message).await?;
+            }
             Descriptor::RecordsDelete(_) => {
                 self.remote_queue(&message).await?;
             }

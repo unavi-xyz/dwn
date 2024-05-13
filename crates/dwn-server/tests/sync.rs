@@ -2,7 +2,14 @@ use std::sync::Arc;
 
 use dwn::{
     actor::Actor,
-    message::{descriptor::Descriptor, Data},
+    message::{
+        descriptor::{
+            protocols::{ProtocolDefinition, ProtocolsFilter},
+            records::Version,
+            Descriptor,
+        },
+        Data,
+    },
     store::{DataStore, MessageStore, SurrealStore},
     DWN,
 };
@@ -506,7 +513,7 @@ async fn test_sync_pull_delete_after_local_update() {
     assert_eq!(read.status.code, 200);
     assert_eq!(read.record.data, Some(Data::new_base64(&new_data)));
 
-    // Sync data.
+    // Sync.
     alice_kyoto.sync().await.unwrap();
 
     // Kyoto should have deleted the record now.
@@ -521,4 +528,46 @@ async fn test_sync_pull_delete_after_local_update() {
         read.record.descriptor,
         Descriptor::RecordsDelete(_)
     ));
+}
+
+#[tokio::test]
+#[traced_test]
+async fn test_sync_protocols() {
+    let TestContext {
+        mut alice_kyoto,
+        alice_osaka,
+        osaka_url,
+    } = setup_test().await;
+
+    // Add the Osaka DWN as a remote.
+    alice_kyoto.add_remote(osaka_url);
+
+    // Register a protocol in Kyoto.
+    let definition = ProtocolDefinition {
+        published: true,
+        protocol: "my-protocol-1".to_string(),
+        ..Default::default()
+    };
+
+    let register = alice_kyoto
+        .register_protocol(definition.clone())
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(register.status.code, 200);
+
+    // Sync.
+    alice_kyoto.sync().await.unwrap();
+
+    // Query the protocol in Osaka.
+    let query = alice_osaka
+        .query_protocols(ProtocolsFilter {
+            protocol: definition.protocol,
+            versions: vec![Version::new(0, 0, 0)],
+        })
+        .process()
+        .await
+        .unwrap();
+    assert_eq!(query.status.code, 200);
+    assert!(!query.entries.is_empty());
 }
