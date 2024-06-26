@@ -10,7 +10,6 @@
       url = "github:oxalica/rust-overlay";
       inputs = {
         nixpkgs.follows = "nixpkgs";
-        flake-utils.follows = "flake-utils";
       };
     };
   };
@@ -32,8 +31,6 @@
           overlays = [ (import rust-overlay) ];
         };
 
-        inherit (pkgs) lib;
-
         rustToolchain = pkgs.pkgsBuildHost.rust-bin.stable.latest.default;
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
@@ -46,9 +43,9 @@
           buildInputs =
             with pkgs;
             [ openssl ]
-            ++ lib.optionals pkgs.stdenv.isDarwin [
-              pkgs.darwin.apple_sdk.frameworks.Security
-              pkgs.libiconv
+            ++ lib.optionals stdenv.isDarwin [
+              darwin.apple_sdk.frameworks.Security
+              libiconv
             ];
 
           nativeBuildInputs = with pkgs; [
