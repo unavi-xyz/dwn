@@ -16,7 +16,7 @@ surrealdb = ["dep:surrealdb", "dep:tokio"]
 aes-gcm = "0.10.3"
 anyhow = "1.0.82"
 base64 = "0.22.0"
-did-method-key = "0.2.2"
+did-method-key = "0.3.0"
 didkit.workspace = true
 jsonschema = { version = "0.18.0", default-features = false, features = ["draft201909", "draft202012"] }
 libipld = { version = "0.16.0", features = ["serde-codec"] }
