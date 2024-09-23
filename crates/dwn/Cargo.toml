@@ -18,7 +18,7 @@ anyhow = "1.0.82"
 base64 = "0.22.0"
 did-method-key = "0.2.2"
 didkit.workspace = true
-jsonschema = { version = "0.19.1", default-features = false, features = ["draft201909", "draft202012"] }
+jsonschema = { version = "0.20.0", default-features = false, features = ["draft201909", "draft202012"] }
 libipld = { version = "0.16.0", features = ["serde-codec"] }
 libipld-cbor = "0.16.0"
 libipld-core = { version = "0.16.0", features = ["serde", "serde-codec", "multibase"] }
