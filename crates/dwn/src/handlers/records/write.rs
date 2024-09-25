@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use jsonschema::JSONSchema;
+use jsonschema::Validator;
 use reqwest::Client;
 use serde_json::Value;
 use tracing::debug;
@@ -73,7 +73,7 @@ pub async fn handle_records_write(
     let messages = message_store
         .query_records(
             target.clone(),
-            message.author().as_deref(),
+            message.author(),
             authorized,
             RecordsFilter {
                 record_id: Some(message.record_id.clone()),
@@ -117,7 +117,7 @@ pub async fn handle_records_write(
             debug!("Fetching schema: {}", schema_url);
             let schema = client.get(schema_url).send().await?.json::<Value>().await?;
 
-            let compiled = JSONSchema::compile(&schema).map_err(|_| {
+            let compiled = Validator::new(&schema).map_err(|_| {
                 HandleMessageError::SchemaValidation("Failed to compile schema".to_string())
             })?;
 
@@ -266,7 +266,7 @@ pub async fn handle_records_write(
             let messages = message_store
                 .query_records(
                     target.clone(),
-                    message.author().as_deref(),
+                    message.author(),
                     authorized,
                     RecordsFilter {
                         record_id: Some(record_id.to_string()),
@@ -453,7 +453,7 @@ pub async fn handle_records_write(
             for m in existing_writes {
                 let cbor = encode_cbor(&m)?;
                 message_store
-                    .delete(&target, cbor.cid().to_string(), data_store)
+                    .delete(&target, &cbor.cid().to_string(), data_store)
                     .await?;
             }
 

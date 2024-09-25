@@ -26,14 +26,14 @@ use crate::{
 
 use super::{ql::Conditions, SurrealStore};
 
-const DATA_REF_TABLE: &str = "data_cid_refs";
-const MESSAGE_TABLE: &str = "messages";
+const DATA_REF_TABLE: &str = "data_refs";
+const MSG_TABLE: &str = "messages";
 
 impl<T: Connection> MessageStore for SurrealStore<T> {
     async fn delete(
         &self,
         tenant: &str,
-        cid: String,
+        cid: &str,
         data_store: &impl DataStore,
     ) -> Result<(), MessageStoreError> {
         let db = self
@@ -41,10 +41,8 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .await
             .map_err(MessageStoreError::Backend)?;
 
-        let id = Thing::from((Table::from(MESSAGE_TABLE).to_string(), Id::String(cid)));
-
         let message: Option<DbMessage> = db
-            .select(id.clone())
+            .select((MSG_TABLE, cid))
             .await
             .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
@@ -59,25 +57,20 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         }
 
         // Delete the message.
-        db.delete::<Option<DbMessage>>(id)
+        db.delete::<Option<DbMessage>>((MSG_TABLE, cid))
             .await
             .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
         if let Some(data_cid) = message.data_cid {
-            let id = Thing::from((
-                Table::from(DATA_REF_TABLE).to_string(),
-                Id::String(data_cid.to_string()),
-            ));
-
             let db_data_ref: Option<DataRefs> = db
-                .select(id.clone())
+                .select((DATA_REF_TABLE, &data_cid))
                 .await
                 .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 if db_data_ref.ref_count > 1 {
                     // Decrement the reference count for the data CID.
-                    db.update::<Option<DataRefs>>(id)
+                    db.update::<Option<DataRefs>>((DATA_REF_TABLE, &data_cid))
                         .content(DataRefs {
                             ref_count: db_data_ref.ref_count - 1,
                         })
@@ -85,11 +78,11 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                         .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
                 } else {
                     // Delete the data if this is the only reference.
-                    db.delete::<Option<DataRefs>>(id)
+                    db.delete::<Option<DataRefs>>((DATA_REF_TABLE, &data_cid))
                         .await
                         .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
-                    data_store.delete(data_cid).await?;
+                    data_store.delete(&data_cid).await?;
                 }
             }
         }
@@ -114,19 +107,14 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             // Check if the data is already stored.
             let cid = data.cid()?.to_string();
 
-            let id = Thing::from((
-                Table::from(DATA_REF_TABLE).to_string(),
-                Id::String(cid.clone()),
-            ));
-
             let db_data_ref: Option<DataRefs> = db
-                .select(id.clone())
+                .select((DATA_REF_TABLE, &cid))
                 .await
                 .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
 
             if let Some(db_data_ref) = db_data_ref {
                 // Add one to the reference count.
-                db.update::<Option<DataRefs>>(id.clone())
+                db.update::<Option<DataRefs>>((DATA_REF_TABLE, &cid))
                     .content(DataRefs {
                         ref_count: db_data_ref.ref_count + 1,
                     })
@@ -134,7 +122,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
             } else {
                 // Create a new data CID object.
-                db.create::<Option<DataRefs>>(id.clone())
+                db.create::<Option<DataRefs>>((DATA_REF_TABLE, &cid))
                     .content(DataRefs { ref_count: 1 })
                     .await
                     .map_err(|err| MessageStoreError::Backend(anyhow!(err)))?;
@@ -161,7 +149,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 let parent_records = self
                     .query_records(
                         tenant.clone(),
-                        message.author().as_deref(),
+                        message.author(),
                         authorized,
                         RecordsFilter {
                             record_id: Some(parent_record_id.to_string()),
@@ -177,7 +165,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 let parent_cid = parent_cbor.cid();
 
                 context.push(Thing::from((
-                    Table::from(MESSAGE_TABLE.to_string()).to_string(),
+                    Table::from(MSG_TABLE.to_string()).to_string(),
                     Id::String(parent_cid.to_string()),
                 )));
             }
@@ -241,10 +229,10 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
                                         let count = extra.split('/').count();
 
-                                        let id = &context[count - 1];
+                                        let id = context[count - 1].to_string();
 
                                         let message: Option<DbMessage> =
-                                            db.select(id).await.map_err(|err| {
+                                            db.select((MSG_TABLE, id)).await.map_err(|err| {
                                                 MessageStoreError::Backend(anyhow!(err))
                                             })?;
 
@@ -276,12 +264,12 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                                         // Go one level higher to get the recipient.
                                         // For root level structures this is the tenant.
                                         if count < context.len() {
-                                            let id = &context[count];
+                                            let id = &context[count].to_string();
 
                                             let message: Option<DbMessage> =
-                                                db.select(id).await.map_err(|err| {
-                                                    MessageStoreError::Backend(anyhow!(err))
-                                                })?;
+                                                db.select((MSG_TABLE, id)).await.map_err(
+                                                    |err| MessageStoreError::Backend(anyhow!(err)),
+                                                )?;
 
                                             let message =
                                                 message.ok_or(MessageStoreError::NotFound)?;
@@ -309,11 +297,6 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             }
         }
 
-        let id = Thing::from((
-            Table::from(MESSAGE_TABLE).to_string(),
-            Id::String(message_cid.to_string()),
-        ));
-
         let record_id = message.record_id.clone();
 
         let message_timestamp = match &message.descriptor {
@@ -335,7 +318,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         // TODO: When updating a record, if data changes delete old data / decrement ref
 
-        db.create::<Option<DbMessage>>(id)
+        db.create::<Option<DbMessage>>((MSG_TABLE, message_cid.to_string()))
             .content(DbMessage {
                 author,
                 can_read,
@@ -388,7 +371,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                 "SELECT * FROM type::table($table){}",
                 condition_statement
             ))
-            .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
+            .bind(("table", Table::from(MSG_TABLE.to_string())))
             .bind(("protocol", filter.protocol))
             .bind(("versions", filter.versions));
 
@@ -411,7 +394,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
     async fn query_records(
         &self,
         tenant: String,
-        author: Option<&str>,
+        author: Option<String>,
         authorized: bool,
         filter: RecordsFilter,
     ) -> Result<Vec<Message>, MessageStoreError> {
@@ -499,7 +482,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         let mut query = db
             .query(query_string)
-            .bind(("table", Table::from(MESSAGE_TABLE.to_string())))
+            .bind(("table", MSG_TABLE))
             .bind(("author", author));
 
         for (key, value) in binds {

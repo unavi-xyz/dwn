@@ -32,7 +32,7 @@ pub async fn handle_records_read(
     let messages = message_store
         .query_records(
             target.clone(),
-            message.author().as_deref(),
+            message.author(),
             authorized,
             RecordsFilter {
                 record_id: Some(descriptor.record_id.clone()),
@@ -63,7 +63,7 @@ pub async fn handle_records_read(
                 let data_cid = Cid::try_from(data_cid.as_str()).map_err(|e| {
                     HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
                 })?;
-                let res = data_store.get(data_cid.to_string()).await?;
+                let res = data_store.get(&data_cid.to_string()).await?;
                 res.map(|res| res.into())
             } else {
                 None

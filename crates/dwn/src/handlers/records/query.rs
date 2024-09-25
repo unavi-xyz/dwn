@@ -26,7 +26,7 @@ pub async fn handle_records_query(
     let entries = message_store
         .query_records(
             target,
-            message.author().as_deref(),
+            message.author(),
             authorized,
             filter.unwrap_or_default(),
         )

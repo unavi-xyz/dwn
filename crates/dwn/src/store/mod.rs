@@ -35,12 +35,11 @@ pub enum DataStoreError {
 }
 
 pub trait DataStore: Send + Sync {
-    fn delete(&self, cid: String)
-        -> impl Future<Output = Result<(), DataStoreError>> + Send + Sync;
+    fn delete(&self, cid: &str) -> impl Future<Output = Result<(), DataStoreError>> + Send + Sync;
 
     fn get(
         &self,
-        cid: String,
+        cid: &str,
     ) -> impl Future<Output = Result<Option<StoredData>, DataStoreError>> + Send + Sync;
 
     fn put(
@@ -60,7 +59,7 @@ pub trait MessageStore: Send + Sync {
     fn delete(
         &self,
         tenant: &str,
-        cid: String,
+        cid: &str,
         data_store: &impl DataStore,
     ) -> impl Future<Output = Result<(), MessageStoreError>> + Send + Sync;
 
@@ -82,7 +81,7 @@ pub trait MessageStore: Send + Sync {
     fn query_records(
         &self,
         tenant: String,
-        author: Option<&str>,
+        author: Option<String>,
         authorized: bool,
         filter: RecordsFilter,
     ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;

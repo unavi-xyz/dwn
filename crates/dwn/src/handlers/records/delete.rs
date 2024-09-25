@@ -35,7 +35,7 @@ pub async fn handle_records_delete(
     let messages = message_store
         .query_records(
             target.clone(),
-            message.author().as_deref(),
+            message.author(),
             authorized,
             RecordsFilter {
                 record_id: Some(descriptor.record_id.clone()),
@@ -72,7 +72,7 @@ pub async fn handle_records_delete(
     for m in messages.iter() {
         let block = encode_cbor(m)?;
         message_store
-            .delete(&target, block.cid().to_string(), data_store)
+            .delete(&target, &block.cid().to_string(), data_store)
             .await?;
     }
 
