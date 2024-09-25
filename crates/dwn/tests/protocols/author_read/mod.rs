@@ -8,10 +8,12 @@ use dwn::{
 };
 use semver::Version;
 use surrealdb::{engine::local::Mem, Surreal};
+use tracing_test::traced_test;
 
 const DEFINITION: &str = include_str!("./protocol.json");
 
 #[tokio::test]
+#[traced_test]
 pub async fn test_author_read() {
     let definition: ProtocolDefinition = serde_json::from_str(DEFINITION).unwrap();
 

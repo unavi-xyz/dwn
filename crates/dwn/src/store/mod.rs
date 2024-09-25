@@ -97,8 +97,8 @@ pub enum MessageStoreError {
     Decode(#[from] DecodeError),
     #[error(transparent)]
     DataEncode(#[from] libipld_core::error::SerdeError),
-    #[error("Not found")]
-    NotFound,
+    #[error("{0} not found")]
+    NotFound(&'static str),
     #[error(transparent)]
     Cid(#[from] libipld::cid::Error),
     #[error("Failed to create block {0}")]

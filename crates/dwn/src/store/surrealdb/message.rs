@@ -53,7 +53,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
         // Ensure the message belongs to the tenant.
         if message.tenant != tenant {
-            return Err(MessageStoreError::NotFound);
+            return Err(MessageStoreError::NotFound("message"));
         }
 
         // Delete the message.
@@ -142,7 +142,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
         let cbor = encode_cbor(&message)?;
         let message_cid = cbor.cid();
 
-        let mut context = Vec::new();
+        let mut context_cids = Vec::new();
 
         if let Some(context_id) = message.context_id.clone() {
             for parent_record_id in context_id.split('/').rev().skip(1) {
@@ -159,15 +159,14 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     )
                     .await?;
 
-                let parent_msg = parent_records.first().ok_or(MessageStoreError::NotFound)?;
+                let parent_msg = parent_records
+                    .first()
+                    .ok_or(MessageStoreError::NotFound("context parent"))?;
 
                 let parent_cbor = encode_cbor(&parent_msg)?;
                 let parent_cid = parent_cbor.cid();
 
-                context.push(Thing::from((
-                    Table::from(MSG_TABLE.to_string()).to_string(),
-                    Id::String(parent_cid.to_string()),
-                )));
+                context_cids.push(parent_cid.to_string());
             }
         }
 
@@ -190,7 +189,10 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     )
                     .await?;
 
-                let configure_msg = protocols.first().ok_or(MessageStoreError::NotFound)?;
+                let configure_msg = protocols
+                    .first()
+                    .ok_or(MessageStoreError::NotFound("protocol"))?;
+
                 let definition = match &configure_msg.descriptor {
                     Descriptor::ProtocolsConfigure(config) => config.definition.clone(),
                     _ => unreachable!(),
@@ -200,7 +202,7 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
                     if let Some(path) = &descriptor.protocol_path {
                         let structure = definition
                             .get_structure(path)
-                            .ok_or(MessageStoreError::NotFound)?;
+                            .ok_or(MessageStoreError::NotFound("structure"))?;
 
                         let mut can_read_dids = Vec::new();
                         let mut set_can_read = true;
@@ -229,14 +231,15 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
                                         let count = extra.split('/').count();
 
-                                        let id = context[count - 1].to_string();
+                                        let id = &context_cids[count - 1];
 
                                         let message: Option<DbMessage> =
                                             db.select((MSG_TABLE, id)).await.map_err(|err| {
                                                 MessageStoreError::Backend(anyhow!(err))
                                             })?;
 
-                                        let message = message.ok_or(MessageStoreError::NotFound)?;
+                                        let message = message
+                                            .ok_or(MessageStoreError::NotFound("message"))?;
 
                                         if let Some(author) = message.author {
                                             can_read_dids.push(author);
@@ -263,16 +266,16 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
 
                                         // Go one level higher to get the recipient.
                                         // For root level structures this is the tenant.
-                                        if count < context.len() {
-                                            let id = &context[count].to_string();
+                                        if count < context_cids.len() {
+                                            let id = &context_cids[count];
 
                                             let message: Option<DbMessage> =
                                                 db.select((MSG_TABLE, id)).await.map_err(
                                                     |err| MessageStoreError::Backend(anyhow!(err)),
                                                 )?;
 
-                                            let message =
-                                                message.ok_or(MessageStoreError::NotFound)?;
+                                            let message = message
+                                                .ok_or(MessageStoreError::NotFound("message"))?;
 
                                             if let Some(author) = message.author {
                                                 can_read_dids.push(author);
@@ -322,7 +325,10 @@ impl<T: Connection> MessageStore for SurrealStore<T> {
             .content(DbMessage {
                 author,
                 can_read,
-                context,
+                context: context_cids
+                    .into_iter()
+                    .map(|cid| Thing::from((MSG_TABLE, Id::String(cid))))
+                    .collect(),
                 data_cid,
                 date_published,
                 message,
