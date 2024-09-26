@@ -17,7 +17,7 @@ async fn main() {
     // Create a DWN, using in-memory SurrealDB for storage.
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
     // Create an actor to send messages.
     // Here we generate a new `did:key` for the actor's identity,
