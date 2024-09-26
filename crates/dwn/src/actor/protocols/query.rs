@@ -5,18 +5,17 @@ use crate::{
         Message,
     },
     reply::{MessageReply, QueryReply},
-    store::{DataStore, MessageStore},
 };
 
-pub struct ProtocolsQueryBuilder<'a, D: DataStore, M: MessageStore> {
-    actor: &'a Actor<D, M>,
+pub struct ProtocolsQueryBuilder<'a> {
+    actor: &'a Actor,
     authorized: bool,
     filter: ProtocolsFilter,
     target: Option<String>,
 }
 
-impl<'a, D: DataStore, M: MessageStore> MessageBuilder for ProtocolsQueryBuilder<'a, D, M> {
-    fn get_actor(&self) -> &Actor<impl DataStore, impl MessageStore> {
+impl<'a> MessageBuilder for ProtocolsQueryBuilder<'a> {
+    fn get_actor(&self) -> &Actor {
         self.actor
     }
 
@@ -42,8 +41,8 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for ProtocolsQueryBuilder
     }
 }
 
-impl<'a, D: DataStore, M: MessageStore> ProtocolsQueryBuilder<'a, D, M> {
-    pub fn new(actor: &'a Actor<D, M>, filter: ProtocolsFilter) -> Self {
+impl<'a> ProtocolsQueryBuilder<'a> {
+    pub fn new(actor: &'a Actor, filter: ProtocolsFilter) -> Self {
         ProtocolsQueryBuilder {
             actor,
             authorized: true,

@@ -7,11 +7,10 @@ use crate::{
         Message,
     },
     reply::{MessageReply, StatusReply},
-    store::{DataStore, MessageStore},
 };
 
-pub struct ProtocolsConfigureBuilder<'a, D: DataStore, M: MessageStore> {
-    actor: &'a Actor<D, M>,
+pub struct ProtocolsConfigureBuilder<'a> {
+    actor: &'a Actor,
     authorized: bool,
     definition: Option<ProtocolDefinition>,
     last_configuration: Option<String>,
@@ -19,8 +18,8 @@ pub struct ProtocolsConfigureBuilder<'a, D: DataStore, M: MessageStore> {
     target: Option<String>,
 }
 
-impl<'a, D: DataStore, M: MessageStore> MessageBuilder for ProtocolsConfigureBuilder<'a, D, M> {
-    fn get_actor(&self) -> &Actor<impl DataStore, impl MessageStore> {
+impl<'a> MessageBuilder for ProtocolsConfigureBuilder<'a> {
+    fn get_actor(&self) -> &Actor {
         self.actor
     }
 
@@ -52,8 +51,8 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for ProtocolsConfigureBui
     }
 }
 
-impl<'a, D: DataStore, M: MessageStore> ProtocolsConfigureBuilder<'a, D, M> {
-    pub fn new(actor: &'a Actor<D, M>, definition: Option<ProtocolDefinition>) -> Self {
+impl<'a> ProtocolsConfigureBuilder<'a> {
+    pub fn new(actor: &'a Actor, definition: Option<ProtocolDefinition>) -> Self {
         ProtocolsConfigureBuilder {
             actor,
             authorized: true,

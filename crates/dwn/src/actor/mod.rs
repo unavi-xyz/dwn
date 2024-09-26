@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 
 use didkit::JWK;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use crate::{
         AuthError, DwnRequest, Message, SignError,
     },
     reply::{MessageReply, StatusReply},
-    store::{DataStore, MessageStore, MessageStoreError},
+    store::MessageStoreError,
     HandleMessageError, DWN,
 };
 
@@ -39,11 +39,11 @@ use self::{
 /// Holds a DID and associated keys.
 /// Provides methods for interacting with the DID's DWN.
 #[derive(Clone)]
-pub struct Actor<D: DataStore, M: MessageStore> {
+pub struct Actor {
     pub attestation: VerifiableCredential,
     pub authorization: VerifiableCredential,
     pub did: String,
-    pub dwn: Arc<DWN<D, M>>,
+    pub dwn: DWN,
     pub remotes: Vec<Remote>,
 }
 
@@ -53,9 +53,9 @@ pub struct VerifiableCredential {
     pub key_id: String,
 }
 
-impl<D: DataStore, M: MessageStore> Actor<D, M> {
+impl Actor {
     /// Generates a new `did:key` actor.
-    pub fn new_did_key(dwn: Arc<DWN<D, M>>) -> Result<Actor<D, M>, did_key::DidKeygenError> {
+    pub fn new_did_key(dwn: DWN) -> Result<Actor, did_key::DidKeygenError> {
         let did_key = did_key::DidKey::new()?;
         Ok(Actor {
             attestation: VerifiableCredential {
@@ -214,38 +214,31 @@ impl<D: DataStore, M: MessageStore> Actor<D, M> {
             .await
     }
 
-    pub fn create_record(&self) -> RecordsWriteBuilder<D, M> {
+    pub fn create_record(&self) -> RecordsWriteBuilder {
         RecordsWriteBuilder::new(self)
     }
 
-    pub fn delete_record(&self, record_id: String) -> RecordsDeleteBuilder<D, M> {
+    pub fn delete_record(&self, record_id: String) -> RecordsDeleteBuilder {
         RecordsDeleteBuilder::new(self, record_id)
     }
 
-    pub fn query_records(&self, filter: RecordsFilter) -> RecordsQueryBuilder<D, M> {
+    pub fn query_records(&self, filter: RecordsFilter) -> RecordsQueryBuilder {
         RecordsQueryBuilder::new(self, filter)
     }
 
-    pub fn read_record(&self, record_id: String) -> RecordsReadBuilder<D, M> {
+    pub fn read_record(&self, record_id: String) -> RecordsReadBuilder {
         RecordsReadBuilder::new(self, record_id)
     }
 
-    pub fn update_record(
-        &self,
-        record_id: String,
-        parent_entry_id: String,
-    ) -> RecordsWriteBuilder<D, M> {
+    pub fn update_record(&self, record_id: String, parent_entry_id: String) -> RecordsWriteBuilder {
         RecordsWriteBuilder::new_update(self, record_id, parent_entry_id)
     }
 
-    pub fn register_protocol(
-        &self,
-        definition: ProtocolDefinition,
-    ) -> ProtocolsConfigureBuilder<D, M> {
+    pub fn register_protocol(&self, definition: ProtocolDefinition) -> ProtocolsConfigureBuilder {
         ProtocolsConfigureBuilder::new(self, Some(definition))
     }
 
-    pub fn query_protocols(&self, filter: ProtocolsFilter) -> ProtocolsQueryBuilder<D, M> {
+    pub fn query_protocols(&self, filter: ProtocolsFilter) -> ProtocolsQueryBuilder {
         ProtocolsQueryBuilder::new(self, filter)
     }
 }

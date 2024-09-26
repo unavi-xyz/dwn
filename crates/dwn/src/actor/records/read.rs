@@ -5,12 +5,11 @@ use crate::{
         DwnRequest, Message,
     },
     reply::{MessageReply, RecordsReadReply},
-    store::{DataStore, MessageStore},
     HandleMessageError,
 };
 
-pub struct RecordsReadBuilder<'a, D: DataStore, M: MessageStore> {
-    actor: &'a Actor<D, M>,
+pub struct RecordsReadBuilder<'a> {
+    actor: &'a Actor,
     authorized: bool,
     record_id: String,
     target: Option<String>,
@@ -18,8 +17,8 @@ pub struct RecordsReadBuilder<'a, D: DataStore, M: MessageStore> {
     final_message: Option<Message>,
 }
 
-impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsReadBuilder<'a, D, M> {
-    fn get_actor(&self) -> &Actor<impl DataStore, impl MessageStore> {
+impl<'a> MessageBuilder for RecordsReadBuilder<'a> {
+    fn get_actor(&self) -> &Actor {
         self.actor
     }
 
@@ -49,8 +48,8 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsReadBuilder<'a
     }
 }
 
-impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
-    pub fn new(actor: &'a Actor<D, M>, record_id: String) -> Self {
+impl<'a> RecordsReadBuilder<'a> {
+    pub fn new(actor: &'a Actor, record_id: String) -> Self {
         RecordsReadBuilder {
             actor,
             authorized: true,
@@ -96,7 +95,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsReadBuilder<'a, D, M> {
                             true,
                             target,
                             *found.record.clone(),
-                            &self.actor.dwn.data_store,
+                            self.actor.dwn.data_store.clone(),
                         )
                         .await
                         .map_err(HandleMessageError::MessageStoreError)?;

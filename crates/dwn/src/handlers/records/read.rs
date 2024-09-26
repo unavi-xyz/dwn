@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use libipld::Cid;
 
 use crate::{
@@ -14,8 +16,8 @@ use crate::{
 };
 
 pub async fn handle_records_read(
-    data_store: &impl DataStore,
-    message_store: &impl MessageStore,
+    data_store: &Arc<dyn DataStore>,
+    message_store: &Arc<dyn MessageStore>,
     DwnRequest { target, message }: DwnRequest,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
@@ -63,7 +65,7 @@ pub async fn handle_records_read(
                 let data_cid = Cid::try_from(data_cid.as_str()).map_err(|e| {
                     HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
                 })?;
-                let res = data_store.get(&data_cid.to_string()).await?;
+                let res = data_store.get(data_cid.to_string()).await?;
                 res.map(|res| res.into())
             } else {
                 None

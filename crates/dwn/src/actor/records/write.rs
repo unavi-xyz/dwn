@@ -7,7 +7,6 @@ use crate::{
     actor::{Actor, MessageBuilder, PrepareError, ProcessMessageError},
     message::{descriptor::records::RecordsWrite, Data, EncryptedData, Message},
     reply::{MessageReply, StatusReply},
-    store::{DataStore, MessageStore},
 };
 
 #[derive(Clone)]
@@ -22,8 +21,8 @@ impl Encryption {
     }
 }
 
-pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
-    actor: &'a Actor<D, M>,
+pub struct RecordsWriteBuilder<'a> {
+    actor: &'a Actor,
     authorized: bool,
     data: Option<Vec<u8>>,
     data_format: Option<String>,
@@ -44,8 +43,8 @@ pub struct RecordsWriteBuilder<'a, D: DataStore, M: MessageStore> {
     final_record_id: String,
 }
 
-impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'a, D, M> {
-    fn get_actor(&self) -> &Actor<impl DataStore, impl MessageStore> {
+impl<'a> MessageBuilder for RecordsWriteBuilder<'a> {
+    fn get_actor(&self) -> &Actor {
         self.actor
     }
 
@@ -142,8 +141,8 @@ impl<'a, D: DataStore, M: MessageStore> MessageBuilder for RecordsWriteBuilder<'
     }
 }
 
-impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
-    pub fn new(actor: &'a Actor<D, M>) -> Self {
+impl<'a> RecordsWriteBuilder<'a> {
+    pub fn new(actor: &'a Actor) -> Self {
         RecordsWriteBuilder {
             actor,
             authorized: true,
@@ -167,7 +166,7 @@ impl<'a, D: DataStore, M: MessageStore> RecordsWriteBuilder<'a, D, M> {
         }
     }
 
-    pub fn new_update(actor: &'a Actor<D, M>, record_id: String, parent_id: String) -> Self {
+    pub fn new_update(actor: &'a Actor, record_id: String, parent_id: String) -> Self {
         let mut builder = RecordsWriteBuilder::new(actor);
         builder.record_id = Some(record_id);
         builder.parent_id = Some(parent_id);
@@ -270,7 +269,6 @@ pub struct WriteResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use surrealdb::{engine::local::Mem, Surreal};
 
@@ -282,7 +280,7 @@ mod tests {
     async fn test_records_ids_different() {
         let db = Surreal::new::<Mem>(()).await.unwrap();
         let store = SurrealStore::new(db).await.unwrap();
-        let dwn = Arc::new(DWN::from(store));
+        let dwn = DWN::from(store);
 
         let actor = Actor::new_did_key(dwn).unwrap();
 

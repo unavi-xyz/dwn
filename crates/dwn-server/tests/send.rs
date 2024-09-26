@@ -29,7 +29,7 @@ async fn test_send() {
 
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store_osaka = SurrealStore::new(db).await.unwrap();
-    let dwn_osaka = Arc::new(DWN::from(store_osaka));
+    let dwn_osaka = DWN::from(store_osaka);
 
     // Make alice a did:web.
     let alice_did = format!("did:web:localhost%3A{}", port);
@@ -114,7 +114,7 @@ async fn test_send() {
     // Create another DWN.
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store_kyoto = SurrealStore::new(db).await.unwrap();
-    let dwn_kyoto = Arc::new(DWN::from(store_kyoto.clone()));
+    let dwn_kyoto = DWN::from(store_kyoto.clone());
 
     let bob_kyoto = Actor::new_did_key(dwn_kyoto).unwrap();
 

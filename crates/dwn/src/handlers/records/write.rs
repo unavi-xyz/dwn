@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use jsonschema::Validator;
 use reqwest::Client;
@@ -27,8 +29,8 @@ pub struct HandleWriteOptions {
 
 pub async fn handle_records_write(
     client: &Client,
-    data_store: &impl DataStore,
-    message_store: &impl MessageStore,
+    data_store: &Arc<dyn DataStore>,
+    message_store: &Arc<dyn MessageStore>,
     DwnRequest { target, message }: DwnRequest,
     options: HandleWriteOptions,
 ) -> Result<MessageReply, HandleMessageError> {
@@ -373,7 +375,7 @@ pub async fn handle_records_write(
 
         // Store message as initial entry.
         message_store
-            .put(authorized, target.clone(), message, data_store)
+            .put(authorized, target.clone(), message, data_store.clone())
             .await?;
     } else {
         let checkpoint_entry = checkpoint_entry.ok_or(HandleMessageError::InvalidDescriptor(
@@ -432,7 +434,7 @@ pub async fn handle_records_write(
         if existing_writes.is_empty() {
             // Store message as new entry.
             message_store
-                .put(authorized, target.clone(), message, data_store)
+                .put(authorized, target.clone(), message, data_store.clone())
                 .await?;
         } else if existing_writes.iter().all(|m| {
             let m_timestamp = match &m.descriptor {
@@ -453,13 +455,13 @@ pub async fn handle_records_write(
             for m in existing_writes {
                 let cbor = encode_cbor(&m)?;
                 message_store
-                    .delete(&target, &cbor.cid().to_string(), data_store)
+                    .delete(target.clone(), cbor.cid().to_string(), data_store.clone())
                     .await?;
             }
 
             // Store message as new entry.
             message_store
-                .put(authorized, target, message, data_store)
+                .put(authorized, target, message, data_store.clone())
                 .await?;
         }
     }

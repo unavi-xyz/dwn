@@ -17,7 +17,7 @@ use tracing_test::traced_test;
 async fn test_records_schema() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
     let actor = Actor::new_did_key(dwn).unwrap();
 

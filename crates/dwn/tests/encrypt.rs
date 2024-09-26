@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dwn::{
     actor::{records::Encryption, Actor},
     message::Data,
@@ -14,7 +12,7 @@ use tracing_test::traced_test;
 async fn test_encrypt() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
     let actor = Actor::new_did_key(dwn).unwrap();
 

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dwn::{
     actor::Actor,
     message::descriptor::records::{FilterDateCreated, FilterDateSort, RecordsFilter},
@@ -23,7 +21,7 @@ fn gen_data(i: usize) -> Vec<u8> {
 async fn test_filter_date_sort() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
     let actor = Actor::new_did_key(dwn).unwrap();
 
     let mut records = Vec::new();
@@ -111,7 +109,7 @@ async fn test_filter_date_sort() {
 async fn test_filter_message_timestamp() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
     let actor = Actor::new_did_key(dwn).unwrap();
 
     let mut records = Vec::new();
@@ -253,7 +251,7 @@ async fn test_filter_message_timestamp() {
 async fn test_query_records_delete() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
     let actor = Actor::new_did_key(dwn).unwrap();
 
     // Create a new record.

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dwn::{
     actor::Actor,
     message::{
@@ -10,26 +8,26 @@ use dwn::{
         },
         Data,
     },
-    store::{DataStore, MessageStore, SurrealStore},
+    store::SurrealStore,
     DWN,
 };
 use surrealdb::{engine::local::Mem, Surreal};
 use tokio::net::TcpListener;
 use tracing_test::traced_test;
 
-struct TestContext<D: DataStore, M: MessageStore> {
-    alice_kyoto: Actor<D, M>,
-    alice_osaka: Actor<D, M>,
+struct TestContext {
+    alice_kyoto: Actor,
+    alice_osaka: Actor,
     osaka_url: String,
 }
 
-async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
+async fn setup_test() -> TestContext {
     let port = port_scanner::request_open_port().unwrap();
 
     // Start a DWN server.
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store_osaka = SurrealStore::new(db).await.unwrap();
-    let dwn_osaka = Arc::new(DWN::from(store_osaka));
+    let dwn_osaka = DWN::from(store_osaka);
     let alice_osaka = Actor::new_did_key(dwn_osaka.clone()).unwrap();
 
     tokio::spawn(async move {
@@ -47,7 +45,7 @@ async fn setup_test() -> TestContext<impl DataStore, impl MessageStore> {
     // Create another DWN.
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store_kyoto = SurrealStore::new(db).await.unwrap();
-    let dwn_kyoto = Arc::new(DWN::from(store_kyoto.clone()));
+    let dwn_kyoto = DWN::from(store_kyoto.clone());
 
     let alice_kyoto = Actor {
         attestation: alice_osaka.attestation.clone(),

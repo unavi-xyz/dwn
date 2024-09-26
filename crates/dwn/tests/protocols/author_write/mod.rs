@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dwn::{
     actor::{Actor, MessageBuilder},
     message::descriptor::protocols::ProtocolDefinition,
@@ -17,7 +15,7 @@ pub async fn test_author_read() {
 
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
     let alice = Actor::new_did_key(dwn.clone()).unwrap();
     let bob = Actor::new_did_key(dwn.clone()).unwrap();

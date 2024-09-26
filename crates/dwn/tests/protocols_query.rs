@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dwn::{
     actor::Actor,
     message::descriptor::{
@@ -18,7 +16,7 @@ use tracing_test::traced_test;
 async fn test_protocol_name_query() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
     let actor = Actor::new_did_key(dwn).unwrap();
 
@@ -104,7 +102,7 @@ async fn test_protocol_name_query() {
 async fn test_protocol_version_query() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
     let actor = Actor::new_did_key(dwn).unwrap();
 

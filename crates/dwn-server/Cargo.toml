@@ -21,6 +21,6 @@ tracing.workspace = true
 didkit.workspace = true
 port_scanner = "0.1.5"
 serde_json.workspace = true
-surrealdb.workspace = true
+surrealdb = { workspace = true, features = ["kv-mem"] }
 tokio.workspace = true
 tracing-test.workspace = true

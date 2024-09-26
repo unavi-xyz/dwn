@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     message::{descriptor::Descriptor, DwnRequest},
     reply::{MessageReply, QueryReply, Status},
@@ -6,7 +8,7 @@ use crate::{
 };
 
 pub async fn handle_records_query(
-    message_store: &impl MessageStore,
+    message_store: &Arc<dyn MessageStore>,
     DwnRequest {
         target,
         mut message,

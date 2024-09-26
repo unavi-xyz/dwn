@@ -1,3 +1,5 @@
+use std::{future::Future, pin::Pin};
+
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use surrealdb::Connection;
@@ -9,36 +11,68 @@ use super::SurrealStore;
 const DATA_TABLE: &str = "data";
 
 impl<T: Connection> DataStore for SurrealStore<T> {
-    async fn delete(&self, cid: &str) -> Result<(), DataStoreError> {
-        let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
+    fn delete(
+        &self,
+        cid: String,
+    ) -> Pin<Box<dyn Future<Output = Result<(), DataStoreError>> + Send + Sync>> {
+        let store = self.clone();
 
-        db.delete::<Option<DbData>>((DATA_TABLE, cid))
-            .await
-            .map_err(|e| DataStoreError::BackendError(anyhow!(e)))?;
+        Box::pin(async move {
+            let db = store
+                .data_db()
+                .await
+                .map_err(DataStoreError::BackendError)?;
 
-        Ok(())
+            db.delete::<Option<DbData>>((DATA_TABLE, cid))
+                .await
+                .map_err(|e| DataStoreError::BackendError(anyhow!(e)))?;
+
+            Ok(())
+        })
     }
 
-    async fn get(&self, cid: &str) -> Result<Option<StoredData>, DataStoreError> {
-        let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
+    fn get(
+        &self,
+        cid: String,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<StoredData>, DataStoreError>> + Send + Sync>>
+    {
+        let store = self.clone();
 
-        let res: Result<Option<DbData>, _> = db.select((DATA_TABLE, cid)).await;
+        Box::pin(async move {
+            let db = store
+                .data_db()
+                .await
+                .map_err(DataStoreError::BackendError)?;
 
-        res.map(|r| r.map(|r| r.data))
-            .map_err(|e| DataStoreError::BackendError(anyhow!(e)))
+            let res: Result<Option<DbData>, _> = db.select((DATA_TABLE, cid)).await;
+
+            res.map(|r| r.map(|r| r.data))
+                .map_err(|e| DataStoreError::BackendError(anyhow!(e)))
+        })
     }
 
-    async fn put(&self, cid: String, data: StoredData) -> Result<PutDataResults, DataStoreError> {
-        let db = self.data_db().await.map_err(DataStoreError::BackendError)?;
+    fn put(
+        &self,
+        cid: String,
+        data: StoredData,
+    ) -> Pin<Box<dyn Future<Output = Result<PutDataResults, DataStoreError>> + Send + Sync>> {
+        let store = self.clone();
 
-        let size = data.len();
+        Box::pin(async move {
+            let db = store
+                .data_db()
+                .await
+                .map_err(DataStoreError::BackendError)?;
 
-        db.create::<Option<DbData>>((DATA_TABLE, &cid))
-            .content(DbData { cid, data })
-            .await
-            .map_err(|e| DataStoreError::BackendError(anyhow!(e)))?;
+            let size = data.len();
 
-        Ok(PutDataResults { size })
+            db.create::<Option<DbData>>((DATA_TABLE, &cid))
+                .content(DbData { cid, data })
+                .await
+                .map_err(|e| DataStoreError::BackendError(anyhow!(e)))?;
+
+            Ok(PutDataResults { size })
+        })
     }
 }
 

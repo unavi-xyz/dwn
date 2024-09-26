@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dwn::{
     actor::{Actor, MessageBuilder},
     message::{descriptor::records::RecordsFilter, Data},
@@ -14,9 +12,9 @@ use tracing_test::traced_test;
 async fn test_publish() {
     let db = Surreal::new::<Mem>(()).await.unwrap();
     let store = SurrealStore::new(db).await.unwrap();
-    let dwn = Arc::new(DWN::from(store));
+    let dwn = DWN::from(store);
 
-    let actor = Actor::new_did_key(dwn.clone()).unwrap();
+    let actor = Actor::new_did_key(dwn).unwrap();
 
     let data = "Hello, world!".bytes().collect::<Vec<_>>();
 

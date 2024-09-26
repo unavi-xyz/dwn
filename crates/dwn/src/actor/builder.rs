@@ -9,14 +9,13 @@ use crate::{
     encode::EncodeError,
     message::{AuthError, DwnRequest, Message},
     reply::MessageReply,
-    store::{DataStore, MessageStore},
     HandleMessageError,
 };
 
 use super::{Actor, PrepareError};
 
-pub trait MessageBuilder: Sized {
-    fn get_actor(&self) -> &Actor<impl DataStore, impl MessageStore>;
+pub trait MessageBuilder {
+    fn get_actor(&self) -> &Actor;
     fn get_authorized(&self) -> bool;
     fn get_target(&self) -> Option<String>;
 

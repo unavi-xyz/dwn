@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     encode::encode_cbor,
     message::{
@@ -13,8 +15,8 @@ use crate::{
 };
 
 pub async fn handle_records_delete(
-    data_store: &impl DataStore,
-    message_store: &impl MessageStore,
+    data_store: Arc<dyn DataStore>,
+    message_store: &Arc<dyn MessageStore>,
     DwnRequest { target, message }: DwnRequest,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
@@ -72,7 +74,7 @@ pub async fn handle_records_delete(
     for m in messages.iter() {
         let block = encode_cbor(m)?;
         message_store
-            .delete(&target, &block.cid().to_string(), data_store)
+            .delete(target.clone(), block.cid().to_string(), data_store.clone())
             .await?;
     }
 

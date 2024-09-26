@@ -13,7 +13,7 @@
 //!     // Create a DWN, using in-memory SurrealDB for storage.
 //!     let db = Surreal::new::<Mem>(()).await.unwrap();
 //!     let store = SurrealStore::new(db).await.unwrap();
-//!     let dwn = Arc::new(DWN::from(store));
+//!     let dwn = DWN::from(store);
 //!
 //!     // Create an actor to send messages.
 //!     // Here we generate a new `did:key` for the actor's identity,
@@ -45,6 +45,8 @@
 //! }
 //! ```
 
+use std::sync::Arc;
+
 use handlers::{
     protocols::{handle_protocols_configure, handle_protocols_query},
     records::{
@@ -68,14 +70,16 @@ pub mod store;
 
 pub use encode::EncodeError;
 
-pub struct DWN<D: DataStore, M: MessageStore> {
+#[derive(Clone)]
+pub struct DWN {
     pub client: Client,
-    pub data_store: D,
-    pub message_store: M,
+    pub data_store: Arc<dyn DataStore>,
+    pub message_store: Arc<dyn MessageStore>,
 }
 
-impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
+impl<T: DataStore + MessageStore + 'static> From<T> for DWN {
     fn from(store: T) -> Self {
+        let store = Arc::new(store);
         Self {
             client: Client::new(),
             data_store: store.clone(),
@@ -84,12 +88,15 @@ impl<T: Clone + DataStore + MessageStore> From<T> for DWN<T, T> {
     }
 }
 
-impl<D: DataStore, M: MessageStore> DWN<D, M> {
-    pub fn new(data_store: D, message_store: M) -> Self {
+impl DWN {
+    pub fn new(
+        data_store: impl DataStore + 'static,
+        message_store: impl MessageStore + 'static,
+    ) -> Self {
         Self {
             client: Client::new(),
-            data_store,
-            message_store,
+            data_store: Arc::new(data_store),
+            message_store: Arc::new(message_store),
         }
     }
 
@@ -99,14 +106,15 @@ impl<D: DataStore, M: MessageStore> DWN<D, M> {
     ) -> Result<MessageReply, HandleMessageError> {
         match &request.message.descriptor {
             Descriptor::ProtocolsConfigure(_) => {
-                handle_protocols_configure(&self.data_store, &self.message_store, request).await
+                handle_protocols_configure(self.data_store.clone(), &self.message_store, request)
+                    .await
             }
             Descriptor::ProtocolsQuery(_) => {
                 handle_protocols_query(&self.message_store, request).await
             }
 
             Descriptor::RecordsDelete(_) => {
-                handle_records_delete(&self.data_store, &self.message_store, request).await
+                handle_records_delete(self.data_store.clone(), &self.message_store, request).await
             }
             Descriptor::RecordsRead(_) => {
                 handle_records_read(&self.data_store, &self.message_store, request).await

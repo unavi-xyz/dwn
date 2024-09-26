@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     message::{
         descriptor::{protocols::ActionWho, Descriptor},
@@ -9,8 +11,8 @@ use crate::{
 };
 
 pub async fn handle_protocols_configure(
-    data_store: &impl DataStore,
-    message_store: &impl MessageStore,
+    data_store: Arc<dyn DataStore>,
+    message_store: &Arc<dyn MessageStore>,
     DwnRequest { target, message }: DwnRequest,
 ) -> Result<MessageReply, HandleMessageError> {
     let authorized = message.is_authorized(&target).await;
@@ -45,7 +47,7 @@ pub async fn handle_protocols_configure(
     }
 
     message_store
-        .put(authorized, target, message, data_store)
+        .put(authorized, target, message, data_store.clone())
         .await?;
 
     Ok(StatusReply {

@@ -1,4 +1,4 @@
-use std::future::Future;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use base64::DecodeError;
 use libipld::Cid;
@@ -35,18 +35,21 @@ pub enum DataStoreError {
 }
 
 pub trait DataStore: Send + Sync {
-    fn delete(&self, cid: &str) -> impl Future<Output = Result<(), DataStoreError>> + Send + Sync;
+    fn delete(
+        &self,
+        cid: String,
+    ) -> Pin<Box<dyn Future<Output = Result<(), DataStoreError>> + Send + Sync>>;
 
     fn get(
         &self,
-        cid: &str,
-    ) -> impl Future<Output = Result<Option<StoredData>, DataStoreError>> + Send + Sync;
+        cid: String,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<StoredData>, DataStoreError>> + Send + Sync>>;
 
     fn put(
         &self,
         cid: String,
-        value: StoredData,
-    ) -> impl Future<Output = Result<PutDataResults, DataStoreError>> + Send + Sync;
+        data: StoredData,
+    ) -> Pin<Box<dyn Future<Output = Result<PutDataResults, DataStoreError>> + Send + Sync>>;
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -58,25 +61,25 @@ pub struct PutDataResults {
 pub trait MessageStore: Send + Sync {
     fn delete(
         &self,
-        tenant: &str,
-        cid: &str,
-        data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<(), MessageStoreError>> + Send + Sync;
+        tenant: String,
+        cid: String,
+        data_store: Arc<dyn DataStore>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), MessageStoreError>> + Send + Sync>>;
 
     fn put(
         &self,
         authorized: bool,
         tenant: String,
         message: Message,
-        data_store: &impl DataStore,
-    ) -> impl Future<Output = Result<Cid, MessageStoreError>> + Send + Sync;
+        data_store: Arc<dyn DataStore>,
+    ) -> Pin<Box<dyn Future<Output = Result<Cid, MessageStoreError>> + Send + Sync>>;
 
     fn query_protocols(
         &self,
         tenant: String,
         authorized: bool,
         filter: ProtocolsFilter,
-    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync>>;
 
     fn query_records(
         &self,
@@ -84,7 +87,7 @@ pub trait MessageStore: Send + Sync {
         author: Option<String>,
         authorized: bool,
         filter: RecordsFilter,
-    ) -> impl Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<Message>, MessageStoreError>> + Send + Sync>>;
 }
 
 #[derive(Error, Debug)]
