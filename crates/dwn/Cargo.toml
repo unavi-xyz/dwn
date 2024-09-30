@@ -18,7 +18,7 @@ anyhow = "1.0.82"
 base64 = "0.22.0"
 did-method-key = "0.2.2"
 didkit.workspace = true
-jsonschema = { version = "0.20.0", default-features = false, features = [
+jsonschema = { version = "0.21.0", default-features = false, features = [
   "draft201909",
   "draft202012",
 ] }
