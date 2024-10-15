@@ -1,3 +1,8 @@
 # dwn-core
 
-<!-- cargo-rdme -->
+<!-- cargo-rdme start -->
+
+Core DWN types.
+Does not provide an implementation.
+
+<!-- cargo-rdme end -->

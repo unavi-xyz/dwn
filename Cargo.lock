@@ -81,6 +81,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "dwn-server"
+version = "0.0.10"
+
+[[package]]
 name = "errno"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
