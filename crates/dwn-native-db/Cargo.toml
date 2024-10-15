@@ -1,0 +1,13 @@
+[package]
+name = "dwn-native-db"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+
+[dependencies]
+dwn-core = { path = "../dwn-core" }
+native_db = { version = "0.8.1", default-features = false }
+native_model = "0.4.20"
+serde = "1.0.210"

@@ -1,0 +1,7 @@
+[package]
+name = "dwn-core"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
