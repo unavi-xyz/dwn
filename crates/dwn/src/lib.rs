@@ -16,7 +16,8 @@ pub mod stores {
     pub use dwn_native_db::*;
 }
 
-mod records;
+pub mod builders;
+mod handlers;
 
 #[derive(Clone)]
 pub struct DWN {
@@ -66,7 +67,9 @@ impl DWN {
                     code: 500,
                     detail: "todo",
                 }),
-                Method::Write => records::write::handle(self.record_store.as_ref(), target, msg),
+                Method::Write => {
+                    handlers::records::write::handle(self.record_store.as_ref(), target, msg)
+                }
                 Method::Subscribe => Err(Status {
                     code: 500,
                     detail: "todo",

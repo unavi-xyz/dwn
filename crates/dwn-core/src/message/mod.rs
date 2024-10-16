@@ -1,10 +1,12 @@
 use std::fmt::Display;
 
-use mime::Mime;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 
+pub use mime;
+
 pub mod cid;
+pub mod data;
 mod record_id;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -12,8 +14,7 @@ mod record_id;
 #[skip_serializing_none]
 pub struct Message {
     pub record_id: String,
-    /// base64url encoded data.
-    pub data: Option<String>,
+    pub data: Option<data::Data>,
     pub descriptor: Descriptor,
 }
 
@@ -26,7 +27,7 @@ pub struct Descriptor {
     pub method: Method,
     pub data_cid: Option<String>,
     #[serde_as(as = "Option<DisplayFromStr>")]
-    pub data_format: Option<Mime>,
+    pub data_format: Option<mime::Mime>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

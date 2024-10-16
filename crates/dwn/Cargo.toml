@@ -10,6 +10,7 @@ keywords.workspace = true
 native_db = ["dep:dwn-native-db"]
 
 [dependencies]
+base64 = "0.22.1"
 dwn-core = { path = "../dwn-core" }
 dwn-native-db = { path = "../dwn-native-db", optional = true }
 thiserror.workspace = true

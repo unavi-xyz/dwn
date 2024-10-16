@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use super::{
-    cid::{compute_cid, CidGenerationError},
+    cid::{compute_cid_cbor, CidGenerationError},
     Descriptor,
 };
 
@@ -14,8 +14,8 @@ pub struct RecordIdGeneration {
 impl Descriptor {
     pub fn compute_record_id(&self) -> Result<String, CidGenerationError> {
         let generator = RecordIdGeneration {
-            descriptor_cid: compute_cid(self)?,
+            descriptor_cid: compute_cid_cbor(self)?,
         };
-        compute_cid(&generator)
+        compute_cid_cbor(&generator)
     }
 }
