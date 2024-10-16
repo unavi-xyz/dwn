@@ -1,3 +1,4 @@
+use dwn_core::message::Message;
 use native_db::{native_db, ToKey};
 use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
@@ -7,5 +8,6 @@ use serde::{Deserialize, Serialize};
 #[native_db]
 pub struct Record {
     #[primary_key]
-    pub id: String,
+    pub key: (String, String),
+    pub message: Message,
 }
