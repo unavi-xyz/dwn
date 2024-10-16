@@ -3,6 +3,8 @@
 //! The DWN spec is a work-in-progress and often out of date from other implementations,
 //! so it is treated more as a loose guide rather than an absolute set of rules to follow.
 
+use std::sync::Arc;
+
 use dwn_core::{
     message::{Interface, Message, Method},
     store::{DataStore, RecordStore},
@@ -16,22 +18,23 @@ pub mod stores {
 
 mod records;
 
+#[derive(Clone)]
 pub struct DWN {
-    pub data_store: Box<dyn DataStore>,
-    pub record_store: Box<dyn RecordStore>,
+    pub data_store: Arc<dyn DataStore>,
+    pub record_store: Arc<dyn RecordStore>,
 }
 
 impl<T: DataStore + RecordStore + Clone + 'static> From<T> for DWN {
     fn from(value: T) -> Self {
         Self {
-            data_store: Box::new(value.clone()),
-            record_store: Box::new(value),
+            data_store: Arc::new(value.clone()),
+            record_store: Arc::new(value),
         }
     }
 }
 
 impl DWN {
-    pub fn process_message(&self, msg: Message) -> Result<(), Status> {
+    pub fn process_message(&self, target: String, msg: Message) -> Result<(), Status> {
         debug!(
             "processing {} {}",
             msg.descriptor.interface, msg.descriptor.method
@@ -63,7 +66,7 @@ impl DWN {
                     code: 500,
                     detail: "todo",
                 }),
-                Method::Write => records::write::handle(self.record_store.as_ref(), msg),
+                Method::Write => records::write::handle(self.record_store.as_ref(), target, msg),
                 Method::Subscribe => Err(Status {
                     code: 500,
                     detail: "todo",

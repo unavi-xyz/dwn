@@ -8,5 +8,5 @@ keywords.workspace = true
 
 [dependencies]
 axum = "0.7.7"
-dwn = { path = "../dwn", features = ["native_db"] }
+dwn = { path = "../dwn" }
 tracing.workspace = true

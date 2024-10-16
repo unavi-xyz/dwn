@@ -5,13 +5,11 @@ use dwn_core::{
 
 use crate::Status;
 
-pub fn handle(records: &dyn RecordStore, msg: Message) -> Result<(), Status> {
+pub fn handle(records: &dyn RecordStore, target: String, msg: Message) -> Result<(), Status> {
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);
     debug_assert_eq!(msg.descriptor.method, Method::Write);
 
-    let did = "did:example:123";
-
-    let Ok(prev) = records.read(did, &msg.record_id) else {
+    let Ok(prev) = records.read(&target, &msg.record_id) else {
         return Err(Status {
             code: 500,
             detail: "Internal error.",
@@ -41,7 +39,7 @@ pub fn handle(records: &dyn RecordStore, msg: Message) -> Result<(), Status> {
                 }
             };
 
-            if records.write(did, msg).is_err() {
+            if records.write(&target, msg).is_err() {
                 return Err(Status {
                     code: 500,
                     detail: "Internal error.",

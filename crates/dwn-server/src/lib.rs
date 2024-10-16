@@ -6,14 +6,17 @@
 //!
 //! ## Design
 //!
-//! The server provides a RESTful API, leaning into the strengths of HTTP.
+//! The server provides a REST API, leaning into the strengths of HTTP.
 //! For example, using HTTP-level status codes instead of the spec-defined
 //! JSON reply objects.
 
 use axum::{routing::get, Router};
+use dwn::DWN;
 
 mod records;
 
-pub fn create_router() -> Router {
-    Router::new().route("/records/:id", get(records::get::records_get))
+pub fn create_router(dwn: DWN) -> Router {
+    Router::new()
+        .route("/:target/records/:id", get(records::get::records_get))
+        .with_state(dwn)
 }

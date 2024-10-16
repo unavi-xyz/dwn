@@ -1,6 +1,9 @@
-use axum::extract::Path;
-use tracing::info;
+use axum::extract::{Path, State};
+use dwn::DWN;
 
-pub async fn records_get(Path(id): Path<String>) {
-    info!("GET records/{}", id);
+pub async fn records_get(
+    Path((_target, _record_id)): Path<(String, String)>,
+    State(_dwn): State<DWN>,
+) {
+    todo!();
 }
