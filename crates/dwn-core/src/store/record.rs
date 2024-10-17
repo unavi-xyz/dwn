@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use crate::message::Message;
 
 pub trait RecordStore: Send + Sync {
@@ -5,6 +7,8 @@ pub trait RecordStore: Send + Sync {
     fn write(&self, target: &str, message: Message) -> Result<(), RecordStoreError>;
 }
 
+#[derive(Error, Debug)]
 pub enum RecordStoreError {
+    #[error("backend error")]
     BackendError,
 }

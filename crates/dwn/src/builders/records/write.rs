@@ -67,11 +67,14 @@ mod tests {
 
     #[test]
     fn test_data() {
-        let data = vec![0, 1, 2, 3, 2, 1, 0];
+        let data = "test data".as_bytes().to_owned();
+
         let msg = RecordsWriteBuilder::default()
             .data(TEXT_PLAIN, data.clone())
             .build()
             .unwrap();
+        assert!(msg.descriptor.data_cid.is_some());
+        assert_eq!(msg.descriptor.data_format, Some(TEXT_PLAIN));
 
         let encoded = match msg.data.as_ref().unwrap() {
             Data::Base64(s) => s,

@@ -15,3 +15,7 @@ dwn-core = { path = "../dwn-core" }
 dwn-native-db = { path = "../dwn-native-db", optional = true }
 thiserror.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+dwn-native-db = { path = "../dwn-native-db" }
+tracing-test = "0.2.5"

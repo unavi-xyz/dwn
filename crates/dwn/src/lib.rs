@@ -35,7 +35,7 @@ impl<T: DataStore + RecordStore + Clone + 'static> From<T> for DWN {
 }
 
 impl DWN {
-    pub fn process_message(&self, target: String, msg: Message) -> Result<(), Status> {
+    pub fn process_message(&self, target: &str, msg: Message) -> Result<Reply, Status> {
         debug!(
             "processing {} {}",
             msg.descriptor.interface, msg.descriptor.method
@@ -45,30 +45,40 @@ impl DWN {
             if msg.descriptor.data_cid.is_none() {
                 return Err(Status {
                     code: 400,
-                    detail: "Data CID not present.",
+                    detail: "Data CID not present",
                 });
             }
 
             if msg.descriptor.data_format.is_none() {
                 return Err(Status {
                     code: 400,
-                    detail: "Data format not present.",
+                    detail: "Data format not present",
                 });
             }
         }
 
         match &msg.descriptor.interface {
             Interface::Records => match &msg.descriptor.method {
-                Method::Read => Err(Status {
-                    code: 500,
-                    detail: "todo",
-                }),
+                Method::Read => {
+                    match handlers::records::read::handle(self.record_store.as_ref(), target, msg)?
+                    {
+                        Some(found) => Ok(Reply::RecordsRead(found)),
+                        None => Err(Status {
+                            code: 404,
+                            detail: "Not Found",
+                        }),
+                    }
+                }
                 Method::Query => Err(Status {
                     code: 500,
                     detail: "todo",
                 }),
                 Method::Write => {
-                    handlers::records::write::handle(self.record_store.as_ref(), target, msg)
+                    handlers::records::write::handle(self.record_store.as_ref(), target, msg)?;
+                    Ok(Reply::Status(Status {
+                        code: 200,
+                        detail: "OK",
+                    }))
                 }
                 Method::Subscribe => Err(Status {
                     code: 500,
@@ -80,7 +90,7 @@ impl DWN {
                 }),
                 _ => Err(Status {
                     code: 400,
-                    detail: "Invalid method.",
+                    detail: "Invalid descriptor method",
                 }),
             },
             Interface::Protocols => Err(Status {
@@ -95,6 +105,13 @@ impl DWN {
     }
 }
 
+pub enum Reply {
+    RecordsQuery(Vec<Message>),
+    RecordsRead(Message),
+    Status(Status),
+}
+
+#[derive(Debug)]
 pub struct Status {
     pub code: u64,
     pub detail: &'static str,

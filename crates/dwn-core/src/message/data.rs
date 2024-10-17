@@ -2,7 +2,7 @@ use ipld_core::cid::Cid;
 use rust_unixfs::file::adder::FileAdder;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Data {
     Base64(String),
     Encrypted(()),
@@ -29,5 +29,20 @@ fn data_to_unixfs(data: &[u8]) -> Vec<(Cid, Vec<u8>)> {
         }
     }
 
+    for b in adder.finish() {
+        blocks.push(b);
+    }
+
     blocks
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compute_data_cid() {
+        let data = "test data".as_bytes();
+        assert!(compute_data_cid(data).is_some());
+    }
 }

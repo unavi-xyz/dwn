@@ -9,7 +9,7 @@ pub mod cid;
 pub mod data;
 mod record_id;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[skip_serializing_none]
 pub struct Message {
@@ -19,7 +19,7 @@ pub struct Message {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[skip_serializing_none]
 pub struct Descriptor {
@@ -30,7 +30,7 @@ pub struct Descriptor {
     pub data_format: Option<mime::Mime>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Interface {
     Permissions,
     Protocols,
@@ -43,7 +43,7 @@ impl Display for Interface {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Method {
     Read,
     Query,
