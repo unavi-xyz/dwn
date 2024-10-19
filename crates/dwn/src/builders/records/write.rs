@@ -3,14 +3,20 @@ use dwn_core::message::{
     cid::CidGenerationError,
     data::{compute_data_cid, Data},
     mime::Mime,
-    Descriptor, Interface, Message, Method,
+    Descriptor, Interface, Message, Method, OffsetDateTime, Version,
 };
 
 #[derive(Default)]
 pub struct RecordsWriteBuilder {
     record_id: Option<String>,
+    context_id: Option<String>,
     data: Option<Vec<u8>>,
     data_format: Option<Mime>,
+    schema: Option<String>,
+    protocol: Option<String>,
+    protocol_version: Option<Version>,
+    parent_id: Option<String>,
+    published: Option<bool>,
 }
 
 impl RecordsWriteBuilder {
@@ -19,9 +25,35 @@ impl RecordsWriteBuilder {
         self
     }
 
+    pub fn context_id(mut self, value: String) -> Self {
+        self.context_id = Some(value);
+        self
+    }
+
     pub fn data(mut self, format: Mime, data: Vec<u8>) -> Self {
         self.data_format = Some(format);
         self.data = Some(data);
+        self
+    }
+
+    pub fn schema(mut self, value: String) -> Self {
+        self.schema = Some(value);
+        self
+    }
+
+    pub fn protocol(mut self, protocol: String, version: Version) -> Self {
+        self.protocol = Some(protocol);
+        self.protocol_version = Some(version);
+        self
+    }
+
+    pub fn parent_id(mut self, value: String) -> Self {
+        self.parent_id = Some(value);
+        self
+    }
+
+    pub fn published(mut self, value: bool) -> Self {
+        self.published = Some(value);
         self
     }
 
@@ -33,6 +65,13 @@ impl RecordsWriteBuilder {
             method: Method::Write,
             data_cid,
             data_format: self.data_format,
+            schema: self.schema,
+            protocol: self.protocol,
+            protocol_version: self.protocol_version,
+            parent_id: self.parent_id,
+            published: self.published,
+            date_created: OffsetDateTime::now_utc(),
+            date_published: None,
         };
 
         let record_id = match self.record_id {
@@ -47,6 +86,7 @@ impl RecordsWriteBuilder {
 
         Ok(Message {
             record_id,
+            context_id: self.context_id,
             data,
             descriptor,
         })

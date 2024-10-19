@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 
 pub use mime;
+pub use semver::Version;
+pub use time::OffsetDateTime;
 
 pub mod cid;
 pub mod data;
@@ -14,6 +16,7 @@ mod record_id;
 #[skip_serializing_none]
 pub struct Message {
     pub record_id: String,
+    pub context_id: Option<String>,
     pub data: Option<data::Data>,
     pub descriptor: Descriptor,
 }
@@ -28,6 +31,13 @@ pub struct Descriptor {
     pub data_cid: Option<String>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub data_format: Option<mime::Mime>,
+    pub parent_id: Option<String>,
+    pub protocol: Option<String>,
+    pub protocol_version: Option<Version>,
+    pub schema: Option<String>,
+    pub published: Option<bool>,
+    pub date_created: OffsetDateTime,
+    pub date_published: Option<OffsetDateTime>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
