@@ -61,7 +61,7 @@
             cargo-machete
             cargo-rdme
             cargo-release
-            cargo-watch
+            cargo-workspaces
             minio
             minio-client
             nodePackages.prettier
@@ -107,15 +107,6 @@
           dwn-server = flake-utils.lib.mkApp {
             drv = pkgs.writeScriptBin "dwn-server" ''
               ${self.packages.${localSystem}.dwn-server}/bin/dwn-server
-            '';
-          };
-
-          generate-readme = flake-utils.lib.mkApp {
-            drv = pkgs.writeShellScriptBin "generate-readme" ''
-              cd crates
-              for folder in */; do
-                (cd $folder && cargo rdme --force)
-              done
             '';
           };
 

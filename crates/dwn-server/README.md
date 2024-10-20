@@ -10,7 +10,7 @@ crate.
 
 ### Design
 
-The server provides a RESTful API, leaning into the strengths of HTTP.
+The server provides a REST API, leaning into the strengths of HTTP.
 For example, using HTTP-level status codes instead of the spec-defined
 JSON reply objects.
 
