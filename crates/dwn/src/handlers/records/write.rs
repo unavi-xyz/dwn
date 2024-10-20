@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::{
-    message::{data::Data, Interface, Message, Method},
+    message::{data::Data, mime::APPLICATION_JSON, Interface, Message, Method},
     store::RecordStore,
 };
 use serde_json::Value;
@@ -31,6 +31,13 @@ pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Re
     }
 
     if let Some(schema_url) = &msg.descriptor.schema {
+        if msg.descriptor.data_format != Some(APPLICATION_JSON) {
+            return Err(Status {
+                code: 400,
+                detail: "Data format must be application/json when using schemas",
+            });
+        }
+
         if !schema_url.starts_with("http") {
             return Err(Status {
                 code: 400,

@@ -4,6 +4,7 @@ use hyper::{server::conn::http1::Builder, service::service_fn, Response};
 use hyper_util::rt::TokioIo;
 use port_check::free_local_port;
 use tokio::net::TcpListener;
+use tracing::info;
 
 /// Hosts data over HTTP at a random port.
 /// Returns a URI to the data.
@@ -33,5 +34,8 @@ pub async fn serve_string(data: String) -> String {
         }
     });
 
-    format!("http://{}", addr)
+    let url = format!("http://{}", addr);
+    info!("Serving string to {}", url);
+
+    url
 }
