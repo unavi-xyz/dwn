@@ -13,9 +13,20 @@ native_db = ["dep:dwn-native-db"]
 base64 = "0.22.1"
 dwn-core = { path = "../dwn-core" }
 dwn-native-db = { path = "../dwn-native-db", optional = true }
+jsonschema = { version = "0.23.0", default-features = false, features = [
+  "resolve-http",
+  "draft201909",
+  "draft202012",
+] }
+reqwest = "0.12.8"
+serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
 dwn-native-db = { path = "../dwn-native-db" }
-tracing-test = "0.2.5"
+hyper = { version = "1.5.0", features = ["http1", "server"] }
+hyper-util = "0.1.9"
+port_check = "0.2.1"
+tokio = { version = "1.40.0", features = ["rt", "macros"] }
+tracing-test = { version = "0.2.5", features = ["no-env-filter"] }

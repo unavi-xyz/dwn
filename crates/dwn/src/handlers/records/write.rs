@@ -1,11 +1,16 @@
+use std::str::FromStr;
+
+use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::{
-    message::{Interface, Message, Method},
+    message::{data::Data, Interface, Message, Method},
     store::RecordStore,
 };
+use serde_json::Value;
+use tracing::info;
 
 use crate::Status;
 
-pub fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Result<(), Status> {
+pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Result<(), Status> {
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);
     debug_assert_eq!(msg.descriptor.method, Method::Write);
 
@@ -16,25 +21,110 @@ pub fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Result<(
         });
     };
 
+    if let Some(prev) = &prev {
+        if msg.descriptor.schema != prev.descriptor.schema {
+            return Err(Status {
+                code: 400,
+                detail: "Invalid schema",
+            });
+        }
+    }
+
+    if let Some(schema_url) = &msg.descriptor.schema {
+        if !schema_url.starts_with("http") {
+            return Err(Status {
+                code: 400,
+                detail: "Schema must be an HTTP URL",
+            });
+        }
+
+        let schema = reqwest::get(schema_url)
+            .await
+            .map_err(|e| {
+                info!("Failed to fetch schema {:?}", e);
+                Status {
+                    code: 500,
+                    detail: "Failed to fetch schema",
+                }
+            })?
+            .json::<Value>()
+            .await
+            .map_err(|e| {
+                info!("Failed to parse schema {:?}", e);
+                Status {
+                    code: 500,
+                    detail: "Failed to parse schema",
+                }
+            })?;
+
+        let validator = jsonschema::validator_for(&schema).map_err(|e| {
+            info!("Failed to create schema validator: {:?}", e);
+            Status {
+                code: 400,
+                detail: "Invalid schema",
+            }
+        })?;
+
+        let value = match &msg.data {
+            Some(Data::Base64(d)) => {
+                let decoded = BASE64_URL_SAFE_NO_PAD.decode(d).map_err(|e| {
+                    info!("Failed to base64 decode data: {:?}", e);
+                    Status {
+                        code: 400,
+                        detail: "Failed to base64 decode data",
+                    }
+                })?;
+                let utf8 = String::from_utf8(decoded).map_err(|e| {
+                    info!("Failed to parse data as utf8: {:?}", e);
+                    Status {
+                        code: 400,
+                        detail: "Failed to parse data as utf8",
+                    }
+                })?;
+                Value::from_str(&utf8).map_err(|e| {
+                    info!("Failed to parse data as JSON: {:?}", e);
+                    Status {
+                        code: 400,
+                        detail: "Data is not JSON",
+                    }
+                })?
+            }
+            Some(Data::Encrypted(_)) => todo!("cannot validate encrypted data against schema"),
+            None => {
+                return Err(Status {
+                    code: 400,
+                    detail: "No data provided",
+                })
+            }
+        };
+
+        if !validator.is_valid(&value) {
+            return Err(Status {
+                code: 400,
+                detail: "Data does not fulfill schema",
+            });
+        };
+    }
+
     match prev {
         Some(_) => {
             todo!("overwrite record");
         }
         None => {
-            // For new records, the record ID must match the message.
+            // For new records, the record ID must match the descriptor.
             match msg.descriptor.compute_record_id() {
                 Ok(id) => {
                     if id != msg.record_id {
                         return Err(Status {
                             code: 400,
-                            detail: "Invalid record ID.",
+                            detail: "Invalid record ID",
                         });
                     }
                 }
                 Err(_) => {
                     return Err(Status {
                         code: 400,
-                        detail: "Failed to compute record ID for message.",
+                        detail: "Failed to compute record ID for message",
                     })
                 }
             };
@@ -42,7 +132,7 @@ pub fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Result<(
             if records.write(target, msg).is_err() {
                 return Err(Status {
                     code: 500,
-                    detail: "Internal error.",
+                    detail: "Internal error",
                 });
             };
 

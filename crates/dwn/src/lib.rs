@@ -35,7 +35,7 @@ impl<T: DataStore + RecordStore + Clone + 'static> From<T> for DWN {
 }
 
 impl DWN {
-    pub fn process_message(&self, target: &str, msg: Message) -> Result<Reply, Status> {
+    pub async fn process_message(&self, target: &str, msg: Message) -> Result<Reply, Status> {
         debug!(
             "processing {} {}",
             msg.descriptor.interface, msg.descriptor.method
@@ -62,7 +62,7 @@ impl DWN {
                 Method::Read => {
                     match handlers::records::read::handle(self.record_store.as_ref(), target, msg)?
                     {
-                        Some(found) => Ok(Reply::RecordsRead(found)),
+                        Some(found) => Ok(Reply::RecordsRead(Box::new(found))),
                         None => Err(Status {
                             code: 404,
                             detail: "Not Found",
@@ -74,7 +74,8 @@ impl DWN {
                     detail: "todo",
                 }),
                 Method::Write => {
-                    handlers::records::write::handle(self.record_store.as_ref(), target, msg)?;
+                    handlers::records::write::handle(self.record_store.as_ref(), target, msg)
+                        .await?;
                     Ok(Reply::Status(Status {
                         code: 200,
                         detail: "OK",
@@ -107,7 +108,7 @@ impl DWN {
 
 pub enum Reply {
     RecordsQuery(Vec<Message>),
-    RecordsRead(Message),
+    RecordsRead(Box<Message>),
     Status(Status),
 }
 

@@ -6,9 +6,9 @@ use dwn_core::message::mime::TEXT_PLAIN;
 use dwn_native_db::NativeDbStore;
 use tracing_test::traced_test;
 
-#[test]
+#[tokio::test]
 #[traced_test]
-fn test_read_data() {
+async fn test_read_data() {
     let store = NativeDbStore::new_in_memory().unwrap();
     let dwn = DWN::from(store);
 
@@ -24,9 +24,9 @@ fn test_read_data() {
     let msg_read = RecordsReadBuilder::new(msg_write.record_id.clone())
         .build()
         .unwrap();
-    let reply = match dwn.process_message(target, msg_read).unwrap() {
+    let reply = match dwn.process_message(target, msg_read).await.unwrap() {
         Reply::RecordsRead(m) => m,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(reply, msg_write);
+    assert_eq!(*reply, msg_write);
 }
