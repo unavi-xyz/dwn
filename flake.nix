@@ -58,6 +58,7 @@
         commonShell = {
           checks = self.checks.${localSystem};
           packages = with pkgs; [
+            cargo-deny
             cargo-machete
             cargo-rdme
             cargo-release
