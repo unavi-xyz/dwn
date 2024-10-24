@@ -16,16 +16,17 @@ pub mod stores {
     pub use dwn_native_db::*;
 }
 
+pub mod actor;
 pub mod builders;
 mod handlers;
 
 #[derive(Clone)]
-pub struct DWN {
+pub struct Dwn {
     pub data_store: Arc<dyn DataStore>,
     pub record_store: Arc<dyn RecordStore>,
 }
 
-impl<T: DataStore + RecordStore + Clone + 'static> From<T> for DWN {
+impl<T: DataStore + RecordStore + Clone + 'static> From<T> for Dwn {
     fn from(value: T) -> Self {
         Self {
             data_store: Arc::new(value.clone()),
@@ -34,7 +35,7 @@ impl<T: DataStore + RecordStore + Clone + 'static> From<T> for DWN {
     }
 }
 
-impl DWN {
+impl Dwn {
     pub async fn process_message(&self, target: &str, msg: Message) -> Result<Reply, Status> {
         debug!(
             "processing {} {}",

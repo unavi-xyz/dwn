@@ -1,6 +1,6 @@
 use dwn::{
     builders::records::{read::RecordsReadBuilder, write::RecordsWriteBuilder},
-    Reply, DWN,
+    Dwn, Reply,
 };
 use dwn_core::message::mime::TEXT_PLAIN;
 use dwn_native_db::NativeDbStore;
@@ -10,7 +10,7 @@ use tracing_test::traced_test;
 #[traced_test]
 async fn test_read_data() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
     let data = "hello, world!".as_bytes().to_owned();

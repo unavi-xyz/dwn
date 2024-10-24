@@ -13,15 +13,18 @@ native_db = ["dep:dwn-native-db"]
 base64 = "0.22.1"
 dwn-core = { path = "../dwn-core" }
 dwn-native-db = { path = "../dwn-native-db", optional = true }
-jsonschema = { version = "0.23.0", default-features = false, features = [
+jose-jwk = "0.1.2"
+jsonschema = { version = "0.24.0", default-features = false, features = [
   "resolve-http",
   "draft201909",
   "draft202012",
 ] }
 reqwest = "0.12.8"
+ring = "0.17.8"
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+xdid.workspace = true
 
 [dev-dependencies]
 dwn-native-db = { path = "../dwn-native-db" }

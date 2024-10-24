@@ -89,6 +89,7 @@ impl RecordsWriteBuilder {
             context_id: self.context_id,
             data,
             descriptor,
+            attestation: None,
         })
     }
 }

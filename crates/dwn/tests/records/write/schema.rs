@@ -1,4 +1,4 @@
-use dwn::{builders::records::write::RecordsWriteBuilder, DWN};
+use dwn::{builders::records::write::RecordsWriteBuilder, Dwn};
 use dwn_core::message::mime::{APPLICATION_JSON, TEXT_PLAIN};
 use dwn_native_db::NativeDbStore;
 use serde_json::json;
@@ -12,7 +12,7 @@ use super::{expect_fail, expect_success};
 #[traced_test]
 async fn test_schema_success() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
 
@@ -35,7 +35,7 @@ async fn test_schema_success() {
 #[traced_test]
 async fn test_schema_fail() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
 
@@ -58,7 +58,7 @@ async fn test_schema_fail() {
 #[traced_test]
 async fn test_invalid_schema() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
 
@@ -80,7 +80,7 @@ async fn test_invalid_schema() {
 #[traced_test]
 async fn test_invalid_schema_url() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
 
@@ -100,7 +100,7 @@ async fn test_invalid_schema_url() {
 #[traced_test]
 async fn test_schema_requires_data_format_json() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
 

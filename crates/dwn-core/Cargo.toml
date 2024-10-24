@@ -8,6 +8,7 @@ keywords.workspace = true
 
 [dependencies]
 ipld-core = { version = "0.4.1", features = ["serde"] }
+jose-jwa = "0.1.2"
 mime = "0.3.17"
 rust-unixfs = "0.5.0"
 semver = { version = "1.0.23", features = ["serde"] }
@@ -18,3 +19,4 @@ serde_with = "3.11.0"
 sha3 = "0.10.8"
 thiserror.workspace = true
 time = { version = "0.3.36", features = ["parsing", "serde"] }
+xdid.workspace = true

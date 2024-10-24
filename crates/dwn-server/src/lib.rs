@@ -11,11 +11,11 @@
 //! JSON reply objects.
 
 use axum::{routing::get, Router};
-use dwn::DWN;
+use dwn::Dwn;
 
 mod records;
 
-pub fn create_router(dwn: DWN) -> Router {
+pub fn create_router(dwn: Dwn) -> Router {
     Router::new()
         .route("/:target/records/:id", get(records::get::records_get))
         .with_state(dwn)

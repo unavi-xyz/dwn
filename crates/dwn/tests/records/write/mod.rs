@@ -1,4 +1,4 @@
-use dwn::{builders::records::write::RecordsWriteBuilder, DWN};
+use dwn::{builders::records::write::RecordsWriteBuilder, Dwn};
 use dwn_core::message::{mime::TEXT_PLAIN, Message};
 use dwn_native_db::NativeDbStore;
 use tracing_test::traced_test;
@@ -9,7 +9,7 @@ mod schema;
 #[traced_test]
 async fn test_write_data() {
     let store = NativeDbStore::new_in_memory().unwrap();
-    let dwn = DWN::from(store);
+    let dwn = Dwn::from(store);
 
     let target = "did:example:123";
     let data = "hello, world!".as_bytes().to_owned();
@@ -22,7 +22,7 @@ async fn test_write_data() {
     expect_success(&dwn, msg, target).await;
 }
 
-async fn expect_success(dwn: &DWN, msg: Message, target: &str) {
+async fn expect_success(dwn: &Dwn, msg: Message, target: &str) {
     let record_id = msg.record_id.clone();
 
     dwn.process_message(target, msg.clone()).await.unwrap();
@@ -35,7 +35,7 @@ async fn expect_success(dwn: &DWN, msg: Message, target: &str) {
     assert_eq!(found, msg);
 }
 
-async fn expect_fail(dwn: &DWN, msg: Message, target: &str) {
+async fn expect_fail(dwn: &Dwn, msg: Message, target: &str) {
     let record_id = msg.record_id.clone();
     assert!(dwn.process_message(target, msg.clone()).await.is_err());
     assert!(dwn

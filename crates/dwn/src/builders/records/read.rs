@@ -31,6 +31,7 @@ impl RecordsReadBuilder {
             context_id: None,
             data: None,
             descriptor,
+            attestation: None,
         })
     }
 }
