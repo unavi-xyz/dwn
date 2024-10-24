@@ -3,14 +3,14 @@ use dwn_core::message::{
     cid::{compute_cid_cbor, CidGenerationError},
     Attestation, Header, Message, Signature,
 };
-use jose_jwk::jose_jwa::Signing;
 use thiserror::Error;
-use xdid::{
-    core::{did::Did, did_url::DidUrl},
-    methods::key::Signer,
-};
+use xdid::core::did::Did;
 
 use crate::Dwn;
+
+use self::document_key::DocumentKey;
+
+pub mod document_key;
 
 pub struct Actor {
     pub did: Did,
@@ -20,14 +20,6 @@ pub struct Actor {
     pub dwn: Option<Dwn>,
     /// URL of remote DWN to interact with.
     pub remote: Option<String>,
-}
-
-/// A key that is stored in the DID document.
-pub struct DocumentKey {
-    alg: Signing,
-    key: Box<dyn Signer>,
-    /// URL to the key.
-    url: DidUrl,
 }
 
 impl Actor {
@@ -95,16 +87,7 @@ mod tests {
         let did = key.public().to_did();
 
         let mut actor = Actor::new(did.clone());
-        actor.sign_key = Some(DocumentKey {
-            key: Box::new(key),
-            alg: Signing::Ps256,
-            url: DidUrl {
-                did,
-                path_abempty: "".to_string(),
-                query: None,
-                fragment: None,
-            },
-        });
+        actor.sign_key = Some(key.into());
 
         let mut msg = RecordsWriteBuilder::default().build().unwrap();
         actor.sign_message(&mut msg).unwrap();
