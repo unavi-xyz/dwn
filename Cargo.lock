@@ -605,6 +605,7 @@ dependencies = [
  "native_model",
  "serde",
  "tracing",
+ "xdid",
 ]
 
 [[package]]
@@ -3368,7 +3369,7 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 [[package]]
 name = "xdid"
 version = "0.1.0"
-source = "git+https://github.com/unavi-xyz/xdid#30de02c67c9a8f9c1cbd5762b02eb93a41bcdade"
+source = "git+https://github.com/unavi-xyz/xdid#ed600d73d197e983080e32f8d63f817281f120ed"
 dependencies = [
  "xdid-core",
  "xdid-method-key",
@@ -3378,11 +3379,10 @@ dependencies = [
 [[package]]
 name = "xdid-core"
 version = "0.1.0"
-source = "git+https://github.com/unavi-xyz/xdid#30de02c67c9a8f9c1cbd5762b02eb93a41bcdade"
+source = "git+https://github.com/unavi-xyz/xdid#ed600d73d197e983080e32f8d63f817281f120ed"
 dependencies = [
  "jose-jwk",
  "serde",
- "serde_json",
  "serde_with",
  "thiserror",
 ]
@@ -3390,7 +3390,7 @@ dependencies = [
 [[package]]
 name = "xdid-method-key"
 version = "0.1.0"
-source = "git+https://github.com/unavi-xyz/xdid#30de02c67c9a8f9c1cbd5762b02eb93a41bcdade"
+source = "git+https://github.com/unavi-xyz/xdid#ed600d73d197e983080e32f8d63f817281f120ed"
 dependencies = [
  "jose-jwk",
  "multibase",
@@ -3407,7 +3407,7 @@ dependencies = [
 [[package]]
 name = "xdid-method-web"
 version = "0.1.0"
-source = "git+https://github.com/unavi-xyz/xdid#30de02c67c9a8f9c1cbd5762b02eb93a41bcdade"
+source = "git+https://github.com/unavi-xyz/xdid#ed600d73d197e983080e32f8d63f817281f120ed"
 dependencies = [
  "xdid-core",
 ]

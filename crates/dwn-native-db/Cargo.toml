@@ -12,3 +12,4 @@ native_db = { version = "0.8.1", default-features = false }
 native_model = "0.4.20"
 serde.workspace = true
 tracing.workspace = true
+xdid.workspace = true

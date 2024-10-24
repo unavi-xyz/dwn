@@ -2,12 +2,13 @@ use dwn_core::{
     message::{Interface, Message, Method},
     store::RecordStore,
 };
+use xdid::core::did::Did;
 
 use crate::Status;
 
 pub fn handle(
     records: &dyn RecordStore,
-    target: &str,
+    target: &Did,
     msg: Message,
 ) -> Result<Option<Message>, Status> {
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);

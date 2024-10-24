@@ -6,11 +6,12 @@ use dwn_core::{
     store::RecordStore,
 };
 use serde_json::Value;
-use tracing::info;
+use tracing::debug;
+use xdid::core::did::Did;
 
 use crate::Status;
 
-pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Result<(), Status> {
+pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Result<(), Status> {
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);
     debug_assert_eq!(msg.descriptor.method, Method::Write);
 
@@ -48,7 +49,7 @@ pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Re
         let schema = reqwest::get(schema_url)
             .await
             .map_err(|e| {
-                info!("Failed to fetch schema {:?}", e);
+                debug!("Failed to fetch schema {:?}", e);
                 Status {
                     code: 500,
                     detail: "Failed to fetch schema",
@@ -57,7 +58,7 @@ pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Re
             .json::<Value>()
             .await
             .map_err(|e| {
-                info!("Failed to parse schema {:?}", e);
+                debug!("Failed to parse schema {:?}", e);
                 Status {
                     code: 500,
                     detail: "Failed to parse schema",
@@ -65,7 +66,7 @@ pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Re
             })?;
 
         let validator = jsonschema::validator_for(&schema).map_err(|e| {
-            info!("Failed to create schema validator: {:?}", e);
+            debug!("Failed to create schema validator: {:?}", e);
             Status {
                 code: 400,
                 detail: "Invalid schema",
@@ -75,21 +76,21 @@ pub async fn handle(records: &dyn RecordStore, target: &str, msg: Message) -> Re
         let value = match &msg.data {
             Some(Data::Base64(d)) => {
                 let decoded = BASE64_URL_SAFE_NO_PAD.decode(d).map_err(|e| {
-                    info!("Failed to base64 decode data: {:?}", e);
+                    debug!("Failed to base64 decode data: {:?}", e);
                     Status {
                         code: 400,
                         detail: "Failed to base64 decode data",
                     }
                 })?;
                 let utf8 = String::from_utf8(decoded).map_err(|e| {
-                    info!("Failed to parse data as utf8: {:?}", e);
+                    debug!("Failed to parse data as utf8: {:?}", e);
                     Status {
                         code: 400,
                         detail: "Failed to parse data as utf8",
                     }
                 })?;
                 Value::from_str(&utf8).map_err(|e| {
-                    info!("Failed to parse data as JSON: {:?}", e);
+                    debug!("Failed to parse data as JSON: {:?}", e);
                     Status {
                         code: 400,
                         detail: "Data is not JSON",

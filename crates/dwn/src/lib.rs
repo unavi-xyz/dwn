@@ -9,7 +9,8 @@ use dwn_core::{
     message::{Interface, Message, Method},
     store::{DataStore, RecordStore},
 };
-use tracing::debug;
+use tracing::{debug, info_span};
+use xdid::core::did::Did;
 
 pub mod stores {
     #[cfg(feature = "native_db")]
@@ -36,29 +37,24 @@ impl<T: DataStore + RecordStore + Clone + 'static> From<T> for Dwn {
 }
 
 impl Dwn {
-    pub async fn process_message(&self, target: &str, msg: Message) -> Result<Reply, Status> {
-        debug!(
-            "processing {} {}",
-            msg.descriptor.interface, msg.descriptor.method
-        );
+    pub async fn process_message(&self, target: &Did, msg: Message) -> Result<Reply, Status> {
+        let span = {
+            let interface = msg.descriptor.interface.to_string();
+            let method = msg.descriptor.method.to_string();
+            info_span!("process_message", interface, method).entered()
+        };
 
-        if msg.data.is_some() {
-            if msg.descriptor.data_cid.is_none() {
-                return Err(Status {
+        handlers::validation::validate_message(target, &msg)
+            .await
+            .map_err(|e| {
+                debug!("Failed to validate message: {:?}", e);
+                Status {
                     code: 400,
-                    detail: "Data CID not present",
-                });
-            }
+                    detail: "Failed validation.",
+                }
+            })?;
 
-            if msg.descriptor.data_format.is_none() {
-                return Err(Status {
-                    code: 400,
-                    detail: "Data format not present",
-                });
-            }
-        }
-
-        match &msg.descriptor.interface {
+        let res = match &msg.descriptor.interface {
             Interface::Records => match &msg.descriptor.method {
                 Method::Read => {
                     match handlers::records::read::handle(self.record_store.as_ref(), target, msg)?
@@ -103,7 +99,11 @@ impl Dwn {
                 code: 500,
                 detail: "todo",
             }),
-        }
+        };
+
+        drop(span);
+
+        res
     }
 }
 

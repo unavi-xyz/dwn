@@ -52,7 +52,7 @@ pub enum Interface {
 
 impl Display for Interface {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&serde_json::to_string(self).unwrap())
+        write!(f, "{:?}", self)
     }
 }
 
@@ -71,7 +71,7 @@ pub enum Method {
 
 impl Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&serde_json::to_string(self).unwrap())
+        write!(f, "{:?}", self)
     }
 }
 

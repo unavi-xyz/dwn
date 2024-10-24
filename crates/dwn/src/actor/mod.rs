@@ -35,7 +35,7 @@ impl Actor {
 
     pub fn sign_message(&self, msg: &mut Message) -> Result<(), SignError> {
         let Some(doc_key) = self.sign_key.as_ref() else {
-            return Err(SignError::NoKey);
+            return Err(SignError::MissingKey);
         };
 
         let header = Header {
@@ -65,10 +65,10 @@ impl Actor {
 
 #[derive(Error, Debug)]
 pub enum SignError {
-    #[error("no signing key set")]
-    NoKey,
     #[error(transparent)]
     CidGeneration(#[from] CidGenerationError),
+    #[error("missing signing key")]
+    MissingKey,
     #[error("failed to sign message")]
     Sign(#[from] xdid::methods::key::SignError),
 }
