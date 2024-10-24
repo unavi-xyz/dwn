@@ -137,7 +137,8 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
                 }
             };
 
-            if records.write(target, msg).is_err() {
+            if let Err(e) = records.write(target, msg) {
+                debug!("Error during wring: {:?}", e);
                 return Err(Status {
                     code: 500,
                     detail: "Internal error",

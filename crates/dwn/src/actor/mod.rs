@@ -1,10 +1,12 @@
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::message::{
     cid::{compute_cid_cbor, CidGenerationError},
-    Attestation, Header, Message, Signature,
+    Header, Jws, Message, Signature,
 };
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use thiserror::Error;
-use xdid::core::did::Did;
+use xdid::{core::did::Did, methods::key::Signer};
 
 use crate::Dwn;
 
@@ -33,7 +35,7 @@ impl Actor {
         }
     }
 
-    pub fn sign_message(&self, msg: &mut Message) -> Result<(), SignError> {
+    pub fn sign(&self, msg: &mut Message) -> Result<(), SignError> {
         let Some(doc_key) = self.sign_key.as_ref() else {
             return Err(SignError::MissingKey);
         };
@@ -45,14 +47,10 @@ impl Actor {
 
         let cid = compute_cid_cbor(&msg.descriptor)?;
 
-        let header_str = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_string(&header).unwrap());
-        let payload = BASE64_URL_SAFE_NO_PAD.encode(cid);
-        let input = header_str + "." + &payload;
+        let signature = sign_jws(&doc_key.key, &header, &cid)?;
 
-        let signature = doc_key.key.sign(input.as_bytes())?;
-
-        msg.attestation = Some(Attestation {
-            payload,
+        msg.attestation = Some(Jws {
+            payload: BASE64_URL_SAFE_NO_PAD.encode(cid),
             signatures: vec![Signature {
                 header,
                 signature: BASE64_URL_SAFE_NO_PAD.encode(signature),
@@ -61,6 +59,62 @@ impl Actor {
 
         Ok(())
     }
+
+    pub fn authorize(&self, msg: &mut Message) -> Result<(), SignError> {
+        let Some(doc_key) = self.auth_key.as_ref() else {
+            return Err(SignError::MissingKey);
+        };
+
+        let header = Header {
+            alg: doc_key.alg,
+            kid: doc_key.url.clone(),
+        };
+
+        let descriptor_cid = compute_cid_cbor(&msg.descriptor)?;
+
+        let attestation_cid = match &msg.attestation {
+            // Spec says to use the "attestation string"... but I don't know what
+            // that means, so we use the attestation payload.
+            Some(v) => Some(compute_cid_cbor(&v.payload)?),
+            None => None,
+        };
+
+        let auth_payload = serde_json::to_string(&AuthPayload {
+            descriptor_cid,
+            permissions_grant_cid: None,
+            attestation_cid,
+        })
+        .unwrap();
+
+        let signature = sign_jws(&doc_key.key, &header, &auth_payload)?;
+
+        msg.authorization = Some(Jws {
+            payload: BASE64_URL_SAFE_NO_PAD.encode(auth_payload),
+            signatures: vec![Signature {
+                header,
+                signature: BASE64_URL_SAFE_NO_PAD.encode(signature),
+            }],
+        });
+
+        Ok(())
+    }
+}
+
+fn sign_jws(key: &Box<dyn Signer>, header: &Header, payload: &str) -> Result<Vec<u8>, SignError> {
+    let header_str = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_string(&header).unwrap());
+    let payload = BASE64_URL_SAFE_NO_PAD.encode(payload);
+    let input = header_str + "." + &payload;
+    let signature = key.sign(input.as_bytes())?;
+    Ok(signature)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[skip_serializing_none]
+struct AuthPayload {
+    descriptor_cid: String,
+    permissions_grant_cid: Option<String>,
+    attestation_cid: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -90,7 +144,7 @@ mod tests {
         actor.sign_key = Some(key.into());
 
         let mut msg = RecordsWriteBuilder::default().build().unwrap();
-        actor.sign_message(&mut msg).unwrap();
+        actor.sign(&mut msg).unwrap();
         assert!(msg.attestation.is_some());
     }
 }

@@ -32,6 +32,7 @@ impl RecordsReadBuilder {
             data: None,
             descriptor,
             attestation: None,
+            authorization: None,
         })
     }
 }

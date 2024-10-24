@@ -21,7 +21,8 @@ pub struct Message {
     pub context_id: Option<String>,
     pub data: Option<data::Data>,
     pub descriptor: Descriptor,
-    pub attestation: Option<Attestation>,
+    pub attestation: Option<Jws>,
+    pub authorization: Option<Jws>,
 }
 
 #[serde_as]
@@ -76,7 +77,8 @@ impl Display for Method {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct Attestation {
+pub struct Jws {
+    /// Base64 encoded payload.
     pub payload: String,
     pub signatures: Vec<Signature>,
 }
@@ -86,6 +88,7 @@ pub struct Signature {
     // DWN spec says to use protected headers here... but then how would
     // you read them to verify the JWS?
     pub header: Header,
+    /// Base64 encoded signature.
     pub signature: String,
 }
 

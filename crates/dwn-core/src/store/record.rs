@@ -10,6 +10,6 @@ pub trait RecordStore: Send + Sync {
 
 #[derive(Error, Debug)]
 pub enum RecordStoreError {
-    #[error("backend error")]
-    BackendError,
+    #[error("backend error: {0}")]
+    BackendError(String),
 }

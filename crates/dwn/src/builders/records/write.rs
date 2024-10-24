@@ -90,6 +90,7 @@ impl RecordsWriteBuilder {
             data,
             descriptor,
             attestation: None,
+            authorization: None,
         })
     }
 }

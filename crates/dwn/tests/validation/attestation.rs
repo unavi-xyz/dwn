@@ -10,7 +10,7 @@ async fn test_valid_attestation() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_ok());
 }
@@ -21,7 +21,7 @@ async fn test_invalid_payload() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     msg.attestation.as_mut().unwrap().payload = "abcdefghijklmnop".to_string();
 
@@ -34,7 +34,7 @@ async fn test_empty_signatures() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     msg.attestation.as_mut().unwrap().signatures.clear();
 
@@ -47,7 +47,7 @@ async fn test_invalid_signature() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     msg.attestation.as_mut().unwrap().signatures[0].signature = "abcdefghijklmnop".to_string();
 
@@ -60,7 +60,7 @@ async fn test_multiple_signatures() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     let sig = msg.attestation.as_mut().unwrap().signatures[0].clone();
     msg.attestation.as_mut().unwrap().signatures.push(sig);
@@ -74,7 +74,7 @@ async fn test_multiple_signatures_invalid() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     let mut sig = msg.attestation.as_mut().unwrap().signatures[0].clone();
     sig.signature = "abcdefghijklmnop".to_string();
@@ -92,7 +92,7 @@ async fn test_wrong_assertion_key() {
     actor.sign_key = Some(key_2.into());
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign_message(&mut msg).unwrap();
+    actor.sign(&mut msg).unwrap();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_err());
 }
