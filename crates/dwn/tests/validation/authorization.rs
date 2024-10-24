@@ -6,11 +6,11 @@ use crate::utils::init_dwn;
 
 #[tokio::test]
 #[traced_test]
-async fn test_valid_attestation() {
+async fn test_valid_authorization() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_ok());
 }
@@ -21,9 +21,9 @@ async fn test_invalid_payload() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
-    msg.attestation.as_mut().unwrap().payload = "abcdefghijklmnop".to_string();
+    msg.authorization.as_mut().unwrap().payload = "abcdefghijklmnop".to_string();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_err());
 }
@@ -34,9 +34,9 @@ async fn test_empty_signatures() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
-    msg.attestation.as_mut().unwrap().signatures.clear();
+    msg.authorization.as_mut().unwrap().signatures.clear();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_err());
 }
@@ -47,9 +47,9 @@ async fn test_invalid_signature() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
-    msg.attestation.as_mut().unwrap().signatures[0].signature = "abcdefghijklmnop".to_string();
+    msg.authorization.as_mut().unwrap().signatures[0].signature = "abcdefghijklmnop".to_string();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_err());
 }
@@ -60,10 +60,10 @@ async fn test_multiple_signatures() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
-    let sig = msg.attestation.as_mut().unwrap().signatures[0].clone();
-    msg.attestation.as_mut().unwrap().signatures.push(sig);
+    let sig = msg.authorization.as_mut().unwrap().signatures[0].clone();
+    msg.authorization.as_mut().unwrap().signatures.push(sig);
 
     assert!(dwn.process_message(&actor.did, msg).await.is_ok());
 }
@@ -74,25 +74,25 @@ async fn test_multiple_signatures_invalid() {
     let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
-    let mut sig = msg.attestation.as_mut().unwrap().signatures[0].clone();
+    let mut sig = msg.authorization.as_mut().unwrap().signatures[0].clone();
     sig.signature = "abcdefghijklmnop".to_string();
-    msg.attestation.as_mut().unwrap().signatures.push(sig);
+    msg.authorization.as_mut().unwrap().signatures.push(sig);
 
     assert!(dwn.process_message(&actor.did, msg).await.is_err());
 }
 
 #[tokio::test]
 #[traced_test]
-async fn test_wrong_sign_key() {
+async fn test_wrong_auth_key() {
     let (mut actor, dwn) = init_dwn();
 
     let key_2 = P256KeyPair::generate();
-    actor.sign_key = Some(key_2.into());
+    actor.auth_key = Some(key_2.into());
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
-    actor.sign(&mut msg).unwrap();
+    actor.authorize(&mut msg).unwrap();
 
     assert!(dwn.process_message(&actor.did, msg).await.is_err());
 }

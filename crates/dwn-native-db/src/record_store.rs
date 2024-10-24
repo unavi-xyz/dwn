@@ -9,7 +9,7 @@ use crate::{data::Record, NativeDbStore};
 
 impl RecordStore for NativeDbStore<'_> {
     fn read(&self, target: &Did, record_id: &str) -> Result<Option<Message>, RecordStoreError> {
-        debug!("reading {}/{}", target, record_id);
+        debug!("reading {} {}", target, record_id);
 
         let tx = self
             .0
@@ -25,7 +25,7 @@ impl RecordStore for NativeDbStore<'_> {
     }
 
     fn write(&self, target: &Did, message: Message) -> Result<(), RecordStoreError> {
-        debug!("writing {}/{}", target, message.record_id);
+        debug!("writing {} {}", target, message.record_id);
 
         let tx = self
             .0

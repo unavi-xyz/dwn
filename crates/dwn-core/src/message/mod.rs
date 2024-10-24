@@ -97,3 +97,12 @@ pub struct Header {
     pub alg: Signing,
     pub kid: DidUrl,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[skip_serializing_none]
+pub struct AuthPayload {
+    pub descriptor_cid: String,
+    pub permissions_grant_cid: Option<String>,
+    pub attestation_cid: Option<String>,
+}

@@ -1,10 +1,8 @@
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::message::{
     cid::{compute_cid_cbor, CidGenerationError},
-    Header, Jws, Message, Signature,
+    AuthPayload, Header, Jws, Message, Signature,
 };
-use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 use thiserror::Error;
 use xdid::{core::did::Did, methods::key::Signer};
 
@@ -35,6 +33,7 @@ impl Actor {
         }
     }
 
+    /// Signs the message with a [DID assertion](https://www.w3.org/TR/did-core/#assertion) key.
     pub fn sign(&self, msg: &mut Message) -> Result<(), SignError> {
         let Some(doc_key) = self.sign_key.as_ref() else {
             return Err(SignError::MissingKey);
@@ -60,6 +59,8 @@ impl Actor {
         Ok(())
     }
 
+    /// Authorizes the message with a [DID authentication](https://www.w3.org/TR/did-core/#authentication) key.
+    /// If the message has been signed, the assertion will also be authorized.
     pub fn authorize(&self, msg: &mut Message) -> Result<(), SignError> {
         let Some(doc_key) = self.auth_key.as_ref() else {
             return Err(SignError::MissingKey);
@@ -106,15 +107,6 @@ fn sign_jws(key: &Box<dyn Signer>, header: &Header, payload: &str) -> Result<Vec
     let input = header_str + "." + &payload;
     let signature = key.sign(input.as_bytes())?;
     Ok(signature)
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[skip_serializing_none]
-struct AuthPayload {
-    descriptor_cid: String,
-    permissions_grant_cid: Option<String>,
-    attestation_cid: Option<String>,
 }
 
 #[derive(Error, Debug)]

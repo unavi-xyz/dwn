@@ -1,1 +1,2 @@
 mod attestation;
+mod authorization;

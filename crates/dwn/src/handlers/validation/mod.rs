@@ -3,6 +3,8 @@ use thiserror::Error;
 use xdid::core::{did::Did, ResolutionError};
 
 mod attestation;
+mod authorization;
+mod jws;
 
 pub async fn validate_message(target: &Did, msg: &Message) -> Result<(), ValidationError> {
     if msg.data.is_some() {
@@ -17,6 +19,10 @@ pub async fn validate_message(target: &Did, msg: &Message) -> Result<(), Validat
 
     if msg.attestation.is_some() {
         attestation::validate_attestation(target, msg).await?;
+    }
+
+    if msg.authorization.is_some() {
+        authorization::validate_authorization(target, msg).await?;
     }
 
     Ok(())
