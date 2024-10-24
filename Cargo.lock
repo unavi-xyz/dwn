@@ -588,7 +588,6 @@ dependencies = [
  "semver",
  "serde",
  "serde_ipld_dagcbor",
- "serde_json",
  "serde_with",
  "sha3",
  "thiserror",
