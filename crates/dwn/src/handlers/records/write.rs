@@ -15,6 +15,13 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);
     debug_assert_eq!(msg.descriptor.method, Method::Write);
 
+    if msg.authorization.is_none() {
+        return Err(Status {
+            code: 401,
+            detail: "Unauthorized.",
+        });
+    }
+
     let Ok(prev) = records.read(target, &msg.record_id) else {
         return Err(Status {
             code: 500,

@@ -14,12 +14,28 @@ async fn test_write_data() {
 
     let data = "hello, world!".as_bytes().to_owned();
 
+    let mut msg = RecordsWriteBuilder::default()
+        .data(TEXT_PLAIN, data)
+        .build()
+        .unwrap();
+    actor.authorize(&mut msg).unwrap();
+
+    expect_success(&actor.did, &dwn, msg).await;
+}
+
+#[tokio::test]
+#[traced_test]
+async fn test_require_auth() {
+    let (actor, dwn) = init_dwn();
+
+    let data = "hello, world!".as_bytes().to_owned();
+
     let msg = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, data)
         .build()
         .unwrap();
 
-    expect_success(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &dwn, msg).await;
 }
 
 async fn expect_success(target: &Did, dwn: &Dwn, msg: Message) {
