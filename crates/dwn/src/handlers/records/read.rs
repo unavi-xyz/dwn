@@ -19,7 +19,7 @@ pub fn handle(
     let Ok(found) = records.read(target, &msg.record_id, authorized) else {
         return Err(Status {
             code: 500,
-            detail: "Internal error.",
+            detail: "Internal error",
         });
     };
 

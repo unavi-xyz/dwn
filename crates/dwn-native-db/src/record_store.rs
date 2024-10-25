@@ -44,7 +44,7 @@ impl RecordStore for NativeDbStore<'_> {
             .rw_transaction()
             .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
 
-        tx.insert(Record {
+        tx.upsert(Record {
             key: (target.to_string(), message.record_id.clone()),
             message,
         })

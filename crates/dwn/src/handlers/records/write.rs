@@ -18,48 +18,77 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
     if msg.authorization.is_none() {
         return Err(Status {
             code: 401,
-            detail: "Unauthorized.",
+            detail: "Unauthorized",
         });
     }
+
+    let computed_record_id = msg.descriptor.compute_record_id().map_err(|_| Status {
+        code: 400,
+        detail: "Failed to compute record id",
+    })?;
 
     let Ok(prev) = records.read(target, &msg.record_id, true) else {
         return Err(Status {
             code: 500,
-            detail: "Internal error.",
+            detail: "Internal error",
         });
     };
 
-    if let Some(prev) = &prev {
-        if msg.descriptor.schema != prev.descriptor.schema {
+    // 1. If the generated entry id matches the record id, and the initial entry
+    //    already exists, cease processing (the spec says to do the opposite
+    //    of this, but I think that is wrong).
+    if computed_record_id == msg.record_id {
+        if prev.is_some() {
+            return Ok(());
+        }
+    } else {
+        // 2. If mesesage is not the initial entry, parent id must be present.
+        let Some(parent_id) = &msg.descriptor.parent_id else {
             return Err(Status {
                 code: 400,
-                detail: "Invalid schema",
+                detail: "Missing parent id",
             });
-        }
+        };
 
-        if msg.descriptor.date_created < prev.descriptor.date_created {
-            debug!("Message created after currently stored entry.");
-            return Ok(());
-        }
-
-        let new_id = msg.descriptor.compute_record_id().map_err(|_| Status {
-            code: 400,
-            detail: "Failed to compute record ID",
-        })?;
-
-        let old_id = prev.descriptor.compute_record_id().map_err(|_| {
-            error!("Failed to compute record ID for: {}", prev.record_id);
-            Status {
-                code: 400,
-                detail: "Failed to compute record ID for stored entry",
+        if let Some(prev) = &prev {
+            // 3. Ensure all immutable values remain unchanged.
+            if msg.descriptor.schema != prev.descriptor.schema {
+                return Err(Status {
+                    code: 400,
+                    detail: "Invalid schema",
+                });
             }
-        })?;
 
-        if (msg.descriptor.date_created == prev.descriptor.date_created) && (new_id < old_id) {
-            return Ok(());
+            // 4. Compare the parent id to the latest stored entry.
+            //    If they do not match, cease processing.
+            let prev_id = prev.descriptor.compute_record_id().map_err(|_| {
+                error!("Failed to compute record id for: {}", prev.record_id);
+                Status {
+                    code: 400,
+                    detail: "Failed to compute record id for stored entry",
+                }
+            })?;
+
+            if *parent_id != prev_id {
+                return Ok(());
+            }
+
+            // 6. Ensure date created is greater than the stored entry.
+            //    If the dates match, compare the entry ids lexicographically.
+            if msg.descriptor.date_created < prev.descriptor.date_created {
+                debug!("Message created after currently stored entry.");
+                return Ok(());
+            }
+
+            if (msg.descriptor.date_created == prev.descriptor.date_created)
+                && (computed_record_id < prev_id)
+            {
+                return Ok(());
+            }
         }
     }
 
+    // Validate data conforms to schema.
     if let Some(schema_url) = &msg.descriptor.schema {
         if msg.descriptor.data_format != Some(APPLICATION_JSON) {
             return Err(Status {
@@ -126,7 +155,13 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
                     }
                 })?
             }
-            Some(Data::Encrypted(_)) => todo!("cannot validate encrypted data against schema"),
+            Some(Data::Encrypted(_)) => {
+                // TODO: Store the message without validation?
+                return Err(Status {
+                    code: 500,
+                    detail: "Cannot validate schema for encrypted data.",
+                });
+            }
             None => {
                 return Err(Status {
                     code: 400,
@@ -143,38 +178,14 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
         };
     }
 
-    match prev {
-        Some(_) => {
-            todo!("overwrite record");
-        }
-        None => {
-            // For new records, the record ID must match the descriptor.
-            match msg.descriptor.compute_record_id() {
-                Ok(id) => {
-                    if id != msg.record_id {
-                        return Err(Status {
-                            code: 400,
-                            detail: "Invalid record ID",
-                        });
-                    }
-                }
-                Err(_) => {
-                    return Err(Status {
-                        code: 400,
-                        detail: "Failed to compute record ID",
-                    })
-                }
-            };
+    // 7. Store the inbound message as the latest entry.
+    if let Err(e) = records.write(target, msg) {
+        debug!("Error during write: {:?}", e);
+        return Err(Status {
+            code: 500,
+            detail: "Internal error",
+        });
+    };
 
-            if let Err(e) = records.write(target, msg) {
-                debug!("Error during wring: {:?}", e);
-                return Err(Status {
-                    code: 500,
-                    detail: "Internal error",
-                });
-            };
-
-            Ok(())
-        }
-    }
+    Ok(())
 }
