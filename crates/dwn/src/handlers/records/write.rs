@@ -6,7 +6,7 @@ use dwn_core::{
     store::RecordStore,
 };
 use serde_json::Value;
-use tracing::debug;
+use tracing::{debug, error};
 use xdid::core::did::Did;
 
 use crate::Status;
@@ -35,6 +35,28 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
                 code: 400,
                 detail: "Invalid schema",
             });
+        }
+
+        if msg.descriptor.date_created < prev.descriptor.date_created {
+            debug!("Message created after currently stored entry.");
+            return Ok(());
+        }
+
+        let new_id = msg.descriptor.compute_record_id().map_err(|_| Status {
+            code: 400,
+            detail: "Failed to compute record ID",
+        })?;
+
+        let old_id = prev.descriptor.compute_record_id().map_err(|_| {
+            error!("Failed to compute record ID for: {}", prev.record_id);
+            Status {
+                code: 400,
+                detail: "Failed to compute record ID for stored entry",
+            }
+        })?;
+
+        if (msg.descriptor.date_created == prev.descriptor.date_created) && (new_id < old_id) {
+            return Ok(());
         }
     }
 
@@ -139,7 +161,7 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
                 Err(_) => {
                     return Err(Status {
                         code: 400,
-                        detail: "Failed to compute record ID for message",
+                        detail: "Failed to compute record ID",
                     })
                 }
             };
