@@ -14,7 +14,9 @@ pub fn handle(
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);
     debug_assert_eq!(msg.descriptor.method, Method::Read);
 
-    let Ok(found) = records.read(target, &msg.record_id) else {
+    let authorized = msg.authorization.is_some();
+
+    let Ok(found) = records.read(target, &msg.record_id, authorized) else {
         return Err(Status {
             code: 500,
             detail: "Internal error.",

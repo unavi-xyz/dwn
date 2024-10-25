@@ -8,7 +8,12 @@ use xdid::core::did::Did;
 use crate::{data::Record, NativeDbStore};
 
 impl RecordStore for NativeDbStore<'_> {
-    fn read(&self, target: &Did, record_id: &str) -> Result<Option<Message>, RecordStoreError> {
+    fn read(
+        &self,
+        target: &Did,
+        record_id: &str,
+        authorized: bool,
+    ) -> Result<Option<Message>, RecordStoreError> {
         debug!("reading {} {}", target, record_id);
 
         let tx = self
@@ -16,12 +21,19 @@ impl RecordStore for NativeDbStore<'_> {
             .r_transaction()
             .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
 
-        let value = tx
+        let Some(value) = tx
             .get()
             .primary::<Record>((target.to_string(), record_id))
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+        else {
+            return Ok(None);
+        };
 
-        Ok(value.map(|v| v.message))
+        if !authorized && value.message.descriptor.published != Some(true) {
+            return Ok(None);
+        }
+
+        Ok(Some(value.message))
     }
 
     fn write(&self, target: &Did, message: Message) -> Result<(), RecordStoreError> {

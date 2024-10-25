@@ -45,7 +45,7 @@ async fn expect_success(target: &Did, dwn: &Dwn, msg: Message) {
 
     let found = dwn
         .record_store
-        .read(target, &record_id)
+        .read(target, &record_id, true)
         .expect("error reading record")
         .expect("record not found");
     assert_eq!(found, msg);
@@ -56,7 +56,7 @@ async fn expect_fail(target: &Did, dwn: &Dwn, msg: Message) {
     assert!(dwn.process_message(target, msg.clone()).await.is_err());
     assert!(dwn
         .record_store
-        .read(target, &record_id)
+        .read(target, &record_id, true)
         .expect("error reading record")
         .is_none());
 }

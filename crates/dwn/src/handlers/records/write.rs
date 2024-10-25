@@ -22,7 +22,7 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
         });
     }
 
-    let Ok(prev) = records.read(target, &msg.record_id) else {
+    let Ok(prev) = records.read(target, &msg.record_id, true) else {
         return Err(Status {
             code: 500,
             detail: "Internal error.",
