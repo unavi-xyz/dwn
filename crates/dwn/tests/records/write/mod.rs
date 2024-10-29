@@ -6,6 +6,7 @@ use xdid::core::did::Did;
 use crate::utils::init_dwn;
 
 mod schema;
+mod update;
 
 #[tokio::test]
 #[traced_test]
@@ -36,33 +37,6 @@ async fn test_require_auth() {
         .unwrap();
 
     expect_fail(&actor.did, &dwn, msg).await;
-}
-
-#[tokio::test]
-#[traced_test]
-async fn test_write_update() {
-    let (actor, dwn) = init_dwn();
-
-    let data_1 = "hello, world!".as_bytes().to_owned();
-    let mut msg_1 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data_1)
-        .build()
-        .unwrap();
-    actor.authorize(&mut msg_1).unwrap();
-
-    let record_id = msg_1.record_id.clone();
-
-    expect_success(&actor.did, &dwn, msg_1).await;
-
-    let data_2 = "goodbye".as_bytes().to_owned();
-    let mut msg_2 = RecordsWriteBuilder::default()
-        .record_id(record_id)
-        .data(TEXT_PLAIN, data_2)
-        .build()
-        .unwrap();
-    actor.authorize(&mut msg_2).unwrap();
-
-    expect_success(&actor.did, &dwn, msg_2).await;
 }
 
 #[tokio::test]

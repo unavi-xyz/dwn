@@ -76,7 +76,7 @@ impl RecordsWriteBuilder {
 
         let record_id = match self.record_id {
             Some(v) => v,
-            None => descriptor.compute_record_id()?,
+            None => descriptor.compute_entry_id()?,
         };
 
         let data = self
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn test_record_id_generation() {
         let msg = RecordsWriteBuilder::default().build().unwrap();
-        assert_eq!(msg.record_id, msg.descriptor.compute_record_id().unwrap());
+        assert_eq!(msg.record_id, msg.descriptor.compute_entry_id().unwrap());
     }
 
     #[test]

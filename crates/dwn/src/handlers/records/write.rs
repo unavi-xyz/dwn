@@ -22,7 +22,7 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
         });
     }
 
-    let computed_record_id = msg.descriptor.compute_record_id().map_err(|_| Status {
+    let computed_record_id = msg.descriptor.compute_entry_id().map_err(|_| Status {
         code: 400,
         detail: "Failed to compute record id",
     })?;
@@ -61,7 +61,7 @@ pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Re
 
             // 4. Compare the parent id to the latest stored entry.
             //    If they do not match, cease processing.
-            let prev_id = prev.descriptor.compute_record_id().map_err(|_| {
+            let prev_id = prev.descriptor.compute_entry_id().map_err(|_| {
                 error!("Failed to compute record id for: {}", prev.record_id);
                 Status {
                     code: 400,
