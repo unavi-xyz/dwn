@@ -140,12 +140,10 @@ impl RecordStore for NativeDbStore<'_> {
             .map(|r| r.unwrap().message)
             .collect::<Vec<_>>();
 
-        if let Some(date_sort) = &filter.date_sort {
-            found.sort_by(|a, b| match date_sort {
-                DateSort::Ascending => a.descriptor.date_created.cmp(&b.descriptor.date_created),
-                DateSort::Descending => b.descriptor.date_created.cmp(&a.descriptor.date_created),
-            });
-        }
+        found.sort_by(|a, b| match filter.date_sort.unwrap_or_default() {
+            DateSort::Ascending => a.descriptor.date_created.cmp(&b.descriptor.date_created),
+            DateSort::Descending => b.descriptor.date_created.cmp(&a.descriptor.date_created),
+        });
 
         Ok(found)
     }

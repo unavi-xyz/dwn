@@ -132,9 +132,10 @@ pub struct DateFilter {
     pub to: OffsetDateTime,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DateSort {
     Ascending,
+    #[default]
     Descending,
 }
