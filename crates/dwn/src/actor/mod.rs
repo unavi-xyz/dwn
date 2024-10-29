@@ -46,7 +46,7 @@ impl Actor {
 
         let cid = compute_cid_cbor(&msg.descriptor)?;
 
-        let signature = sign_jws(&doc_key.key, &header, &cid)?;
+        let signature = sign_jws(doc_key.key.as_ref(), &header, &cid)?;
 
         msg.attestation = Some(Jws {
             payload: BASE64_URL_SAFE_NO_PAD.encode(cid),
@@ -87,7 +87,7 @@ impl Actor {
         })
         .unwrap();
 
-        let signature = sign_jws(&doc_key.key, &header, &auth_payload)?;
+        let signature = sign_jws(doc_key.key.as_ref(), &header, &auth_payload)?;
 
         msg.authorization = Some(Jws {
             payload: BASE64_URL_SAFE_NO_PAD.encode(auth_payload),
@@ -101,7 +101,7 @@ impl Actor {
     }
 }
 
-fn sign_jws(key: &Box<dyn Signer>, header: &Header, payload: &str) -> Result<Vec<u8>, SignError> {
+fn sign_jws(key: &dyn Signer, header: &Header, payload: &str) -> Result<Vec<u8>, SignError> {
     let header_str = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_string(&header).unwrap());
     let payload = BASE64_URL_SAFE_NO_PAD.encode(payload);
     let input = header_str + "." + &payload;

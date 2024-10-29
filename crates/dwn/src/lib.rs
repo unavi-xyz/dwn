@@ -66,10 +66,12 @@ impl Dwn {
                         }),
                     }
                 }
-                Method::Query => Err(Status {
-                    code: 500,
-                    detail: "todo",
-                }),
+                Method::Query => {
+                    let found =
+                        handlers::records::query::handle(self.record_store.as_ref(), target, msg)
+                            .await?;
+                    Ok(Reply::RecordsQuery(found))
+                }
                 Method::Write => {
                     handlers::records::write::handle(self.record_store.as_ref(), target, msg)
                         .await?;

@@ -15,6 +15,7 @@ impl RecordsReadBuilder {
         let descriptor = Descriptor {
             interface: Interface::Records,
             method: Method::Read,
+            filter: None,
             data_cid: None,
             data_format: None,
             parent_id: None,
@@ -23,7 +24,6 @@ impl RecordsReadBuilder {
             published: None,
             schema: None,
             date_created: OffsetDateTime::now_utc(),
-            date_published: None,
         };
 
         Ok(Message {

@@ -63,6 +63,7 @@ impl RecordsWriteBuilder {
         let descriptor = Descriptor {
             interface: Interface::Records,
             method: Method::Write,
+            filter: None,
             data_cid,
             data_format: self.data_format,
             schema: self.schema,
@@ -71,7 +72,6 @@ impl RecordsWriteBuilder {
             parent_id: self.parent_id,
             published: self.published,
             date_created: OffsetDateTime::now_utc(),
-            date_published: None,
         };
 
         let record_id = match self.record_id {

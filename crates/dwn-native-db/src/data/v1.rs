@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 #[native_model(id = 1, version = 1)]
 #[native_db]
 pub struct Record {
+    /// (target, record id)
     #[primary_key]
     pub key: (String, String),
     pub message: Message,
