@@ -17,4 +17,4 @@ tag-name = "v{{version}}"
 serde = "1.0.210"
 thiserror = "1.0.64"
 tracing = "0.1.40"
-xdid = { git = "https://github.com/unavi-xyz/xdid" }
+xdid = "0.2.0"
