@@ -34,6 +34,8 @@ pub enum ValidationError {
     CidGeneration(#[from] CidGenerationError),
     #[error("failed to decode base64: {0}")]
     Decode(#[from] base64::DecodeError),
+    #[error("failed to construct DID resolver: {0}")]
+    DidResolver(#[from] xdid::resolver::MethodError),
     #[error("invalid kid")]
     InvalidKid,
     #[error("invalid payload")]

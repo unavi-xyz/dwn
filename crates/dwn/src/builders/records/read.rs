@@ -18,17 +18,16 @@ impl RecordsReadBuilder {
             filter: None,
             data_cid: None,
             data_format: None,
-            parent_id: None,
             protocol: None,
             protocol_version: None,
+            parent_id: None,
             published: None,
             schema: None,
-            date_created: OffsetDateTime::now_utc(),
+            message_timestamp: OffsetDateTime::now_utc(),
         };
 
         Ok(Message {
             record_id: self.record_id,
-            context_id: None,
             data: None,
             descriptor,
             attestation: None,

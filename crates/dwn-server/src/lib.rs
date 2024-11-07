@@ -10,13 +10,39 @@
 //! For example, using HTTP-level status codes instead of the spec-defined
 //! JSON reply objects.
 
-use axum::{routing::get, Router};
-use dwn::Dwn;
+use std::str::FromStr;
 
-mod records;
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    routing::put,
+    Json, Router,
+};
+use axum_macros::debug_handler;
+use dwn::{core::message::Message, Dwn};
+use tracing::debug;
+use xdid::core::did::Did;
+
+pub use dwn::core::reply::Reply;
 
 pub fn create_router(dwn: Dwn) -> Router {
     Router::new()
-        .route("/:target/records/:id", get(records::get::records_get))
+        .route("/:target", put(handle_put))
         .with_state(dwn)
+}
+
+#[debug_handler]
+async fn handle_put(
+    Path(target): Path<String>,
+    State(dwn): State<Dwn>,
+    Json(msg): Json<Message>,
+) -> Result<Json<Option<Reply>>, StatusCode> {
+    let target = Did::from_str(&target).map_err(|e| {
+        debug!("Failed to parse DID: {:?}", e);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    let reply = dwn.process_message(&target, msg).await?;
+
+    Ok(Json(reply))
 }

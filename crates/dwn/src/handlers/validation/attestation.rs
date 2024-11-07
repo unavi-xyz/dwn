@@ -1,13 +1,10 @@
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::message::{cid::compute_cid_cbor, Message};
-use tracing::info_span;
 use xdid::core::{did::Did, document::VerificationRole};
 
 use super::{jws::validate_jws, ValidationError};
 
 pub async fn validate_attestation(did: &Did, msg: &Message) -> Result<(), ValidationError> {
-    let span = info_span!("validate_attestation").entered();
-
     // Verify payload.
     let cid = compute_cid_cbor(&msg.descriptor)?;
 
@@ -23,6 +20,5 @@ pub async fn validate_attestation(did: &Did, msg: &Message) -> Result<(), Valida
     // Validate JWS.
     validate_jws(did, attestation, VerificationRole::Assertion).await?;
 
-    drop(span);
     Ok(())
 }

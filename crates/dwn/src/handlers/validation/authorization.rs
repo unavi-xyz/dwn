@@ -1,13 +1,11 @@
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::message::{cid::compute_cid_cbor, AuthPayload, Message};
-use tracing::{debug, info_span};
+use tracing::debug;
 use xdid::core::{did::Did, document::VerificationRole};
 
 use super::{jws::validate_jws, ValidationError};
 
 pub async fn validate_authorization(did: &Did, msg: &Message) -> Result<(), ValidationError> {
-    let span = info_span!("validate_authorization").entered();
-
     // Verify payload.
     let authorization = msg
         .authorization
@@ -40,6 +38,5 @@ pub async fn validate_authorization(did: &Did, msg: &Message) -> Result<(), Vali
     // Validate JWS.
     validate_jws(did, authorization, VerificationRole::Authentication).await?;
 
-    drop(span);
     Ok(())
 }

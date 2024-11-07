@@ -1,8 +1,8 @@
-use dwn::{
-    builders::records::{read::RecordsReadBuilder, write::RecordsWriteBuilder},
-    Reply,
+use dwn::builders::records::{read::RecordsReadBuilder, write::RecordsWriteBuilder};
+use dwn_core::{
+    message::mime::TEXT_PLAIN,
+    reply::{RecordsReadReply, Reply},
 };
-use dwn_core::message::mime::TEXT_PLAIN;
 use tracing_test::traced_test;
 
 use crate::utils::init_dwn;
@@ -25,10 +25,10 @@ async fn test_read_published() {
         .build()
         .unwrap();
     let reply = match dwn.process_message(&actor.did, read).await.unwrap() {
-        Reply::RecordsRead(m) => m,
+        Some(Reply::RecordsRead(m)) => m,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(*reply, write);
+    assert_eq!(reply.entry, Some(write));
 }
 
 #[tokio::test]
@@ -50,10 +50,10 @@ async fn test_read_unpublished() {
     actor.authorize(&mut read).unwrap();
 
     let reply = match dwn.process_message(&actor.did, read).await.unwrap() {
-        Reply::RecordsRead(m) => m,
+        Some(Reply::RecordsRead(m)) => m,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(*reply, write);
+    assert_eq!(reply.entry, Some(write));
 }
 
 #[tokio::test]
@@ -72,5 +72,10 @@ async fn test_read_unpublished_requires_auth() {
     let read = RecordsReadBuilder::new(write.record_id.clone())
         .build()
         .unwrap();
-    assert!(dwn.process_message(&actor.did, read).await.is_err())
+    assert_eq!(
+        dwn.process_message(&actor.did, read).await.unwrap(),
+        Some(Reply::RecordsRead(Box::new(RecordsReadReply {
+            entry: None
+        })))
+    )
 }

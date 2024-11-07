@@ -8,5 +8,7 @@ keywords.workspace = true
 
 [dependencies]
 axum = "0.7.7"
+axum-macros = "0.4.2"
 dwn = { path = "../dwn" }
 tracing.workspace = true
+xdid.workspace = true

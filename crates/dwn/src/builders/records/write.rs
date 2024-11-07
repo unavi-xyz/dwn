@@ -9,7 +9,6 @@ use dwn_core::message::{
 #[derive(Default)]
 pub struct RecordsWriteBuilder {
     record_id: Option<String>,
-    context_id: Option<String>,
     data: Option<Vec<u8>>,
     data_format: Option<Mime>,
     schema: Option<String>,
@@ -22,11 +21,6 @@ pub struct RecordsWriteBuilder {
 impl RecordsWriteBuilder {
     pub fn record_id(mut self, value: String) -> Self {
         self.record_id = Some(value);
-        self
-    }
-
-    pub fn context_id(mut self, value: String) -> Self {
-        self.context_id = Some(value);
         self
     }
 
@@ -71,7 +65,7 @@ impl RecordsWriteBuilder {
             protocol_version: self.protocol_version,
             parent_id: self.parent_id,
             published: self.published,
-            date_created: OffsetDateTime::now_utc(),
+            message_timestamp: OffsetDateTime::now_utc(),
         };
 
         let record_id = match self.record_id {
@@ -86,7 +80,6 @@ impl RecordsWriteBuilder {
 
         Ok(Message {
             record_id,
-            context_id: self.context_id,
             data,
             descriptor,
             attestation: None,

@@ -20,7 +20,7 @@ pub async fn validate_jws(
         return Err(ValidationError::MissingSignature);
     }
 
-    let resolver = DidResolver::default();
+    let resolver = DidResolver::new()?;
 
     for signature in jws.signatures.iter() {
         match &signature.header.alg {

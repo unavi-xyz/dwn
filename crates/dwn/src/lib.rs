@@ -7,10 +7,14 @@ use std::sync::Arc;
 
 use dwn_core::{
     message::{Interface, Message, Method},
+    reply::Reply,
     store::{DataStore, RecordStore},
 };
-use tracing::{debug, info_span};
+use reqwest::StatusCode;
+use tracing::debug;
 use xdid::core::did::Did;
+
+pub use dwn_core as core;
 
 pub mod stores {
     #[cfg(feature = "native_db")]
@@ -37,86 +41,46 @@ impl<T: DataStore + RecordStore + Clone + 'static> From<T> for Dwn {
 }
 
 impl Dwn {
-    pub async fn process_message(&self, target: &Did, msg: Message) -> Result<Reply, Status> {
-        let span = {
-            let interface = msg.descriptor.interface.to_string();
-            let method = msg.descriptor.method.to_string();
-            info_span!("process_message", interface, method).entered()
-        };
+    pub async fn process_message(
+        &self,
+        target: &Did,
+        msg: Message,
+    ) -> Result<Option<Reply>, StatusCode> {
+        debug!(
+            "Processing {} {}",
+            msg.descriptor.interface.to_string(),
+            msg.descriptor.method.to_string()
+        );
 
-        handlers::validation::validate_message(target, &msg)
-            .await
-            .map_err(|e| {
-                debug!("Failed to validate message: {:?}", e);
-                Status {
-                    code: 400,
-                    detail: "Failed validation.",
-                }
-            })?;
+        if let Err(e) = handlers::validation::validate_message(target, &msg).await {
+            debug!("Failed to validate message: {:?}", e);
+            return Err(StatusCode::BAD_REQUEST);
+        };
 
         let res = match &msg.descriptor.interface {
             Interface::Records => match &msg.descriptor.method {
                 Method::Read => {
-                    match handlers::records::read::handle(self.record_store.as_ref(), target, msg)?
-                    {
-                        Some(found) => Ok(Reply::RecordsRead(Box::new(found))),
-                        None => Err(Status {
-                            code: 404,
-                            detail: "Not Found",
-                        }),
-                    }
+                    handlers::records::read::handle(self.record_store.as_ref(), target, msg)
+                        .map(|v| Some(Reply::RecordsRead(Box::new(v))))?
                 }
                 Method::Query => {
-                    let found =
-                        handlers::records::query::handle(self.record_store.as_ref(), target, msg)
-                            .await?;
-                    Ok(Reply::RecordsQuery(found))
+                    handlers::records::query::handle(self.record_store.as_ref(), target, msg)
+                        .await
+                        .map(|v| Some(Reply::RecordsQuery(v)))?
                 }
                 Method::Write => {
                     handlers::records::write::handle(self.record_store.as_ref(), target, msg)
                         .await?;
-                    Ok(Reply::Status(Status {
-                        code: 200,
-                        detail: "OK",
-                    }))
+                    None
                 }
-                Method::Subscribe => Err(Status {
-                    code: 500,
-                    detail: "todo",
-                }),
-                Method::Delete => Err(Status {
-                    code: 500,
-                    detail: "todo",
-                }),
-                _ => Err(Status {
-                    code: 400,
-                    detail: "Invalid descriptor method",
-                }),
+                Method::Subscribe => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+                Method::Delete => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+                _ => return Err(StatusCode::BAD_REQUEST),
             },
-            Interface::Protocols => Err(Status {
-                code: 500,
-                detail: "todo",
-            }),
-            Interface::Permissions => Err(Status {
-                code: 500,
-                detail: "todo",
-            }),
+            Interface::Protocols => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+            Interface::Permissions => return Err(StatusCode::INTERNAL_SERVER_ERROR),
         };
 
-        drop(span);
-
-        res
+        Ok(res)
     }
-}
-
-pub enum Reply {
-    RecordsQuery(Vec<Message>),
-    RecordsRead(Box<Message>),
-    Status(Status),
-}
-
-#[derive(Debug)]
-pub struct Status {
-    pub code: u64,
-    pub detail: &'static str,
 }

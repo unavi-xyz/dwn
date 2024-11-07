@@ -18,7 +18,6 @@ mod record_id;
 #[skip_serializing_none]
 pub struct Message {
     pub record_id: String,
-    pub context_id: Option<String>,
     pub data: Option<data::Data>,
     pub descriptor: Descriptor,
     pub attestation: Option<Jws>,
@@ -41,7 +40,7 @@ pub struct Descriptor {
     pub protocol_version: Option<Version>,
     pub schema: Option<String>,
     pub published: Option<bool>,
-    pub date_created: OffsetDateTime,
+    pub message_timestamp: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -117,7 +116,6 @@ pub struct Filter {
     pub schema: Option<String>,
     pub record_id: Option<String>,
     pub parent_id: Option<String>,
-    pub context_id: Option<String>,
     pub date_created: Option<DateFilter>,
     pub protocol: Option<String>,
     pub protocol_version: Option<Version>,

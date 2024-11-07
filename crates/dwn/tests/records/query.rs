@@ -1,8 +1,8 @@
-use dwn::{
-    builders::records::{query::RecordsQueryBuilder, write::RecordsWriteBuilder},
-    Reply,
+use dwn::builders::records::{query::RecordsQueryBuilder, write::RecordsWriteBuilder};
+use dwn_core::{
+    message::{mime::TEXT_PLAIN, DateFilter, DateSort},
+    reply::Reply,
 };
-use dwn_core::message::{mime::TEXT_PLAIN, DateFilter, DateSort};
 use tracing_test::traced_test;
 
 use crate::utils::init_dwn;
@@ -29,10 +29,10 @@ async fn test_query_no_filter() {
     let query = RecordsQueryBuilder::default().build().unwrap();
 
     let reply = match dwn.process_message(&actor.did, query).await.unwrap() {
-        Reply::RecordsQuery(m) => m,
+        Some(Reply::RecordsQuery(v)) => v,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(reply.len(), 2);
+    assert_eq!(reply.entries.len(), 2);
 }
 
 #[tokio::test]
@@ -60,11 +60,11 @@ async fn test_query_record_id() {
         .unwrap();
 
     let reply = match dwn.process_message(&actor.did, query).await.unwrap() {
-        Reply::RecordsQuery(m) => m,
+        Some(Reply::RecordsQuery(v)) => v,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(reply.len(), 1);
-    assert_eq!(reply[0], msg_1);
+    assert_eq!(reply.entries.len(), 1);
+    assert_eq!(reply.entries[0], msg_1);
 }
 
 #[tokio::test]
@@ -101,20 +101,20 @@ async fn test_query_date_filter() {
     dwn.record_store.write(&actor.did, msg_4.clone()).unwrap();
 
     let query = RecordsQueryBuilder::default()
-        .date_created(DateFilter {
-            from: msg_2.descriptor.date_created,
-            to: msg_3.descriptor.date_created,
+        .message_timestamp(DateFilter {
+            from: msg_2.descriptor.message_timestamp,
+            to: msg_3.descriptor.message_timestamp,
         })
         .build()
         .unwrap();
 
     let reply = match dwn.process_message(&actor.did, query).await.unwrap() {
-        Reply::RecordsQuery(m) => m,
+        Some(Reply::RecordsQuery(v)) => v,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(reply.len(), 2);
-    assert_eq!(reply[0], msg_3);
-    assert_eq!(reply[1], msg_2);
+    assert_eq!(reply.entries.len(), 2);
+    assert_eq!(reply.entries[0], msg_3);
+    assert_eq!(reply.entries[1], msg_2);
 }
 
 #[tokio::test]
@@ -141,22 +141,22 @@ async fn test_query_date_sort() {
         .build()
         .unwrap();
     let reply = match dwn.process_message(&actor.did, desc).await.unwrap() {
-        Reply::RecordsQuery(m) => m,
+        Some(Reply::RecordsQuery(v)) => v,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(reply.len(), 2);
-    assert_eq!(reply[0], msg_2);
-    assert_eq!(reply[1], msg_1);
+    assert_eq!(reply.entries.len(), 2);
+    assert_eq!(reply.entries[0], msg_2);
+    assert_eq!(reply.entries[1], msg_1);
 
     let asc = RecordsQueryBuilder::default()
         .date_sort(DateSort::Ascending)
         .build()
         .unwrap();
     let reply = match dwn.process_message(&actor.did, asc).await.unwrap() {
-        Reply::RecordsQuery(m) => m,
+        Some(Reply::RecordsQuery(v)) => v,
         _ => panic!("invalid reply"),
     };
-    assert_eq!(reply.len(), 2);
-    assert_eq!(reply[0], msg_1);
-    assert_eq!(reply[1], msg_2);
+    assert_eq!(reply.entries.len(), 2);
+    assert_eq!(reply.entries[0], msg_1);
+    assert_eq!(reply.entries[1], msg_2);
 }

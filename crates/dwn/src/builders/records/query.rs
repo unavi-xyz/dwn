@@ -35,11 +35,6 @@ impl RecordsQueryBuilder {
         self
     }
 
-    pub fn context_id(mut self, value: String) -> Self {
-        self.filter.context_id = Some(value);
-        self
-    }
-
     pub fn protocol(mut self, value: String, version: Version) -> Self {
         self.filter.protocol = Some(value);
         self.filter.protocol_version = Some(version);
@@ -51,7 +46,7 @@ impl RecordsQueryBuilder {
         self
     }
 
-    pub fn date_created(mut self, value: DateFilter) -> Self {
+    pub fn message_timestamp(mut self, value: DateFilter) -> Self {
         self.filter.date_created = Some(value);
         self
     }
@@ -68,17 +63,16 @@ impl RecordsQueryBuilder {
             filter: Some(self.filter),
             data_cid: None,
             data_format: None,
-            parent_id: None,
             protocol: None,
             protocol_version: None,
+            parent_id: None,
             published: None,
             schema: None,
-            date_created: OffsetDateTime::now_utc(),
+            message_timestamp: OffsetDateTime::now_utc(),
         };
 
         Ok(Message {
             record_id: descriptor.compute_entry_id()?,
-            context_id: None,
             data: None,
             descriptor,
             attestation: None,

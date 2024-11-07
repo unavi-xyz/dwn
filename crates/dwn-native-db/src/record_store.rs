@@ -96,18 +96,6 @@ impl RecordStore for NativeDbStore<'_> {
                     }
                 }
 
-                if let Some(parent_id) = filter.parent_id.as_deref() {
-                    if r.message.descriptor.parent_id.as_deref() != Some(parent_id) {
-                        return false;
-                    }
-                }
-
-                if let Some(context_id) = filter.context_id.as_deref() {
-                    if r.message.context_id.as_deref() != Some(context_id) {
-                        return false;
-                    }
-                }
-
                 if let Some(protocol) = filter.protocol.as_deref() {
                     let version = filter.protocol_version.as_ref().unwrap();
 
@@ -127,10 +115,10 @@ impl RecordStore for NativeDbStore<'_> {
                 }
 
                 if let Some(date_created) = &filter.date_created {
-                    if r.message.descriptor.date_created < date_created.from {
+                    if r.message.descriptor.message_timestamp < date_created.from {
                         return false;
                     }
-                    if r.message.descriptor.date_created > date_created.to {
+                    if r.message.descriptor.message_timestamp > date_created.to {
                         return false;
                     }
                 }
@@ -141,8 +129,14 @@ impl RecordStore for NativeDbStore<'_> {
             .collect::<Vec<_>>();
 
         found.sort_by(|a, b| match filter.date_sort.unwrap_or_default() {
-            DateSort::Ascending => a.descriptor.date_created.cmp(&b.descriptor.date_created),
-            DateSort::Descending => b.descriptor.date_created.cmp(&a.descriptor.date_created),
+            DateSort::Ascending => a
+                .descriptor
+                .message_timestamp
+                .cmp(&b.descriptor.message_timestamp),
+            DateSort::Descending => b
+                .descriptor
+                .message_timestamp
+                .cmp(&a.descriptor.message_timestamp),
         });
 
         Ok(found)

@@ -5,186 +5,143 @@ use dwn_core::{
     message::{data::Data, mime::APPLICATION_JSON, Interface, Message, Method},
     store::RecordStore,
 };
+use reqwest::StatusCode;
 use serde_json::Value;
 use tracing::{debug, error};
 use xdid::core::did::Did;
 
-use crate::Status;
-
-pub async fn handle(records: &dyn RecordStore, target: &Did, msg: Message) -> Result<(), Status> {
+pub async fn handle(
+    records: &dyn RecordStore,
+    target: &Did,
+    msg: Message,
+) -> Result<(), StatusCode> {
     debug_assert_eq!(msg.descriptor.interface, Interface::Records);
     debug_assert_eq!(msg.descriptor.method, Method::Write);
 
     if msg.authorization.is_none() {
-        return Err(Status {
-            code: 401,
-            detail: "Unauthorized",
-        });
+        return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let computed_record_id = msg.descriptor.compute_entry_id().map_err(|_| Status {
-        code: 400,
-        detail: "Failed to compute record id",
+    let computed_entry_id = msg.descriptor.compute_entry_id().map_err(|e| {
+        debug!("Failed to compute entry id: {:?}", e);
+        StatusCode::BAD_REQUEST
     })?;
 
-    let Ok(prev) = records.read(target, &msg.record_id, true) else {
-        return Err(Status {
-            code: 500,
-            detail: "Internal error",
-        });
-    };
+    let prev = records.read(target, &msg.record_id, true).map_err(|e| {
+        debug!("Failed to read record id {}: {:?}", msg.record_id, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    // 1. If the generated entry id matches the record id, and the initial entry
-    //    already exists, cease processing (the spec says to do the opposite
-    //    of this, but I think that is wrong).
-    if computed_record_id == msg.record_id {
+    if computed_entry_id == msg.record_id {
         if prev.is_some() {
+            // Entry already exists.
+            return Ok(());
+        }
+    } else if let Some(prev) = &prev {
+        // Ensure immutable values remain unchanged.
+        if msg.descriptor.schema != prev.descriptor.schema {
+            debug!(
+                "Schema does not match: {:?} != {:?}",
+                msg.descriptor.schema, prev.descriptor.schema
+            );
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        // Ensure the message is newer than the stored entry.
+        // If the dates match, compare the entry ids lexicographically.
+        if msg.descriptor.message_timestamp < prev.descriptor.message_timestamp {
+            debug!(
+                "Message created after stored entry: {} < {}",
+                msg.descriptor.message_timestamp, prev.descriptor.message_timestamp
+            );
+            return Err(StatusCode::CONFLICT);
+        }
+
+        let prev_id = prev.descriptor.compute_entry_id().map_err(|e| {
+            error!(
+                "Failed to compute entry id for stored entry {}: {:?}",
+                prev.record_id, e
+            );
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        if (msg.descriptor.message_timestamp == prev.descriptor.message_timestamp)
+            && (computed_entry_id < prev_id)
+        {
             return Ok(());
         }
     } else {
-        // 2. If mesesage is not the initial entry, parent id must be present.
-        let Some(parent_id) = &msg.descriptor.parent_id else {
-            return Err(Status {
-                code: 400,
-                detail: "Missing parent id",
-            });
-        };
-
-        if let Some(prev) = &prev {
-            // 3. Ensure all immutable values remain unchanged.
-            if msg.descriptor.schema != prev.descriptor.schema {
-                return Err(Status {
-                    code: 400,
-                    detail: "Invalid schema",
-                });
-            }
-
-            // 4. Compare the parent id to the latest stored entry.
-            //    If they do not match, cease processing.
-            let prev_id = prev.descriptor.compute_entry_id().map_err(|_| {
-                error!("Failed to compute record id for: {}", prev.record_id);
-                Status {
-                    code: 400,
-                    detail: "Failed to compute record id for stored entry",
-                }
-            })?;
-
-            if *parent_id != prev_id {
-                return Ok(());
-            }
-
-            // 6. Ensure date created is greater than the stored entry.
-            //    If the dates match, compare the entry ids lexicographically.
-            if msg.descriptor.date_created < prev.descriptor.date_created {
-                debug!("Message created after currently stored entry.");
-                return Ok(());
-            }
-
-            if (msg.descriptor.date_created == prev.descriptor.date_created)
-                && (computed_record_id < prev_id)
-            {
-                return Ok(());
-            }
-        }
+        // Message is not the initial entry, and no initial entry was found.
+        debug!("Initial entry not found for: {}", msg.record_id);
+        return Err(StatusCode::BAD_REQUEST);
     }
 
     // Validate data conforms to schema.
     if let Some(schema_url) = &msg.descriptor.schema {
         if msg.descriptor.data_format != Some(APPLICATION_JSON) {
-            return Err(Status {
-                code: 400,
-                detail: "Data format must be application/json when using schemas",
-            });
+            debug!(
+                "Message has schema, but data format is not application/json: {:?}",
+                msg.descriptor.data_format
+            );
+            return Err(StatusCode::BAD_REQUEST);
         }
 
         if !schema_url.starts_with("http") {
-            return Err(Status {
-                code: 400,
-                detail: "Schema must be an HTTP URL",
-            });
+            debug!("Schema is not an HTTP URL: {}", schema_url);
+            return Err(StatusCode::BAD_REQUEST);
         }
 
         let schema = reqwest::get(schema_url)
             .await
             .map_err(|e| {
                 debug!("Failed to fetch schema {:?}", e);
-                Status {
-                    code: 500,
-                    detail: "Failed to fetch schema",
-                }
+                StatusCode::INTERNAL_SERVER_ERROR
             })?
             .json::<Value>()
             .await
             .map_err(|e| {
                 debug!("Failed to parse schema {:?}", e);
-                Status {
-                    code: 500,
-                    detail: "Failed to parse schema",
-                }
+                StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
         let validator = jsonschema::validator_for(&schema).map_err(|e| {
             debug!("Failed to create schema validator: {:?}", e);
-            Status {
-                code: 400,
-                detail: "Invalid schema",
-            }
+            StatusCode::BAD_REQUEST
         })?;
 
         let value = match &msg.data {
             Some(Data::Base64(d)) => {
                 let decoded = BASE64_URL_SAFE_NO_PAD.decode(d).map_err(|e| {
                     debug!("Failed to base64 decode data: {:?}", e);
-                    Status {
-                        code: 400,
-                        detail: "Failed to base64 decode data",
-                    }
+                    StatusCode::BAD_REQUEST
                 })?;
                 let utf8 = String::from_utf8(decoded).map_err(|e| {
                     debug!("Failed to parse data as utf8: {:?}", e);
-                    Status {
-                        code: 400,
-                        detail: "Failed to parse data as utf8",
-                    }
+                    StatusCode::BAD_REQUEST
                 })?;
                 Value::from_str(&utf8).map_err(|e| {
                     debug!("Failed to parse data as JSON: {:?}", e);
-                    Status {
-                        code: 400,
-                        detail: "Data is not JSON",
-                    }
+                    StatusCode::BAD_REQUEST
                 })?
             }
             Some(Data::Encrypted(_)) => {
                 // TODO: Store the message without validation?
-                return Err(Status {
-                    code: 500,
-                    detail: "Cannot validate schema for encrypted data.",
-                });
+                return Err(StatusCode::BAD_REQUEST);
             }
             None => {
-                return Err(Status {
-                    code: 400,
-                    detail: "No data provided",
-                })
+                return Err(StatusCode::BAD_REQUEST);
             }
         };
 
         if !validator.is_valid(&value) {
-            return Err(Status {
-                code: 400,
-                detail: "Data does not fulfill schema",
-            });
+            debug!("Data does not fulfill schema.");
+            return Err(StatusCode::BAD_REQUEST);
         };
     }
 
-    // 7. Store the inbound message as the latest entry.
     if let Err(e) = records.write(target, msg) {
         debug!("Error during write: {:?}", e);
-        return Err(Status {
-            code: 500,
-            detail: "Internal error",
-        });
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
     };
 
     Ok(())
