@@ -29,7 +29,7 @@ async fn main() {
     let key = P256KeyPair::generate();
     let did = key.public().to_did();
    
-    // Create an actor to sign messages on behalf of the DID.
+    // Create an actor to sign messages on behalf of our DID.
     let mut actor = Actor::new(did.clone());
     actor.auth_key = Some(key.clone().into());
     actor.sign_key = Some(key.into());
