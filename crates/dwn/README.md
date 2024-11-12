@@ -36,7 +36,7 @@ async fn main() {
    
     // Prepare to write a new record to the DWN.
     let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_owned())
+        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_vec())
         .published(true)
         .build()
         .unwrap();
@@ -47,21 +47,21 @@ async fn main() {
     actor.authorize(&mut msg).unwrap();
    
     // Process the message at our DID's DWN.
-    dwn.process_message(&did, msg).await.unwrap();
+    dwn.process_message(&did, msg.clone()).await.unwrap();
    
     // We can now read the record using its ID.
-    let msg = RecordsReadBuilder::new(record_id.clone())
+    let read = RecordsReadBuilder::new(record_id.clone())
         .build()
         .unwrap();
    
-    let reply = dwn.process_message(&did, msg).await.unwrap();
+    let reply = dwn.process_message(&did, read).await.unwrap();
 
-    let record = match reply {
+    let found = match reply {
         Some(Reply::RecordsRead(r)) => r.entry.unwrap(),
         _ => panic!("invalid reply"),
     };
 
-    assert_eq!(record.record_id, record_id);
+    assert_eq!(found, msg);
 }
 ```
 

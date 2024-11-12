@@ -3,7 +3,6 @@ use std::{net::SocketAddr, sync::Arc};
 use dwn::{stores::NativeDbStore, Actor, Dwn};
 use hyper::{server::conn::http1::Builder, service::service_fn, Response};
 use hyper_util::rt::TokioIo;
-use port_check::free_local_port;
 use tokio::net::TcpListener;
 use tracing::info;
 use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
@@ -27,7 +26,7 @@ pub fn init_dwn() -> (Actor, Dwn) {
 pub async fn serve_string(data: String) -> String {
     let data = Arc::new(data);
 
-    let port = free_local_port().unwrap();
+    let port = port_check::free_local_port().unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await.unwrap();
 

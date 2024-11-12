@@ -625,7 +625,10 @@ dependencies = [
  "axum",
  "axum-macros",
  "dwn",
+ "port_check",
+ "tokio",
  "tracing",
+ "tracing-test",
  "xdid",
 ]
 

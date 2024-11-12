@@ -14,7 +14,9 @@ shared-version = true
 tag-name = "v{{version}}"
 
 [workspace.dependencies]
+port_check = "0.2.1"
 serde = "1.0.210"
 thiserror = "1.0.64"
 tracing = "0.1.40"
+tracing-test = { version = "0.2.5", features = ["no-env-filter"] }
 xdid = "0.2.0"
