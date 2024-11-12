@@ -1,3 +1,7 @@
-pub mod query;
-pub mod read;
-pub mod write;
+mod query;
+mod read;
+mod write;
+
+pub use query::*;
+pub use read::*;
+pub use write::*;

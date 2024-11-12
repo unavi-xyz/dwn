@@ -123,7 +123,7 @@ pub enum SignError {
 mod tests {
     use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
 
-    use crate::builders::records::write::RecordsWriteBuilder;
+    use crate::builders::records::RecordsWriteBuilder;
 
     use super::*;
 

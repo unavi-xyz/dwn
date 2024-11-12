@@ -7,10 +7,10 @@
 //!
 //! ```
 //! use dwn::{
-//!     actor::Actor,
-//!     builders::records::{read::RecordsReadBuilder, write::RecordsWriteBuilder},
+//!     builders::records::{RecordsReadBuilder, RecordsWriteBuilder},
 //!     core::{message::mime::TEXT_PLAIN, reply::Reply},
 //!     stores::NativeDbStore,
+//!     Actor,
 //!     Dwn
 //! };
 //! use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
@@ -79,9 +79,11 @@ pub mod stores {
     pub use dwn_native_db::*;
 }
 
-pub mod actor;
+mod actor;
 pub mod builders;
 mod handlers;
+
+pub use actor::*;
 
 #[derive(Clone)]
 pub struct Dwn {

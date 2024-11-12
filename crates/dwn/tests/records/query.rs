@@ -1,4 +1,4 @@
-use dwn::builders::records::{query::RecordsQueryBuilder, write::RecordsWriteBuilder};
+use dwn::builders::records::{RecordsQueryBuilder, RecordsWriteBuilder};
 use dwn_core::{
     message::{mime::TEXT_PLAIN, DateFilter, DateSort},
     reply::Reply,

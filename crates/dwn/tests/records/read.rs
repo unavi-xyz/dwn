@@ -1,4 +1,4 @@
-use dwn::builders::records::{read::RecordsReadBuilder, write::RecordsWriteBuilder};
+use dwn::builders::records::{RecordsReadBuilder, RecordsWriteBuilder};
 use dwn_core::{
     message::mime::TEXT_PLAIN,
     reply::{RecordsReadReply, Reply},

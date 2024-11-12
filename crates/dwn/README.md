@@ -11,10 +11,10 @@ so it is treated more as a loose guide rather than an absolute set of rules to f
 
 ```rust
 use dwn::{
-    actor::Actor,
-    builders::records::{read::RecordsReadBuilder, write::RecordsWriteBuilder},
+    builders::records::{RecordsReadBuilder, RecordsWriteBuilder},
     core::{message::mime::TEXT_PLAIN, reply::Reply},
     stores::NativeDbStore,
+    Actor,
     Dwn
 };
 use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};

@@ -1,4 +1,4 @@
-use dwn::builders::records::write::RecordsWriteBuilder;
+use dwn::builders::records::RecordsWriteBuilder;
 use dwn_core::message::mime::{APPLICATION_JSON, TEXT_PLAIN};
 use serde_json::json;
 use tracing_test::traced_test;

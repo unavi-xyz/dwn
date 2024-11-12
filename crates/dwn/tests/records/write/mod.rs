@@ -1,4 +1,4 @@
-use dwn::{builders::records::write::RecordsWriteBuilder, Dwn};
+use dwn::{builders::records::RecordsWriteBuilder, Dwn};
 use dwn_core::message::{mime::TEXT_PLAIN, Message};
 use tracing_test::traced_test;
 use xdid::core::did::Did;

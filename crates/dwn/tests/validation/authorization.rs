@@ -1,4 +1,4 @@
-use dwn::builders::records::write::RecordsWriteBuilder;
+use dwn::builders::records::RecordsWriteBuilder;
 use tracing_test::traced_test;
 use xdid::methods::key::{p256::P256KeyPair, DidKeyPair};
 
