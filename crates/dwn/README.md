@@ -43,10 +43,10 @@ async fn main() {
    
     let record_id = msg.record_id.clone();
    
-    // Authorize the message using our actor.
+    // Authorize the message using the actor.
     actor.authorize(&mut msg).unwrap();
    
-    // Process the write.
+    // Process the message at our DID's DWN.
     dwn.process_message(&did, msg).await.unwrap();
    
     // We can now read the record using its ID.
