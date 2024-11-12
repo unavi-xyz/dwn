@@ -10,7 +10,7 @@ use crate::utils::init_dwn;
 #[tokio::test]
 #[traced_test]
 async fn test_query_no_filter() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, "1".as_bytes().to_owned())
@@ -38,7 +38,7 @@ async fn test_query_no_filter() {
 #[tokio::test]
 #[traced_test]
 async fn test_query_record_id() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, "1".as_bytes().to_owned())
@@ -70,7 +70,7 @@ async fn test_query_record_id() {
 #[tokio::test]
 #[traced_test]
 async fn test_query_date_filter() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, "1".as_bytes().to_owned())
@@ -120,7 +120,7 @@ async fn test_query_date_filter() {
 #[tokio::test]
 #[traced_test]
 async fn test_query_date_sort() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, "1".as_bytes().to_owned())

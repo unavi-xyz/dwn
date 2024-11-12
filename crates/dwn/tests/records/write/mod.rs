@@ -11,7 +11,7 @@ mod update;
 #[tokio::test]
 #[traced_test]
 async fn test_write() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let data = "hello, world!".as_bytes().to_owned();
 
@@ -21,13 +21,13 @@ async fn test_write() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_success(&actor.did, &dwn, msg).await;
+    expect_success(&actor.did, &mut dwn, msg).await;
 }
 
 #[tokio::test]
 #[traced_test]
 async fn test_require_auth() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let data = "hello, world!".as_bytes().to_owned();
 
@@ -36,13 +36,13 @@ async fn test_require_auth() {
         .build()
         .unwrap();
 
-    expect_fail(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &mut dwn, msg).await;
 }
 
 #[tokio::test]
 #[traced_test]
 async fn test_write_invalid_record_id() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let data = "hello, world!".as_bytes().to_owned();
 
@@ -53,10 +53,10 @@ async fn test_write_invalid_record_id() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_fail(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &mut dwn, msg).await;
 }
 
-async fn expect_success(target: &Did, dwn: &Dwn, msg: Message) {
+async fn expect_success(target: &Did, dwn: &mut Dwn, msg: Message) {
     let record_id = msg.record_id.clone();
 
     dwn.process_message(target, msg.clone()).await.unwrap();
@@ -69,7 +69,7 @@ async fn expect_success(target: &Did, dwn: &Dwn, msg: Message) {
     assert_eq!(found, msg);
 }
 
-async fn expect_fail(target: &Did, dwn: &Dwn, msg: Message) {
+async fn expect_fail(target: &Did, dwn: &mut Dwn, msg: Message) {
     let record_id = msg.record_id.clone();
     assert!(dwn.process_message(target, msg.clone()).await.is_err());
     assert!(dwn

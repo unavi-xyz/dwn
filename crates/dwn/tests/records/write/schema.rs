@@ -10,7 +10,7 @@ use super::{expect_fail, expect_success};
 #[tokio::test]
 #[traced_test]
 async fn test_schema_success() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let schema = json!({ "maxLength": 5 });
     let data = json!("foo");
@@ -25,13 +25,13 @@ async fn test_schema_success() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_success(&actor.did, &dwn, msg).await;
+    expect_success(&actor.did, &mut dwn, msg).await;
 }
 
 #[tokio::test]
 #[traced_test]
 async fn test_schema_fail() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let schema = json!({ "maxLength": 2 });
     let data = json!("foo");
@@ -46,13 +46,13 @@ async fn test_schema_fail() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_fail(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &mut dwn, msg).await;
 }
 
 #[tokio::test]
 #[traced_test]
 async fn test_invalid_schema() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let schema = "not a valid schema";
     let data = json!("foo");
@@ -66,13 +66,13 @@ async fn test_invalid_schema() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_fail(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &mut dwn, msg).await;
 }
 
 #[tokio::test]
 #[traced_test]
 async fn test_invalid_schema_url() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let data = json!("foo");
     let schema_url = "not a url".to_string();
@@ -84,13 +84,13 @@ async fn test_invalid_schema_url() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_fail(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &mut dwn, msg).await;
 }
 
 #[tokio::test]
 #[traced_test]
 async fn test_schema_requires_data_format_json() {
-    let (actor, dwn) = init_dwn();
+    let (actor, mut dwn) = init_dwn();
 
     let schema = json!({ "maxLength": 5 });
     let data = json!("foo");
@@ -105,5 +105,5 @@ async fn test_schema_requires_data_format_json() {
         .unwrap();
     actor.authorize(&mut msg).unwrap();
 
-    expect_fail(&actor.did, &dwn, msg).await;
+    expect_fail(&actor.did, &mut dwn, msg).await;
 }

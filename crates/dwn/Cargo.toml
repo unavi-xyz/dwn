@@ -7,6 +7,7 @@ license.workspace = true
 keywords.workspace = true
 
 [features]
+default = ["native_db"]
 native_db = ["dep:dwn-native-db"]
 
 [dependencies]
