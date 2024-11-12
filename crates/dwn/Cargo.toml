@@ -28,7 +28,6 @@ tracing.workspace = true
 xdid.workspace = true
 
 [dev-dependencies]
-dwn-native-db = { path = "../dwn-native-db" }
 hyper = { version = "1.5.0", features = ["http1", "server"] }
 hyper-util = "0.1.9"
 port_check = "0.2.1"

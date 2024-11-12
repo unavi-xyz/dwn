@@ -1,7 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use dwn::{Actor, Dwn};
-use dwn_native_db::NativeDbStore;
+use dwn::{stores::NativeDbStore, Actor, Dwn};
 use hyper::{server::conn::http1::Builder, service::service_fn, Response};
 use hyper_util::rt::TokioIo;
 use port_check::free_local_port;
