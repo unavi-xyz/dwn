@@ -1,5 +1,5 @@
 use dwn_core::{
-    message::{Interface, Message, Method},
+    message::{descriptor::Descriptor, Message},
     reply::RecordsReadReply,
     store::RecordStore,
 };
@@ -12,16 +12,30 @@ pub fn handle(
     target: &Did,
     msg: Message,
 ) -> Result<RecordsReadReply, StatusCode> {
-    debug_assert_eq!(msg.descriptor.interface, Interface::Records);
-    debug_assert_eq!(msg.descriptor.method, Method::Read);
+    debug_assert!(matches!(msg.descriptor, Descriptor::RecordsRead(_)));
+
+    let Descriptor::RecordsRead(desc) = msg.descriptor else {
+        panic!("invalid descriptor: {:?}", msg.descriptor);
+    };
+
+    let record = records.read(target, &desc.record_id).map_err(|e| {
+        warn!("Failed to read record {}: {:?}", msg.record_id, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let authorized = msg.authorization.is_some();
 
-    records
-        .read(target, &msg.record_id, authorized)
-        .map(|entry| RecordsReadReply { entry })
-        .map_err(|e| {
-            warn!("Failed to read record {}: {:?}", msg.record_id, e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })
+    Ok(RecordsReadReply {
+        entry: record.map(|r| r.latest_entry).and_then(|m| {
+            if let Descriptor::RecordsWrite(d) = &m.descriptor {
+                if d.published != Some(true) && !authorized {
+                    None
+                } else {
+                    Some(m)
+                }
+            } else {
+                None
+            }
+        }),
+    })
 }

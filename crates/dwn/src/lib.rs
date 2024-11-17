@@ -7,8 +7,7 @@
 //!
 //! ```
 //! use dwn::{
-//!     builders::records::{RecordsReadBuilder, RecordsWriteBuilder},
-//!     core::{message::mime::TEXT_PLAIN, reply::Reply},
+//!     core::{message::{descriptor::{RecordsReadBuilder, RecordsWriteBuilder}, mime::TEXT_PLAIN}, reply::Reply},
 //!     stores::NativeDbStore,
 //!     Actor,
 //!     Dwn
@@ -64,7 +63,7 @@
 use std::sync::Arc;
 
 use dwn_core::{
-    message::{Interface, Message, Method},
+    message::{descriptor::Descriptor, Message},
     reply::Reply,
     store::{DataStore, RecordStore},
 };
@@ -80,7 +79,6 @@ pub mod stores {
 }
 
 mod actor;
-pub mod builders;
 mod handlers;
 
 pub use actor::*;
@@ -117,48 +115,31 @@ impl Dwn {
         target: &Did,
         msg: Message,
     ) -> Result<Option<Reply>, StatusCode> {
-        debug!(
-            "Processing {} {}",
-            msg.descriptor.interface.to_string(),
-            msg.descriptor.method.to_string()
-        );
-
         if let Err(e) = handlers::validation::validate_message(target, &msg).await {
             debug!("Failed to validate message: {:?}", e);
             return Err(StatusCode::BAD_REQUEST);
         };
 
-        let res = match &msg.descriptor.interface {
-            Interface::Records => match &msg.descriptor.method {
-                Method::Read => {
-                    handlers::records::read::handle(self.record_store.as_ref(), target, msg)
-                        .map(|v| Some(Reply::RecordsRead(Box::new(v))))?
-                }
-                Method::Query => {
-                    handlers::records::query::handle(self.record_store.as_ref(), target, msg)
-                        .await
-                        .map(|v| Some(Reply::RecordsQuery(v)))?
-                }
-                Method::Write => {
-                    handlers::records::write::handle(
-                        self.record_store.as_ref(),
-                        target,
-                        msg.clone(),
-                    )
+        let res = match &msg.descriptor {
+            Descriptor::RecordsQuery(_) => {
+                handlers::records::query::handle(self.record_store.as_ref(), target, msg)
+                    .await
+                    .map(|v| Some(Reply::RecordsQuery(v)))?
+            }
+            Descriptor::RecordsRead(_) => {
+                handlers::records::read::handle(self.record_store.as_ref(), target, msg)
+                    .map(|v| Some(Reply::RecordsRead(Box::new(v))))?
+            }
+            Descriptor::RecordsWrite(_) => {
+                handlers::records::write::handle(self.record_store.as_ref(), target, msg.clone())
                     .await?;
 
-                    if self.remote.is_some() {
-                        self.queue.push((target.clone(), msg));
-                    }
-
-                    None
+                if self.remote.is_some() {
+                    self.queue.push((target.clone(), msg));
                 }
-                Method::Subscribe => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-                Method::Delete => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-                _ => return Err(StatusCode::BAD_REQUEST),
-            },
-            Interface::Protocols => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-            Interface::Permissions => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+
+                None
+            }
         };
 
         Ok(res)

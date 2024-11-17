@@ -1,22 +1,24 @@
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use xdid::core::did::Did;
 
-use crate::message::{Filter, Message};
+use crate::message::{descriptor::Filter, Message};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Record {
+    pub initial_entry: Message,
+    pub latest_entry: Message,
+}
 
 pub trait RecordStore: Send + Sync {
-    fn read(
-        &self,
-        target: &Did,
-        record_id: &str,
-        authorized: bool,
-    ) -> Result<Option<Message>, RecordStoreError>;
-
     fn query(
         &self,
         target: &Did,
         filter: &Filter,
         authorized: bool,
     ) -> Result<Vec<Message>, RecordStoreError>;
+
+    fn read(&self, target: &Did, record_id: &str) -> Result<Option<Record>, RecordStoreError>;
 
     fn write(&self, target: &Did, message: Message) -> Result<(), RecordStoreError>;
 }

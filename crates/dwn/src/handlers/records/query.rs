@@ -1,5 +1,5 @@
 use dwn_core::{
-    message::{Interface, Message, Method},
+    message::{descriptor::Descriptor, Message},
     reply::RecordsQueryReply,
     store::RecordStore,
 };
@@ -12,12 +12,15 @@ pub async fn handle(
     target: &Did,
     msg: Message,
 ) -> Result<RecordsQueryReply, StatusCode> {
-    debug_assert_eq!(msg.descriptor.interface, Interface::Records);
-    debug_assert_eq!(msg.descriptor.method, Method::Query);
+    debug_assert!(matches!(msg.descriptor, Descriptor::RecordsQuery(_)));
 
     let authorized = msg.authorization.is_some();
 
-    if let Some(filter) = &msg.descriptor.filter {
+    let Descriptor::RecordsQuery(desc) = msg.descriptor else {
+        panic!("invalid descriptor: {:?}", msg.descriptor);
+    };
+
+    if let Some(filter) = &desc.filter {
         if filter.protocol.is_some() && filter.protocol_version.is_none() {
             debug!("No protocol version specified");
             return Err(StatusCode::BAD_REQUEST);
@@ -25,11 +28,7 @@ pub async fn handle(
     }
 
     records
-        .query(
-            target,
-            &msg.descriptor.filter.unwrap_or_default(),
-            authorized,
-        )
+        .query(target, &desc.filter.unwrap_or_default(), authorized)
         .map(|entries| RecordsQueryReply { entries })
         .map_err(|e| {
             warn!("Query failed: {:?}", e);

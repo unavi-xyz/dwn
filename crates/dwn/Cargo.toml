@@ -11,7 +11,7 @@ default = ["native_db"]
 native_db = ["dep:dwn-native-db"]
 
 [dependencies]
-base64 = "0.22.1"
+base64.workspace = true
 dwn-core = { path = "../dwn-core" }
 dwn-native-db = { path = "../dwn-native-db", optional = true }
 jose-jwk = "0.1.2"
@@ -22,7 +22,7 @@ jsonschema = { version = "0.24.0", default-features = false, features = [
 ] }
 reqwest = "0.12.8"
 ring = "0.17.8"
-serde_json = "1.0.128"
+serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 xdid.workspace = true

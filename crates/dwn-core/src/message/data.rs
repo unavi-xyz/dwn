@@ -3,6 +3,7 @@ use rust_unixfs::file::adder::FileAdder;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(untagged)]
 pub enum Data {
     Base64(String),
     Encrypted(()),

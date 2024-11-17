@@ -1,6 +1,8 @@
-use dwn::builders::records::{RecordsReadBuilder, RecordsWriteBuilder};
 use dwn_core::{
-    message::mime::TEXT_PLAIN,
+    message::{
+        descriptor::{RecordsReadBuilder, RecordsWriteBuilder},
+        mime::TEXT_PLAIN,
+    },
     reply::{RecordsReadReply, Reply},
 };
 use tracing_test::traced_test;
@@ -12,10 +14,7 @@ use crate::utils::init_dwn;
 async fn test_read_published() {
     let (actor, mut dwn) = init_dwn();
 
-    let data = "hello, world!".as_bytes().to_owned();
-
     let write = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
         .published(true)
         .build()
         .unwrap();

@@ -1,6 +1,8 @@
-use dwn::builders::records::{RecordsQueryBuilder, RecordsWriteBuilder};
 use dwn_core::{
-    message::{mime::TEXT_PLAIN, DateFilter, DateSort},
+    message::{
+        descriptor::{DateFilter, DateSort, RecordsQueryBuilder, RecordsWriteBuilder},
+        mime::TEXT_PLAIN,
+    },
     reply::Reply,
 };
 use tracing_test::traced_test;
@@ -102,8 +104,8 @@ async fn test_query_date_filter() {
 
     let query = RecordsQueryBuilder::default()
         .message_timestamp(DateFilter {
-            from: msg_2.descriptor.message_timestamp,
-            to: msg_3.descriptor.message_timestamp,
+            from: *msg_2.descriptor.message_timestamp(),
+            to: *msg_3.descriptor.message_timestamp(),
         })
         .build()
         .unwrap();

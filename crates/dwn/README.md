@@ -11,8 +11,7 @@ so it is treated more as a loose guide rather than an absolute set of rules to f
 
 ```rust
 use dwn::{
-    builders::records::{RecordsReadBuilder, RecordsWriteBuilder},
-    core::{message::mime::TEXT_PLAIN, reply::Reply},
+    core::{message::{descriptor::{RecordsReadBuilder, RecordsWriteBuilder}, mime::TEXT_PLAIN}, reply::Reply},
     stores::NativeDbStore,
     Actor,
     Dwn

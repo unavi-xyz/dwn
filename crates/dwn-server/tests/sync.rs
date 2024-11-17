@@ -1,6 +1,6 @@
-use dwn::{
-    builders::records::RecordsWriteBuilder,
-    core::{message::mime::TEXT_PLAIN, store::RecordStore},
+use dwn::core::{
+    message::{descriptor::RecordsWriteBuilder, mime::TEXT_PLAIN},
+    store::RecordStore,
 };
 use tracing_test::traced_test;
 use utils::init_test;
@@ -23,8 +23,8 @@ async fn test_sync_write() {
     dwn.process_message(&actor.did, msg.clone()).await.unwrap();
     dwn.sync().await.unwrap();
 
-    let found = remote.read(&actor.did, &record_id, true).unwrap().unwrap();
-    assert_eq!(found, msg);
+    let found = remote.read(&actor.did, &record_id).unwrap().unwrap();
+    assert_eq!(found.latest_entry, msg);
 }
 
 #[tokio::test]
@@ -56,6 +56,6 @@ async fn test_sync_update() {
 
     dwn.sync().await.unwrap();
 
-    let found = remote.read(&actor.did, &record_id, true).unwrap().unwrap();
-    assert_eq!(found, msg_2);
+    let found = remote.read(&actor.did, &record_id).unwrap().unwrap();
+    assert_eq!(found.latest_entry, msg_2);
 }

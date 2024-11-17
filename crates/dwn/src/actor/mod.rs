@@ -121,9 +121,8 @@ pub enum SignError {
 
 #[cfg(test)]
 mod tests {
+    use dwn_core::message::descriptor::RecordsWriteBuilder;
     use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
-
-    use crate::builders::records::RecordsWriteBuilder;
 
     use super::*;
 

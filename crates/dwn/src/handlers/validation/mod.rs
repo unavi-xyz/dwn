@@ -1,4 +1,4 @@
-use dwn_core::message::{cid::CidGenerationError, Message};
+use dwn_core::message::{cid::CidGenerationError, descriptor::Descriptor, Message};
 use thiserror::Error;
 use xdid::core::{did::Did, ResolutionError};
 
@@ -7,13 +7,15 @@ mod authorization;
 mod jws;
 
 pub async fn validate_message(target: &Did, msg: &Message) -> Result<(), ValidationError> {
-    if msg.data.is_some() {
-        if msg.descriptor.data_cid.is_none() {
-            return Err(ValidationError::MissingData);
-        }
+    if let Descriptor::RecordsWrite(desc) = &msg.descriptor {
+        if msg.data.is_some() {
+            if desc.data_cid.is_none() {
+                return Err(ValidationError::MissingDataInfo);
+            }
 
-        if msg.descriptor.data_format.is_none() {
-            return Err(ValidationError::MissingData);
+            if desc.data_format.is_none() {
+                return Err(ValidationError::MissingDataInfo);
+            }
         }
     }
 
@@ -42,8 +44,8 @@ pub enum ValidationError {
     InvalidPayload,
     #[error("invalid signature")]
     InvalidSignature,
-    #[error("missing data")]
-    MissingData,
+    #[error("missing data information")]
+    MissingDataInfo,
     #[error("missing signature")]
     MissingSignature,
     #[error("Error during serialization / deserialization: {0}")]
