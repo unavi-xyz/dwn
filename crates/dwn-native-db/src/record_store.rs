@@ -1,6 +1,6 @@
 use dwn_core::{
     message::{
-        descriptor::{DateSort, Descriptor, Filter},
+        descriptor::{DateSort, Descriptor, Filter, RecordId, RecordsSync},
         Message,
     },
     store::{Record, RecordStore, RecordStoreError},
@@ -14,6 +14,73 @@ use crate::{
 };
 
 impl RecordStore for NativeDbStore<'_> {
+    fn prepare_sync(
+        &self,
+        target: &Did,
+        authorized: bool,
+    ) -> Result<RecordsSync, RecordStoreError> {
+        debug!("syncing {}", target);
+
+        let tx = self
+            .0
+            .r_transaction()
+            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+
+        let initial_entries = tx
+            .scan()
+            .primary::<InitialEntry>()
+            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .start_with((target.to_string(), "".to_string()))
+            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .filter(|res| {
+                let Ok(entry) = res.as_ref().map(|r| &r.entry) else {
+                    warn!("Failed to read record during scan {}", target);
+                    return false;
+                };
+
+                let Descriptor::RecordsWrite(desc) = &entry.descriptor else {
+                    panic!("invalid descriptor: {:?}", entry.descriptor);
+                };
+
+                if !authorized && (desc.published != Some(true)) {
+                    return false;
+                }
+
+                true
+            })
+            .map(|r| r.unwrap().entry)
+            .collect::<Vec<_>>();
+
+        let records = initial_entries
+            .into_iter()
+            .flat_map(|initial_entry| {
+                tx.get()
+                    .primary::<LatestEntry>((target.to_string(), initial_entry.record_id.clone()))
+                    .map(|res| {
+                        let Some(latest_entry) = res.map(|r| r.entry) else {
+                            warn!(
+                                "Latest entry not found for initial entry: {}",
+                                initial_entry.record_id
+                            );
+                            return Err(RecordStoreError::BackendError(
+                                "Missing latest entry".to_string(),
+                            ));
+                        };
+
+                        Ok(RecordId {
+                            record_id: initial_entry.record_id,
+                            latest_entry_id: latest_entry
+                                .descriptor
+                                .compute_entry_id()
+                                .map_err(|e| RecordStoreError::BackendError(e.to_string()))?,
+                        })
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(RecordsSync::new(records))
+    }
+
     fn query(
         &self,
         target: &Did,

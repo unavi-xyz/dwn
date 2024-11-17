@@ -63,12 +63,13 @@
 use std::sync::Arc;
 
 use dwn_core::{
-    message::{descriptor::Descriptor, Message},
+    message::{cid::CidGenerationError, descriptor::Descriptor, Message},
     reply::Reply,
-    store::{DataStore, RecordStore},
+    store::{DataStore, RecordStore, RecordStoreError},
 };
 use reqwest::{Client, StatusCode};
-use tracing::debug;
+use thiserror::Error;
+use tracing::{debug, warn};
 use xdid::core::did::Did;
 
 pub use dwn_core as core;
@@ -90,7 +91,6 @@ pub struct Dwn {
     /// URL of the remote DWN to sync with.
     pub remote: Option<String>,
     client: Client,
-    queue: Vec<(Did, Message)>,
 }
 
 impl<T: DataStore + RecordStore + Clone + 'static> From<T> for Dwn {
@@ -106,7 +106,6 @@ impl Dwn {
             record_store,
             remote: None,
             client: Client::new(),
-            queue: Vec::new(),
         }
     }
 
@@ -130,14 +129,12 @@ impl Dwn {
                 handlers::records::read::handle(self.record_store.as_ref(), target, msg)
                     .map(|v| Some(Reply::RecordsRead(Box::new(v))))?
             }
+            Descriptor::RecordsSync(_) => {
+                handlers::records::sync::handle(self.record_store.as_ref(), target, msg)
+                    .map(|v| Some(Reply::RecordsSync(Box::new(v))))?
+            }
             Descriptor::RecordsWrite(_) => {
-                handlers::records::write::handle(self.record_store.as_ref(), target, msg.clone())
-                    .await?;
-
-                if self.remote.is_some() {
-                    self.queue.push((target.clone(), msg));
-                }
-
+                handlers::records::write::handle(self.record_store.as_ref(), target, msg).await?;
                 None
             }
         };
@@ -155,23 +152,86 @@ impl Dwn {
         send_remote(&self.client, target, msg, url).await
     }
 
-    /// Syncs newly processed messages with the remote DWN.
-    pub async fn sync(&mut self) -> Result<(), reqwest::Error> {
-        let Some(remote) = self.remote.as_deref() else {
+    /// Syncs with the remote DWN.
+    /// If an actor is provided, it will be used to authorize the sync.
+    pub async fn sync(&mut self, target: &Did, actor: Option<&Actor>) -> Result<(), SyncError> {
+        let Some(remote) = &self.remote.clone() else {
             return Ok(());
         };
 
-        debug!("Syncing {} messages.", self.queue.len());
+        let descriptor = Descriptor::RecordsSync(Box::new(
+            self.record_store.prepare_sync(target, actor.is_some())?,
+        ));
 
-        while !self.queue.is_empty() {
-            // If send fails, we still remove the message from the queue.
-            // Should we instead attempt to handle the error and send again?
-            let (target, msg) = self.queue.remove(0);
-            send_remote(&self.client, &target, &msg, remote).await?;
+        let mut msg = Message {
+            record_id: descriptor.compute_entry_id()?,
+            data: None,
+            descriptor,
+            attestation: None,
+            authorization: None,
+        };
+
+        if let Some(actor) = actor {
+            actor.authorize(&mut msg)?;
+        }
+
+        let reply = match self.send(target, &msg, remote).await? {
+            Some(Reply::RecordsSync(r)) => r,
+            v => {
+                debug!("Invalid reply: {:?}", v);
+                return Err(SyncError::InvalidReply);
+            }
+        };
+
+        // Process new records.
+        for record in reply.remote_only {
+            if let Err(e) = self.process_message(target, record.initial_entry).await {
+                warn!("Failed to process message during DWN sync: {}", e);
+                continue;
+            };
+
+            if let Err(e) = self.process_message(target, record.latest_entry).await {
+                warn!("Failed to process message during DWN sync: {}", e);
+            };
+        }
+
+        // Process conflicting entries.
+        for entry in reply.conflict {
+            if let Err(e) = self.process_message(target, entry).await {
+                warn!("Failed to process message during DWN sync: {}", e);
+            };
+        }
+
+        // Send local records to remote.
+        for record_id in reply.local_only {
+            let Some(record) = self.record_store.read(target, &record_id)? else {
+                continue;
+            };
+
+            self.send(target, &record.initial_entry, remote).await?;
+
+            if record.latest_entry.descriptor.compute_entry_id()? != record.initial_entry.record_id
+            {
+                self.send(target, &record.latest_entry, remote).await?;
+            }
         }
 
         Ok(())
     }
+}
+
+#[derive(Error, Debug)]
+pub enum SyncError {
+    #[error(transparent)]
+    CidGeneration(#[from] CidGenerationError),
+    #[error("invalid reply from remote")]
+    InvalidReply,
+    #[error(transparent)]
+    RecordStore(#[from] RecordStoreError),
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    #[error("failed to authorize message: {0}")]
+    Sign(#[from] SignError),
 }
 
 async fn send_remote(

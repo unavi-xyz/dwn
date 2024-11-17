@@ -15,6 +15,7 @@ use super::cid::{compute_cid_cbor, CidGenerationError};
 pub enum Descriptor {
     RecordsQuery(Box<RecordsQuery>),
     RecordsRead(Box<RecordsRead>),
+    RecordsSync(Box<RecordsSync>),
     RecordsWrite(Box<RecordsWrite>),
 }
 
@@ -37,6 +38,7 @@ impl Descriptor {
         match self {
             Descriptor::RecordsQuery(d) => &d.message_timestamp,
             Descriptor::RecordsRead(d) => &d.message_timestamp,
+            Descriptor::RecordsSync(d) => &d.message_timestamp,
             Descriptor::RecordsWrite(d) => &d.message_timestamp,
         }
     }
@@ -71,6 +73,11 @@ impl<'de> Deserialize<'de> for Descriptor {
                 let desc: RecordsRead =
                     serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
                 Ok(Descriptor::RecordsRead(Box::new(desc)))
+            }
+            (Interface::Records, Method::Sync) => {
+                let desc: RecordsSync =
+                    serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
+                Ok(Descriptor::RecordsSync(Box::new(desc)))
             }
             (Interface::Records, Method::Write) => {
                 let desc: RecordsWrite =

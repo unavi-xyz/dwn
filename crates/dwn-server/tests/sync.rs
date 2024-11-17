@@ -9,19 +9,18 @@ mod utils;
 
 #[tokio::test]
 #[traced_test]
-async fn test_sync_write() {
+async fn test_sync_local_write() {
     let (actor, mut dwn, remote) = init_test().await;
 
-    let data = "Hello, world!".as_bytes().to_vec();
     let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
+        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_vec())
         .build()
         .unwrap();
     actor.authorize(&mut msg).unwrap();
     let record_id = msg.record_id.clone();
 
     dwn.process_message(&actor.did, msg.clone()).await.unwrap();
-    dwn.sync().await.unwrap();
+    dwn.sync(&actor.did, Some(&actor)).await.unwrap();
 
     let found = remote.read(&actor.did, &record_id).unwrap().unwrap();
     assert_eq!(found.latest_entry, msg);
@@ -29,7 +28,7 @@ async fn test_sync_write() {
 
 #[tokio::test]
 #[traced_test]
-async fn test_sync_update() {
+async fn test_sync_local_update() {
     let (actor, mut dwn, remote) = init_test().await;
 
     let data = "Hello, world!".as_bytes().to_vec();
@@ -54,8 +53,32 @@ async fn test_sync_update() {
         .await
         .unwrap();
 
-    dwn.sync().await.unwrap();
+    dwn.sync(&actor.did, Some(&actor)).await.unwrap();
 
     let found = remote.read(&actor.did, &record_id).unwrap().unwrap();
     assert_eq!(found.latest_entry, msg_2);
+}
+
+#[tokio::test]
+#[traced_test]
+async fn test_sync_remote_write() {
+    let (actor, mut dwn, remote) = init_test().await;
+
+    let mut msg = RecordsWriteBuilder::default()
+        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_vec())
+        .build()
+        .unwrap();
+    actor.authorize(&mut msg).unwrap();
+    let record_id = msg.record_id.clone();
+
+    remote.write(&actor.did, msg.clone()).unwrap();
+
+    dwn.sync(&actor.did, Some(&actor)).await.unwrap();
+
+    let found = dwn
+        .record_store
+        .read(&actor.did, &record_id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.latest_entry, msg);
 }
