@@ -1,14 +1,15 @@
 use dwn_core::{
     message::{descriptor::Descriptor, Message},
     reply::RecordsSyncReply,
-    store::{RecordStore, RecordStoreError},
+    store::{DataStore, RecordStore, StoreError},
 };
 use reqwest::StatusCode;
 use tracing::warn;
 use xdid::core::did::Did;
 
 pub fn handle(
-    records: &dyn RecordStore,
+    ds: &dyn DataStore,
+    rs: &dyn RecordStore,
     target: &Did,
     msg: Message,
 ) -> Result<RecordsSyncReply, StatusCode> {
@@ -26,7 +27,7 @@ pub fn handle(
         remote_only: Vec::new(),
     };
 
-    let mut local = records.prepare_sync(target, authorized).map_err(|e| {
+    let mut local = rs.prepare_sync(target, authorized).map_err(|e| {
         warn!("Failed to prepare sync {}: {:?}", msg.record_id, e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -42,7 +43,7 @@ pub fn handle(
         };
 
         // Process given record.
-        if let Some(found) = records.read(target, &record.record_id).map_err(|e| {
+        if let Some(found) = rs.read(ds, target, &record.record_id).map_err(|e| {
             warn!("Failed to read record {}: {:?}", msg.record_id, e);
             StatusCode::INTERNAL_SERVER_ERROR
         })? {
@@ -66,9 +67,9 @@ pub fn handle(
     reply.remote_only = local
         .local_records
         .into_iter()
-        .map(|id| match records.read(target, &id.record_id) {
+        .map(|id| match rs.read(ds, target, &id.record_id) {
             Ok(Some(r)) => Ok(r),
-            Ok(None) => Err(RecordStoreError::BackendError(
+            Ok(None) => Err(StoreError::BackendError(
                 "Sync record not found".to_string(),
             )),
             Err(e) => Err(e),

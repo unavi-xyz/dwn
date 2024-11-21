@@ -1,8 +1,5 @@
 use dwn_core::{
-    message::{
-        descriptor::{DateFilter, DateSort, RecordsQueryBuilder, RecordsWriteBuilder},
-        mime::TEXT_PLAIN,
-    },
+    message::descriptor::{DateFilter, DateSort, RecordsQueryBuilder, RecordsWriteBuilder},
     reply::Reply,
 };
 use tracing_test::traced_test;
@@ -15,18 +12,20 @@ async fn test_query_no_filter() {
     let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "1".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_1.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_1.clone())
+        .unwrap();
 
     let msg_2 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "2".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_2).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_2)
+        .unwrap();
 
     let query = RecordsQueryBuilder::default().build().unwrap();
 
@@ -43,18 +42,20 @@ async fn test_query_record_id() {
     let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "1".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_1.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_1.clone())
+        .unwrap();
 
     let msg_2 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "2".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_2).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_2)
+        .unwrap();
 
     let query = RecordsQueryBuilder::default()
         .record_id(msg_1.record_id.clone())
@@ -75,32 +76,36 @@ async fn test_query_date_filter() {
     let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "1".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_1.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_1.clone())
+        .unwrap();
 
     let msg_2 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "2".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_2.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_2.clone())
+        .unwrap();
 
     let msg_3 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "3".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_3.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_3.clone())
+        .unwrap();
 
     let msg_4 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "4".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_4.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_4.clone())
+        .unwrap();
 
     let query = RecordsQueryBuilder::default()
         .message_timestamp(DateFilter {
@@ -125,18 +130,20 @@ async fn test_query_date_sort() {
     let (actor, mut dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "1".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_1.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_1.clone())
+        .unwrap();
 
     let msg_2 = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "2".as_bytes().to_owned())
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, msg_2.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, msg_2.clone())
+        .unwrap();
 
     let desc = RecordsQueryBuilder::default()
         .date_sort(DateSort::Descending)

@@ -18,7 +18,9 @@ async fn test_read_published() {
         .published(true)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, write.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, write.clone())
+        .unwrap();
 
     let read = RecordsReadBuilder::new(write.record_id.clone())
         .build()
@@ -41,7 +43,9 @@ async fn test_read_unpublished() {
         .data(TEXT_PLAIN, data)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, write.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, write.clone())
+        .unwrap();
 
     let mut read = RecordsReadBuilder::new(write.record_id.clone())
         .build()
@@ -66,7 +70,9 @@ async fn test_read_unpublished_requires_auth() {
         .data(TEXT_PLAIN, data)
         .build()
         .unwrap();
-    dwn.record_store.write(&actor.did, write.clone()).unwrap();
+    dwn.record_store
+        .write(dwn.data_store.as_ref(), &actor.did, write.clone())
+        .unwrap();
 
     let read = RecordsReadBuilder::new(write.record_id.clone())
         .build()

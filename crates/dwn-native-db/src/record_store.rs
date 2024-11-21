@@ -3,7 +3,7 @@ use dwn_core::{
         descriptor::{DateSort, Descriptor, Filter, RecordId, RecordsSync},
         Message,
     },
-    store::{Record, RecordStore, RecordStoreError},
+    store::{DataStore, Record, RecordStore, StoreError},
 };
 use tracing::{debug, error, warn};
 use xdid::core::did::Did;
@@ -14,24 +14,20 @@ use crate::{
 };
 
 impl RecordStore for NativeDbStore<'_> {
-    fn prepare_sync(
-        &self,
-        target: &Did,
-        authorized: bool,
-    ) -> Result<RecordsSync, RecordStoreError> {
+    fn prepare_sync(&self, target: &Did, authorized: bool) -> Result<RecordsSync, StoreError> {
         debug!("syncing {}", target);
 
         let tx = self
             .0
             .r_transaction()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
         let initial_entries = tx
             .scan()
             .primary::<InitialEntry>()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
             .start_with((target.to_string(), "".to_string()))
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
             .filter(|res| {
                 let Ok(entry) = res.as_ref().map(|r| &r.entry) else {
                     warn!("Failed to read record during scan {}", target);
@@ -62,7 +58,7 @@ impl RecordStore for NativeDbStore<'_> {
                                 "Latest entry not found for initial entry: {}",
                                 initial_entry.record_id
                             );
-                            return Err(RecordStoreError::BackendError(
+                            return Err(StoreError::BackendError(
                                 "Missing latest entry".to_string(),
                             ));
                         };
@@ -72,7 +68,7 @@ impl RecordStore for NativeDbStore<'_> {
                             latest_entry_id: latest_entry
                                 .descriptor
                                 .compute_entry_id()
-                                .map_err(|e| RecordStoreError::BackendError(e.to_string()))?,
+                                .map_err(|e| StoreError::BackendError(e.to_string()))?,
                         })
                     })
             })
@@ -86,7 +82,7 @@ impl RecordStore for NativeDbStore<'_> {
         target: &Did,
         filter: &Filter,
         authorized: bool,
-    ) -> Result<Vec<Message>, RecordStoreError> {
+    ) -> Result<Vec<Message>, StoreError> {
         debug!("querying {}", target);
 
         if filter.protocol.is_some() {
@@ -96,14 +92,14 @@ impl RecordStore for NativeDbStore<'_> {
         let tx = self
             .0
             .r_transaction()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
         let mut found = tx
             .scan()
             .primary::<LatestEntry>()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
             .start_with((target.to_string(), "".to_string()))
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
             .filter(|res| {
                 let Ok(entry) = res.as_ref().map(|r| &r.entry) else {
                     warn!("Failed to read record during scan {}", target);
@@ -191,32 +187,43 @@ impl RecordStore for NativeDbStore<'_> {
         Ok(found)
     }
 
-    fn read(&self, target: &Did, record_id: &str) -> Result<Option<Record>, RecordStoreError> {
+    fn read(
+        &self,
+        ds: &dyn DataStore,
+        target: &Did,
+        record_id: &str,
+    ) -> Result<Option<Record>, StoreError> {
         debug!("reading {} {}", target, record_id);
 
         let tx = self
             .0
             .r_transaction()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
         let Some(initial_entry) = tx
             .get()
             .primary::<InitialEntry>((target.to_string(), record_id))
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
             .map(|v| v.entry)
         else {
             return Ok(None);
         };
 
-        let Some(latest_entry) = tx
+        let Some(mut latest_entry) = tx
             .get()
             .primary::<LatestEntry>((target.to_string(), record_id))
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
             .map(|v| v.entry)
         else {
             error!("Found initial entry with no latest entry.");
             return Ok(None);
         };
+
+        if let Descriptor::RecordsWrite(desc) = &latest_entry.descriptor {
+            if let Some(cid) = &desc.data_cid {
+                latest_entry.data = ds.read(target, cid)?;
+            }
+        }
 
         Ok(Some(Record {
             initial_entry,
@@ -224,20 +231,33 @@ impl RecordStore for NativeDbStore<'_> {
         }))
     }
 
-    fn write(&self, target: &Did, message: Message) -> Result<(), RecordStoreError> {
+    fn write(
+        &self,
+        ds: &dyn DataStore,
+        target: &Did,
+        mut message: Message,
+    ) -> Result<(), StoreError> {
         debug!("writing {} {}", target, message.record_id);
 
         let tx = self
             .0
             .rw_transaction()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        let cid = if let Descriptor::RecordsWrite(desc) = &message.descriptor {
+            desc.data_cid.clone()
+        } else {
+            None
+        };
+
+        let data = message.data.take();
 
         let prev = tx
             .upsert(LatestEntry {
                 key: (target.to_string(), message.record_id.clone()),
                 entry: message.clone(),
             })
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
         if prev.is_none() {
             debug_assert_eq!(
@@ -249,11 +269,27 @@ impl RecordStore for NativeDbStore<'_> {
                 key: (target.to_string(), message.record_id.clone()),
                 entry: message,
             })
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
         }
 
         tx.commit()
-            .map_err(|e| RecordStoreError::BackendError(e.to_string()))?;
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        if let Some(cid) = cid {
+            // TODO: We should use the same tx commit for more reliability
+
+            // Add a reference for LatestEntry.
+            ds.add_ref(target, &cid, data)?;
+
+            // Remove previous reference.
+            if let Some(prev) = prev {
+                if let Descriptor::RecordsWrite(desc) = prev.entry.descriptor {
+                    if let Some(prev_cid) = &desc.data_cid {
+                        ds.remove_ref(target, prev_cid)?;
+                    }
+                }
+            }
+        }
 
         Ok(())
     }

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use dwn_core::{
     message::{data::Data, descriptor::Descriptor, mime::APPLICATION_JSON, Message},
-    store::RecordStore,
+    store::{DataStore, RecordStore},
 };
 use reqwest::StatusCode;
 use serde_json::Value;
@@ -11,7 +11,8 @@ use tracing::{debug, error};
 use xdid::core::did::Did;
 
 pub async fn handle(
-    records: &dyn RecordStore,
+    ds: &dyn DataStore,
+    rs: &dyn RecordStore,
     target: &Did,
     msg: Message,
 ) -> Result<(), StatusCode> {
@@ -30,7 +31,7 @@ pub async fn handle(
         panic!("invalid descriptor: {:?}", msg.descriptor);
     };
 
-    let latest_entry = records.read(target, &msg.record_id).map_err(|e| {
+    let latest_entry = rs.read(ds, target, &msg.record_id).map_err(|e| {
         debug!("Failed to read record id {}: {:?}", msg.record_id, e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -152,7 +153,7 @@ pub async fn handle(
         };
     }
 
-    if let Err(e) = records.write(target, msg) {
+    if let Err(e) = rs.write(ds, target, msg) {
         debug!("Error during write: {:?}", e);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     };

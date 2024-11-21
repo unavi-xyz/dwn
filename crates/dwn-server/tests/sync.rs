@@ -22,7 +22,10 @@ async fn test_sync_local_write() {
     dwn.process_message(&actor.did, msg.clone()).await.unwrap();
     dwn.sync(&actor.did, Some(&actor)).await.unwrap();
 
-    let found = remote.read(&actor.did, &record_id).unwrap().unwrap();
+    let found = remote
+        .read(dwn.data_store.as_ref(), &actor.did, &record_id)
+        .unwrap()
+        .unwrap();
     assert_eq!(found.latest_entry, msg);
 }
 
@@ -55,7 +58,10 @@ async fn test_sync_local_update() {
 
     dwn.sync(&actor.did, Some(&actor)).await.unwrap();
 
-    let found = remote.read(&actor.did, &record_id).unwrap().unwrap();
+    let found = remote
+        .read(dwn.data_store.as_ref(), &actor.did, &record_id)
+        .unwrap()
+        .unwrap();
     assert_eq!(found.latest_entry, msg_2);
 }
 
@@ -71,13 +77,15 @@ async fn test_sync_remote_write() {
     actor.authorize(&mut msg).unwrap();
     let record_id = msg.record_id.clone();
 
-    remote.write(&actor.did, msg.clone()).unwrap();
+    remote
+        .write(dwn.data_store.as_ref(), &actor.did, msg.clone())
+        .unwrap();
 
     dwn.sync(&actor.did, Some(&actor)).await.unwrap();
 
     let found = dwn
         .record_store
-        .read(&actor.did, &record_id)
+        .read(dwn.data_store.as_ref(), &actor.did, &record_id)
         .unwrap()
         .unwrap();
     assert_eq!(found.latest_entry, msg);

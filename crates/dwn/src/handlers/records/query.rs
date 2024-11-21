@@ -8,7 +8,7 @@ use tracing::{debug, warn};
 use xdid::core::did::Did;
 
 pub async fn handle(
-    records: &dyn RecordStore,
+    rs: &dyn RecordStore,
     target: &Did,
     msg: Message,
 ) -> Result<RecordsQueryReply, StatusCode> {
@@ -27,8 +27,7 @@ pub async fn handle(
         }
     }
 
-    records
-        .query(target, &desc.filter.unwrap_or_default(), authorized)
+    rs.query(target, &desc.filter.unwrap_or_default(), authorized)
         .map(|entries| RecordsQueryReply { entries })
         .map_err(|e| {
             warn!("Query failed: {:?}", e);

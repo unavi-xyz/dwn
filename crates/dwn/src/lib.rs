@@ -65,7 +65,7 @@ use std::sync::Arc;
 use dwn_core::{
     message::{cid::CidGenerationError, descriptor::Descriptor, Message},
     reply::Reply,
-    store::{DataStore, RecordStore, RecordStoreError},
+    store::{DataStore, RecordStore, StoreError},
 };
 use reqwest::{Client, StatusCode};
 use thiserror::Error;
@@ -125,16 +125,28 @@ impl Dwn {
                     .await
                     .map(|v| Some(Reply::RecordsQuery(v)))?
             }
-            Descriptor::RecordsRead(_) => {
-                handlers::records::read::handle(self.record_store.as_ref(), target, msg)
-                    .map(|v| Some(Reply::RecordsRead(Box::new(v))))?
-            }
-            Descriptor::RecordsSync(_) => {
-                handlers::records::sync::handle(self.record_store.as_ref(), target, msg)
-                    .map(|v| Some(Reply::RecordsSync(Box::new(v))))?
-            }
+            Descriptor::RecordsRead(_) => handlers::records::read::handle(
+                self.data_store.as_ref(),
+                self.record_store.as_ref(),
+                target,
+                msg,
+            )
+            .map(|v| Some(Reply::RecordsRead(Box::new(v))))?,
+            Descriptor::RecordsSync(_) => handlers::records::sync::handle(
+                self.data_store.as_ref(),
+                self.record_store.as_ref(),
+                target,
+                msg,
+            )
+            .map(|v| Some(Reply::RecordsSync(Box::new(v))))?,
             Descriptor::RecordsWrite(_) => {
-                handlers::records::write::handle(self.record_store.as_ref(), target, msg).await?;
+                handlers::records::write::handle(
+                    self.data_store.as_ref(),
+                    self.record_store.as_ref(),
+                    target,
+                    msg,
+                )
+                .await?;
                 None
             }
         };
@@ -204,7 +216,10 @@ impl Dwn {
 
         // Send local records to remote.
         for record_id in reply.local_only {
-            let Some(record) = self.record_store.read(target, &record_id)? else {
+            let Some(record) =
+                self.record_store
+                    .read(self.data_store.as_ref(), target, &record_id)?
+            else {
                 continue;
             };
 
@@ -227,7 +242,7 @@ pub enum SyncError {
     #[error("invalid reply from remote")]
     InvalidReply,
     #[error(transparent)]
-    RecordStore(#[from] RecordStoreError),
+    RecordStore(#[from] StoreError),
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
     #[error("failed to authorize message: {0}")]

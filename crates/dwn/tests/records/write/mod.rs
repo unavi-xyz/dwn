@@ -13,7 +13,7 @@ mod update;
 async fn test_write() {
     let (actor, mut dwn) = init_dwn();
 
-    let data = "hello, world!".as_bytes().to_owned();
+    let data = "Hello, world!".as_bytes().to_owned();
 
     let mut msg = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, data)
@@ -29,7 +29,7 @@ async fn test_write() {
 async fn test_require_auth() {
     let (actor, mut dwn) = init_dwn();
 
-    let data = "hello, world!".as_bytes().to_owned();
+    let data = "Hello, world!".as_bytes().to_owned();
 
     let msg = RecordsWriteBuilder::default()
         .data(TEXT_PLAIN, data)
@@ -44,7 +44,7 @@ async fn test_require_auth() {
 async fn test_write_invalid_record_id() {
     let (actor, mut dwn) = init_dwn();
 
-    let data = "hello, world!".as_bytes().to_owned();
+    let data = "Hello, world!".as_bytes().to_owned();
 
     let mut msg = RecordsWriteBuilder::default()
         .record_id("fake id".to_string())
@@ -63,7 +63,7 @@ async fn expect_success(target: &Did, dwn: &mut Dwn, msg: Message) {
 
     let found = dwn
         .record_store
-        .read(target, &record_id)
+        .read(dwn.data_store.as_ref(), target, &record_id)
         .expect("error reading record")
         .expect("record not found");
     assert_eq!(found.latest_entry, msg);
@@ -74,7 +74,7 @@ async fn expect_fail(target: &Did, dwn: &mut Dwn, msg: Message) {
     assert!(dwn.process_message(target, msg.clone()).await.is_err());
     assert!(dwn
         .record_store
-        .read(target, &record_id)
+        .read(dwn.data_store.as_ref(), target, &record_id)
         .expect("error reading record")
         .is_none());
 }

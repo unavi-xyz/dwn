@@ -7,9 +7,9 @@ fn test_nativedb_write_read() {
     let store = dwn_native_db::NativeDbStore::new_in_memory().unwrap();
 
     let msg = RecordsWriteBuilder::default().build().unwrap();
-    store.write(&did, msg.clone()).unwrap();
+    store.write(&store, &did, msg.clone()).unwrap();
 
-    let found = store.read(&did, &msg.record_id).unwrap().unwrap();
+    let found = store.read(&store, &did, &msg.record_id).unwrap().unwrap();
     assert_eq!(found.initial_entry, msg);
     assert_eq!(found.latest_entry, msg);
 }

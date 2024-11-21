@@ -1,4 +1,4 @@
-use dwn_core::message::Message;
+use dwn_core::message::{data::Data, Message};
 use native_db::{native_db, ToKey};
 use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,26 @@ pub struct LatestEntry {
     #[primary_key]
     pub key: (String, String),
     pub entry: Message,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[native_model(id = 3, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
+#[native_db]
+pub struct CidData {
+    /// (target, cid)
+    #[primary_key]
+    pub key: (String, String),
+    pub data: Option<Data>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[native_model(id = 4, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
+#[native_db]
+pub struct RefCount {
+    /// (target, cid)
+    #[primary_key]
+    pub key: (String, String),
+    pub count: usize,
 }
 
 #[cfg(test)]
