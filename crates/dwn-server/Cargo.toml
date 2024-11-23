@@ -1,26 +1,19 @@
 [package]
 name = "dwn-server"
-description = "Decentralized Web Node HTTP server."
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
 keywords.workspace = true
 
-[features]
-default = ["surrealdb"]
-surrealdb = ["dwn/surrealdb"]
-s3 = ["dwn/s3"]
-
 [dependencies]
-axum = "0.7.2"
-dwn.workspace = true
+axum = "0.7.7"
+axum-macros = "0.4.2"
+dwn = { path = "../dwn" }
 tracing.workspace = true
+xdid.workspace = true
 
 [dev-dependencies]
-didkit.workspace = true
-port_scanner = "0.1.5"
-serde_json.workspace = true
-surrealdb = { workspace = true, features = ["kv-mem"] }
-tokio.workspace = true
+port_check.workspace = true
+tokio = { version = "1.40.0", features = ["macros", "rt", "rt-multi-thread"] }
 tracing-test.workspace = true

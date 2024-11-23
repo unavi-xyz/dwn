@@ -1,6 +1,5 @@
 [package]
 name = "dwn"
-description = "Rust implementation of a Decentralized Web Node."
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
@@ -8,52 +7,29 @@ license.workspace = true
 keywords.workspace = true
 
 [features]
-default = ["surrealdb"]
-s3 = ["dep:rust-s3"]
-surrealdb = ["dep:surrealdb", "dep:tokio"]
+default = ["native_db"]
+native_db = ["dep:dwn-native-db"]
 
 [dependencies]
-aes-gcm = "0.10.3"
-anyhow = "1.0.82"
-base64 = "0.22.0"
-did-method-key = "0.2.2"
-didkit.workspace = true
-jsonschema = { version = "0.20.0", default-features = false, features = [
+base64.workspace = true
+dwn-core = { path = "../dwn-core" }
+dwn-native-db = { path = "../dwn-native-db", optional = true }
+jose-jwk = "0.1.2"
+jsonschema = { version = "0.24.0", default-features = false, features = [
+  "resolve-http",
   "draft201909",
   "draft202012",
 ] }
-libipld = { version = "0.16.0", features = ["serde-codec"] }
-libipld-cbor = "0.16.0"
-libipld-core = { version = "0.16.0", features = [
-  "serde",
-  "serde-codec",
-  "multibase",
-] }
-reqwest = { version = "0.12.4", default-features = false, features = [
-  "rustls-tls",
-  "charset",
-  "http2",
-  "macos-system-configuration",
-  "json",
-] }
-semver = { version = "1.0.22", features = ["serde"] }
-serde = { version = "1.0.198", features = ["derive"] }
-serde_ipld_dagcbor = "0.6.0"
+reqwest = "0.12.8"
+ring = "0.17.8"
 serde_json.workspace = true
-thiserror = "1.0.59"
+thiserror.workspace = true
 tracing.workspace = true
-
-rust-s3 = { version = "0.35.1", optional = true }
-surrealdb = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
-
-[target.'cfg(target_family = "wasm")'.dependencies]
-time = { version = "0.3.36", features = ["serde-well-known", "wasm-bindgen"] }
-
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
-time = { version = "0.3.31", features = ["serde-well-known"] }
+xdid.workspace = true
 
 [dev-dependencies]
-surrealdb = { workspace = true, features = ["kv-mem"] }
-tracing-subscriber.workspace = true
+hyper = { version = "1.5.0", features = ["http1", "server"] }
+hyper-util = "0.1.9"
+port_check.workspace = true
+tokio = { version = "1.40.0", features = ["macros", "rt", "rt-multi-thread"] }
 tracing-test.workspace = true

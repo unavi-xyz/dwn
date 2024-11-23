@@ -1,278 +1,141 @@
-use std::collections::HashSet;
-
-use didkit::JWK;
-use serde::{Deserialize, Serialize};
+use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use dwn_core::message::{
+    cid::{compute_cid_cbor, CidGenerationError},
+    AuthPayload, Header, Jws, Message, Signature,
+};
 use thiserror::Error;
-use tracing::debug;
+use xdid::{core::did::Did, methods::key::Signer};
 
-use crate::{
-    encode::EncodeError,
-    handlers::records::{handle_records_write, HandleWriteOptions},
-    message::{
-        descriptor::{
-            protocols::{ProtocolDefinition, ProtocolsFilter},
-            records::{FilterDateSort, RecordsFilter},
-            Descriptor,
-        },
-        AuthError, DwnRequest, Message, SignError,
-    },
-    reply::{MessageReply, StatusReply},
-    store::MessageStoreError,
-    HandleMessageError, DWN,
-};
+use crate::Dwn;
 
-mod builder;
-mod did_key;
-pub mod protocols;
-pub mod records;
-mod remote;
+use self::document_key::DocumentKey;
 
-pub use builder::*;
+pub mod document_key;
 
-use self::{
-    protocols::{ProtocolsConfigureBuilder, ProtocolsQueryBuilder},
-    records::{RecordsDeleteBuilder, RecordsQueryBuilder, RecordsReadBuilder, RecordsWriteBuilder},
-    remote::Remote,
-};
-
-/// Identity actor.
-/// Holds a DID and associated keys.
-/// Provides methods for interacting with the DID's DWN.
-#[derive(Clone)]
 pub struct Actor {
-    pub attestation: VerifiableCredential,
-    pub authorization: VerifiableCredential,
-    pub did: String,
-    pub dwn: DWN,
-    pub remotes: Vec<Remote>,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub struct VerifiableCredential {
-    pub jwk: JWK,
-    pub key_id: String,
+    pub did: Did,
+    pub auth_key: Option<DocumentKey>,
+    pub sign_key: Option<DocumentKey>,
+    /// Local DWN to interact with.
+    pub dwn: Option<Dwn>,
+    /// URL of remote DWN to interact with.
+    pub remote: Option<String>,
 }
 
 impl Actor {
-    /// Generates a new `did:key` actor.
-    pub fn new_did_key(dwn: DWN) -> Result<Actor, did_key::DidKeygenError> {
-        let did_key = did_key::DidKey::new()?;
-        Ok(Actor {
-            attestation: VerifiableCredential {
-                jwk: did_key.jwk.clone(),
-                key_id: did_key.key_id.clone(),
-            },
-            authorization: VerifiableCredential {
-                jwk: did_key.jwk,
-                key_id: did_key.key_id,
-            },
-            did: did_key.did,
-            dwn,
-            remotes: Vec::new(),
+    pub fn new(did: Did) -> Self {
+        Self {
+            did,
+            auth_key: None,
+            sign_key: None,
+            dwn: None,
+            remote: None,
+        }
+    }
+
+    /// Signs the message with a [DID assertion](https://www.w3.org/TR/did-core/#assertion) key.
+    pub fn sign(&self, msg: &mut Message) -> Result<(), SignError> {
+        let Some(doc_key) = self.sign_key.as_ref() else {
+            return Err(SignError::MissingKey);
+        };
+
+        let header = Header {
+            alg: doc_key.alg,
+            kid: doc_key.url.clone(),
+        };
+
+        let cid = compute_cid_cbor(&msg.descriptor)?;
+
+        let signature = sign_jws(doc_key.key.as_ref(), &header, &cid)?;
+
+        msg.attestation = Some(Jws {
+            payload: BASE64_URL_SAFE_NO_PAD.encode(cid),
+            signatures: vec![Signature {
+                header,
+                signature: BASE64_URL_SAFE_NO_PAD.encode(signature),
+            }],
+        });
+
+        Ok(())
+    }
+
+    /// Authorizes the message with a [DID authentication](https://www.w3.org/TR/did-core/#authentication) key.
+    /// If the message has been signed, the assertion will also be authorized.
+    pub fn authorize(&self, msg: &mut Message) -> Result<(), SignError> {
+        let Some(doc_key) = self.auth_key.as_ref() else {
+            return Err(SignError::MissingKey);
+        };
+
+        let header = Header {
+            alg: doc_key.alg,
+            kid: doc_key.url.clone(),
+        };
+
+        let descriptor_cid = compute_cid_cbor(&msg.descriptor)?;
+
+        let attestation_cid = match &msg.attestation {
+            // Spec says to use the "attestation string"... but I don't know what
+            // that means, so we use the attestation payload.
+            Some(v) => Some(compute_cid_cbor(&v.payload)?),
+            None => None,
+        };
+
+        let auth_payload = serde_json::to_string(&AuthPayload {
+            descriptor_cid,
+            permissions_grant_cid: None,
+            attestation_cid,
         })
-    }
+        .unwrap();
 
-    pub fn add_remote(&mut self, remote_url: String) {
-        let remote = Remote::new(remote_url.clone());
-        self.remotes.push(remote);
-    }
+        let signature = sign_jws(doc_key.key.as_ref(), &header, &auth_payload)?;
 
-    pub fn remove_remote(&mut self, remote_url: &str) {
-        self.remotes.retain(|remote| remote.url() != remote_url);
-    }
-
-    /// Sync the local DWN with the actor's remote DWNs.
-    pub async fn sync(&self) -> Result<(), SyncError> {
-        // Push to remotes.
-        for remote in &self.remotes {
-            while let Ok(message) = remote.receiver.write().await.try_recv() {
-                let request = DwnRequest {
-                    message,
-                    target: self.did.clone(),
-                };
-
-                if let Err(e) = self.send(request, remote.url()).await {
-                    debug!("Failed to send message to remote DWN: {:?}", e);
-                }
-            }
-        }
-
-        // Pull all local records from remotes.
-        let mut record_ids = HashSet::new();
-
-        for message in self
-            .dwn
-            .message_store
-            .query_records(self.did.clone(), None, true, RecordsFilter::default())
-            .await?
-        {
-            record_ids.insert(message.record_id);
-        }
-
-        for remote in &self.remotes {
-            let url = remote.url();
-
-            for record_id in record_ids.iter() {
-                let message = self
-                    .query_records(RecordsFilter {
-                        record_id: Some(record_id.clone()),
-                        date_sort: Some(FilterDateSort::CreatedDescending),
-                        ..Default::default()
-                    })
-                    .build()?;
-
-                let request = DwnRequest {
-                    message,
-                    target: self.did.clone(),
-                };
-
-                let reply = match self.send(request, url).await? {
-                    MessageReply::Query(reply) => reply,
-                    _ => return Err(SyncError::ProcessMessage(ProcessMessageError::InvalidReply)),
-                };
-
-                if let Some(latest) = reply.entries.first() {
-                    match &latest.descriptor {
-                        Descriptor::RecordsWrite(_) => {
-                            handle_records_write(
-                                &self.dwn.client,
-                                &self.dwn.data_store,
-                                &self.dwn.message_store,
-                                DwnRequest {
-                                    target: self.did.clone(),
-                                    message: latest.clone(),
-                                },
-                                HandleWriteOptions {
-                                    ignore_parent_id: true,
-                                },
-                            )
-                            .await?;
-                        }
-                        _ => {
-                            self.dwn
-                                .process_message(DwnRequest {
-                                    target: self.did.clone(),
-                                    message: latest.clone(),
-                                })
-                                .await?;
-                        }
-                    }
-                }
-            }
-        }
+        msg.authorization = Some(Jws {
+            payload: BASE64_URL_SAFE_NO_PAD.encode(auth_payload),
+            signatures: vec![Signature {
+                header,
+                signature: BASE64_URL_SAFE_NO_PAD.encode(signature),
+            }],
+        });
 
         Ok(())
     }
-
-    /// Queue a message to be sent to remote DWNs.
-    async fn remote_queue(&self, message: &Message) -> Result<(), HandleMessageError> {
-        for remote in &self.remotes {
-            remote
-                .sender
-                .send(message.clone())
-                .await
-                .map_err(Box::new)?;
-        }
-
-        Ok(())
-    }
-
-    /// Process a message in the local DWN.
-    async fn process_message(&self, message: Message) -> Result<MessageReply, HandleMessageError> {
-        match &message.descriptor {
-            Descriptor::ProtocolsConfigure(_) => {
-                self.remote_queue(&message).await?;
-            }
-            Descriptor::RecordsDelete(_) => {
-                self.remote_queue(&message).await?;
-            }
-            Descriptor::RecordsWrite(_) => {
-                self.remote_queue(&message).await?;
-            }
-            _ => {}
-        }
-
-        self.dwn
-            .process_message(DwnRequest {
-                target: self.did.clone(),
-                message,
-            })
-            .await
-    }
-
-    /// Sends a message to a remote DWN.
-    async fn send(&self, request: DwnRequest, url: &str) -> Result<MessageReply, reqwest::Error> {
-        debug!("Sending message to {}", url);
-
-        self.dwn
-            .client
-            .post(url)
-            .json(&request)
-            .send()
-            .await?
-            .json::<MessageReply>()
-            .await
-    }
-
-    pub fn create_record(&self) -> RecordsWriteBuilder {
-        RecordsWriteBuilder::new(self)
-    }
-
-    pub fn delete_record(&self, record_id: String) -> RecordsDeleteBuilder {
-        RecordsDeleteBuilder::new(self, record_id)
-    }
-
-    pub fn query_records(&self, filter: RecordsFilter) -> RecordsQueryBuilder {
-        RecordsQueryBuilder::new(self, filter)
-    }
-
-    pub fn read_record(&self, record_id: String) -> RecordsReadBuilder {
-        RecordsReadBuilder::new(self, record_id)
-    }
-
-    pub fn update_record(&self, record_id: String, parent_entry_id: String) -> RecordsWriteBuilder {
-        RecordsWriteBuilder::new_update(self, record_id, parent_entry_id)
-    }
-
-    pub fn register_protocol(&self, definition: ProtocolDefinition) -> ProtocolsConfigureBuilder {
-        ProtocolsConfigureBuilder::new(self, Some(definition))
-    }
-
-    pub fn query_protocols(&self, filter: ProtocolsFilter) -> ProtocolsQueryBuilder {
-        ProtocolsQueryBuilder::new(self, filter)
-    }
 }
 
-pub struct CreateResult {
-    pub record_id: String,
-    pub reply: StatusReply,
+fn sign_jws(key: &dyn Signer, header: &Header, payload: &str) -> Result<Vec<u8>, SignError> {
+    let header_str = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_string(&header).unwrap());
+    let payload = BASE64_URL_SAFE_NO_PAD.encode(payload);
+    let input = header_str + "." + &payload;
+    let signature = key.sign(input.as_bytes())?;
+    Ok(signature)
 }
 
-pub struct UpdateResult {
-    pub entry_id: String,
-    pub reply: StatusReply,
+#[derive(Error, Debug)]
+pub enum SignError {
+    #[error(transparent)]
+    CidGeneration(#[from] CidGenerationError),
+    #[error("missing signing key")]
+    MissingKey,
+    #[error("failed to sign message")]
+    Sign(#[from] xdid::methods::key::SignError),
 }
 
-#[derive(Debug, Error)]
-pub enum SyncError {
-    #[error(transparent)]
-    MessageStore(#[from] MessageStoreError),
-    #[error(transparent)]
-    Reqwest(#[from] reqwest::Error),
-    #[error(transparent)]
-    ProcessMessage(#[from] ProcessMessageError),
-    #[error(transparent)]
-    HandleMessage(#[from] HandleMessageError),
-}
+#[cfg(test)]
+mod tests {
+    use dwn_core::message::descriptor::RecordsWriteBuilder;
+    use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
 
-#[derive(Debug, Error)]
-pub enum PrepareError {
-    #[error(transparent)]
-    Auth(#[from] AuthError),
-    #[error(transparent)]
-    Sign(#[from] SignError),
-    #[error(transparent)]
-    Encode(#[from] EncodeError),
-    #[error("Encryption error")]
-    Encryption,
+    use super::*;
+
+    #[test]
+    fn test_sign() {
+        let key = P256KeyPair::generate();
+        let did = key.public().to_did();
+
+        let mut actor = Actor::new(did.clone());
+        actor.sign_key = Some(key.into());
+
+        let mut msg = RecordsWriteBuilder::default().build().unwrap();
+        actor.sign(&mut msg).unwrap();
+        assert!(msg.attestation.is_some());
+    }
 }

@@ -1,82 +1,42 @@
-use std::sync::Arc;
-
-use libipld::Cid;
-
-use crate::{
-    message::{
-        descriptor::{
-            records::{FilterDateSort, RecordsFilter},
-            Descriptor,
-        },
-        DwnRequest,
-    },
-    reply::{MessageReply, RecordsReadReply, Status},
-    store::{DataStore, MessageStore},
-    HandleMessageError,
+use dwn_core::{
+    message::{descriptor::Descriptor, Message},
+    reply::RecordsReadReply,
+    store::{DataStore, RecordStore},
 };
+use reqwest::StatusCode;
+use tracing::warn;
+use xdid::core::did::Did;
 
-pub async fn handle_records_read(
-    data_store: &Arc<dyn DataStore>,
-    message_store: &Arc<dyn MessageStore>,
-    DwnRequest { target, message }: DwnRequest,
-) -> Result<MessageReply, HandleMessageError> {
-    let authorized = message.is_authorized(&target).await;
+pub fn handle(
+    ds: &dyn DataStore,
+    rs: &dyn RecordStore,
+    target: &Did,
+    msg: Message,
+) -> Result<RecordsReadReply, StatusCode> {
+    debug_assert!(matches!(msg.descriptor, Descriptor::RecordsRead(_)));
 
-    let descriptor = match &message.descriptor {
-        Descriptor::RecordsRead(descriptor) => descriptor,
-        _ => {
-            return Err(HandleMessageError::InvalidDescriptor(
-                "Not a RecordsRead message".to_string(),
-            ));
-        }
+    let Descriptor::RecordsRead(desc) = msg.descriptor else {
+        panic!("invalid descriptor: {:?}", msg.descriptor);
     };
 
-    let messages = message_store
-        .query_records(
-            target.clone(),
-            message.author(),
-            authorized,
-            RecordsFilter {
-                record_id: Some(descriptor.record_id.clone()),
-                date_sort: Some(FilterDateSort::CreatedDescending),
-                ..Default::default()
-            },
-        )
-        .await?;
+    let record = rs.read(ds, target, &desc.record_id).map_err(|e| {
+        warn!("Failed to read record {}: {:?}", msg.record_id, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    let mut latest = messages
-        .iter()
-        .find(|m| {
-            matches!(
-                m.descriptor,
-                Descriptor::RecordsDelete(_) | Descriptor::RecordsWrite(_)
-            )
-        })
-        .or(messages.last())
-        .ok_or(HandleMessageError::InvalidDescriptor(
-            "Record not found".to_string(),
-        ))?
-        .to_owned();
+    let authorized = msg.authorization.is_some();
 
-    // Read data.
-    latest.data = match &latest.descriptor {
-        Descriptor::RecordsWrite(descriptor) => {
-            if let Some(data_cid) = &descriptor.data_cid {
-                let data_cid = Cid::try_from(data_cid.as_str()).map_err(|e| {
-                    HandleMessageError::InvalidDescriptor(format!("Invalid data CID: {}", e))
-                })?;
-                let res = data_store.get(data_cid.to_string()).await?;
-                res.map(|res| res.into())
+    Ok(RecordsReadReply {
+        entry: record.map(|r| r.latest_entry).and_then(|m| {
+            if let Descriptor::RecordsWrite(d) = &m.descriptor {
+                if d.published != Some(true) && !authorized {
+                    None
+                } else {
+                    Some(m)
+                }
             } else {
                 None
             }
-        }
-        _ => None,
-    };
-
-    Ok(RecordsReadReply {
-        record: Box::new(latest),
-        status: Status::ok(),
-    }
-    .into())
+        }),
+    })
 }

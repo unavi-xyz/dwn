@@ -1,42 +1,36 @@
-use std::sync::Arc;
-
-use crate::{
-    message::{descriptor::Descriptor, DwnRequest},
-    reply::{MessageReply, QueryReply, Status},
-    store::MessageStore,
-    HandleMessageError,
+use dwn_core::{
+    message::{descriptor::Descriptor, Message},
+    reply::RecordsQueryReply,
+    store::RecordStore,
 };
+use reqwest::StatusCode;
+use tracing::{debug, warn};
+use xdid::core::did::Did;
 
-pub async fn handle_records_query(
-    message_store: &Arc<dyn MessageStore>,
-    DwnRequest {
-        target,
-        mut message,
-    }: DwnRequest,
-) -> Result<MessageReply, HandleMessageError> {
-    let authorized = message.is_authorized(&target).await;
+pub async fn handle(
+    rs: &dyn RecordStore,
+    target: &Did,
+    msg: Message,
+) -> Result<RecordsQueryReply, StatusCode> {
+    debug_assert!(matches!(msg.descriptor, Descriptor::RecordsQuery(_)));
 
-    let filter = match &mut message.descriptor {
-        Descriptor::RecordsQuery(descriptor) => descriptor.filter.take(),
-        _ => {
-            return Err(HandleMessageError::InvalidDescriptor(
-                "Not a RecordsQuery message".to_string(),
-            ))
-        }
+    let authorized = msg.authorization.is_some();
+
+    let Descriptor::RecordsQuery(desc) = msg.descriptor else {
+        panic!("invalid descriptor: {:?}", msg.descriptor);
     };
 
-    let entries = message_store
-        .query_records(
-            target,
-            message.author(),
-            authorized,
-            filter.unwrap_or_default(),
-        )
-        .await?;
-
-    Ok(QueryReply {
-        entries,
-        status: Status::ok(),
+    if let Some(filter) = &desc.filter {
+        if filter.protocol.is_some() && filter.protocol_version.is_none() {
+            debug!("No protocol version specified");
+            return Err(StatusCode::BAD_REQUEST);
+        }
     }
-    .into())
+
+    rs.query(target, &desc.filter.unwrap_or_default(), authorized)
+        .map(|entries| RecordsQueryReply { entries })
+        .map_err(|e| {
+            warn!("Query failed: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })
 }
