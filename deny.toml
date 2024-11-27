@@ -38,10 +38,6 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 allow = ["OpenSSL"]
 crate = "ring"
 
-[[licenses.exceptions]]
-allow = ["Unicode-DFS-2016"]
-crate = "unicode-ident"
-
 [advisories]
 version = 2
 ignore = [

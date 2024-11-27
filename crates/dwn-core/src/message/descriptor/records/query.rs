@@ -15,7 +15,7 @@ use crate::message::{
 pub struct RecordsQuery {
     interface: Interface,
     method: Method,
-    pub filter: Option<Filter>,
+    pub filter: Option<RecordFilter>,
     #[serde(with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
 }
@@ -24,7 +24,7 @@ pub struct RecordsQuery {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct Filter {
+pub struct RecordFilter {
     pub attester: Option<Did>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub data_format: Option<mime::Mime>,
@@ -56,7 +56,7 @@ pub enum DateSort {
 
 #[derive(Default)]
 pub struct RecordsQueryBuilder {
-    filter: Filter,
+    filter: RecordFilter,
 }
 
 impl RecordsQueryBuilder {

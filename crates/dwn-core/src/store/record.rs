@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use xdid::core::did::Did;
 
 use crate::message::{
-    descriptor::{Filter, RecordsSync},
+    descriptor::{RecordFilter, RecordsSync},
     Message,
 };
 
@@ -21,7 +21,7 @@ pub trait RecordStore: Send + Sync {
     fn query(
         &self,
         target: &Did,
-        filter: &Filter,
+        filter: &RecordFilter,
         authorized: bool,
     ) -> Result<Vec<Message>, StoreError>;
 

@@ -58,11 +58,11 @@ pub async fn handle(
 
         // Ensure the message is newer than the stored entry.
         // If the dates match, compare the entry ids lexicographically.
-        if desc.message_timestamp < *prev.latest_entry.descriptor.message_timestamp() {
+        if desc.message_timestamp < *prev.latest_entry.descriptor.message_timestamp().unwrap() {
             debug!(
                 "Message created after stored entry: {} < {}",
                 desc.message_timestamp,
-                prev.latest_entry.descriptor.message_timestamp()
+                prev.latest_entry.descriptor.message_timestamp().unwrap()
             );
             return Err(StatusCode::CONFLICT);
         }
@@ -79,7 +79,7 @@ pub async fn handle(
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
-        if (desc.message_timestamp == *prev.latest_entry.descriptor.message_timestamp())
+        if (desc.message_timestamp == *prev.latest_entry.descriptor.message_timestamp().unwrap())
             && (computed_entry_id < prev_id)
         {
             return Ok(());

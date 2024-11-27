@@ -109,8 +109,8 @@ async fn test_query_date_filter() {
 
     let query = RecordsQueryBuilder::default()
         .message_timestamp(DateFilter {
-            from: *msg_2.descriptor.message_timestamp(),
-            to: *msg_3.descriptor.message_timestamp(),
+            from: *msg_2.descriptor.message_timestamp().unwrap(),
+            to: *msg_3.descriptor.message_timestamp().unwrap(),
         })
         .build()
         .unwrap();

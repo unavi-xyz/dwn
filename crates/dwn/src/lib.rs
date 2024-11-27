@@ -120,6 +120,14 @@ impl Dwn {
         };
 
         let res = match &msg.descriptor {
+            Descriptor::ProtocolsConfigure(_) => {
+                // TODO
+                None
+            }
+            Descriptor::ProtocolsQuery(_) => {
+                // TODO
+                None
+            }
             Descriptor::RecordsQuery(_) => {
                 handlers::records::query::handle(self.record_store.as_ref(), target, msg)
                     .await

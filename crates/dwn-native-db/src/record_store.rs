@@ -1,6 +1,6 @@
 use dwn_core::{
     message::{
-        descriptor::{DateSort, Descriptor, Filter, RecordId, RecordsSync},
+        descriptor::{DateSort, Descriptor, RecordFilter, RecordId, RecordsSync},
         Message,
     },
     store::{DataStore, Record, RecordStore, StoreError},
@@ -80,7 +80,7 @@ impl RecordStore for NativeDbStore<'_> {
     fn query(
         &self,
         target: &Did,
-        filter: &Filter,
+        filter: &RecordFilter,
         authorized: bool,
     ) -> Result<Vec<Message>, StoreError> {
         debug!("querying {}", target);
@@ -177,11 +177,11 @@ impl RecordStore for NativeDbStore<'_> {
             DateSort::Ascending => a
                 .descriptor
                 .message_timestamp()
-                .cmp(b.descriptor.message_timestamp()),
+                .cmp(&b.descriptor.message_timestamp()),
             DateSort::Descending => b
                 .descriptor
                 .message_timestamp()
-                .cmp(a.descriptor.message_timestamp()),
+                .cmp(&a.descriptor.message_timestamp()),
         });
 
         Ok(found)

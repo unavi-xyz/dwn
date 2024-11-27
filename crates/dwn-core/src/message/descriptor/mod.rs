@@ -3,8 +3,10 @@ use std::fmt::Display;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+mod protocols;
 mod records;
 
+pub use protocols::*;
 pub use records::*;
 use time::OffsetDateTime;
 
@@ -13,6 +15,8 @@ use super::cid::{compute_cid_cbor, CidGenerationError};
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Descriptor {
+    ProtocolsConfigure(Box<ProtocolsConfigure>),
+    ProtocolsQuery(Box<ProtocolsQuery>),
     RecordsQuery(Box<RecordsQuery>),
     RecordsRead(Box<RecordsRead>),
     RecordsSync(Box<RecordsSync>),
@@ -34,12 +38,14 @@ impl Descriptor {
         compute_cid_cbor(&generator)
     }
 
-    pub fn message_timestamp(&self) -> &OffsetDateTime {
+    pub fn message_timestamp(&self) -> Option<&OffsetDateTime> {
         match self {
-            Descriptor::RecordsQuery(d) => &d.message_timestamp,
-            Descriptor::RecordsRead(d) => &d.message_timestamp,
-            Descriptor::RecordsSync(d) => &d.message_timestamp,
-            Descriptor::RecordsWrite(d) => &d.message_timestamp,
+            Descriptor::ProtocolsConfigure(_) => None,
+            Descriptor::ProtocolsQuery(_) => None,
+            Descriptor::RecordsQuery(d) => Some(&d.message_timestamp),
+            Descriptor::RecordsRead(d) => Some(&d.message_timestamp),
+            Descriptor::RecordsSync(d) => Some(&d.message_timestamp),
+            Descriptor::RecordsWrite(d) => Some(&d.message_timestamp),
         }
     }
 }
