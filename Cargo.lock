@@ -1581,7 +1581,7 @@ dependencies = [
 [[package]]
 name = "native_db"
 version = "0.8.1"
-source = "git+https://github.com/vincent-herlemont/native_db?branch=main#7c0c46e8cab6b47a47963901ccdbf079fc68dd2f"
+source = "git+https://github.com/vincent-herlemont/native_db?branch=main#5b7fa7c4f3cec4e533238a618ed43ff3d420e7e9"
 dependencies = [
  "native_db_macro",
  "native_model",
@@ -1595,7 +1595,7 @@ dependencies = [
 [[package]]
 name = "native_db_macro"
 version = "0.8.1"
-source = "git+https://github.com/vincent-herlemont/native_db?branch=main#7c0c46e8cab6b47a47963901ccdbf079fc68dd2f"
+source = "git+https://github.com/vincent-herlemont/native_db?branch=main#5b7fa7c4f3cec4e533238a618ed43ff3d420e7e9"
 dependencies = [
  "proc-macro2",
  "quote",
