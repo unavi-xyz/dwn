@@ -574,7 +574,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dwn"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "base64",
  "dwn-core",
@@ -596,7 +596,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-core"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "base64",
  "ipld-core",
@@ -616,7 +616,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-native-db"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "dwn-core",
  "native_db",
@@ -628,7 +628,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-server"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "axum",
  "axum-macros",

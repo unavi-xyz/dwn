@@ -10,7 +10,7 @@ keywords.workspace = true
 [dependencies]
 axum = "0.7.7"
 axum-macros = "0.4.2"
-dwn = { version = "0.0.10", path = "../dwn" }
+dwn = { version = "0.1.0", path = "../dwn" }
 tracing.workspace = true
 xdid.workspace = true
 
