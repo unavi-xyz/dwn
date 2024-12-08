@@ -1,5 +1,6 @@
 [package]
 name = "dwn"
+description = "Rust implementation of a Decentralized Web Node."
 version.workspace = true
 edition.workspace = true
 repository.workspace = true

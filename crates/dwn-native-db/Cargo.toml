@@ -1,5 +1,6 @@
 [package]
 name = "dwn-native-db"
+description = "DWN backend implementation using native_db"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
