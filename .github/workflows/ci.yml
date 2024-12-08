@@ -34,7 +34,6 @@ jobs:
       - run: nix develop -c cargo fmt --all
       - run: nix develop -c cargo ws exec --no-bail -- cargo rdme --force
       - run: nix develop -c prettier -w .
-      - run: nix fmt
       - uses: EndBug/add-and-commit@v9
         with:
           message: "chore: lint"
