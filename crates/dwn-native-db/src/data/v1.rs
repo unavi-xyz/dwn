@@ -4,8 +4,8 @@ use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[native_model(id = 1, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 #[native_db]
+#[native_model(id = 1, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 pub struct InitialEntry {
     /// (target, record id)
     #[primary_key]
@@ -14,8 +14,8 @@ pub struct InitialEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[native_model(id = 2, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 #[native_db]
+#[native_model(id = 2, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 pub struct LatestEntry {
     /// (target, record id)
     #[primary_key]
@@ -24,8 +24,8 @@ pub struct LatestEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[native_model(id = 3, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 #[native_db]
+#[native_model(id = 3, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 pub struct CidData {
     /// (target, cid)
     #[primary_key]
@@ -34,8 +34,8 @@ pub struct CidData {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[native_model(id = 4, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 #[native_db]
+#[native_model(id = 4, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
 pub struct RefCount {
     /// (target, cid)
     #[primary_key]
