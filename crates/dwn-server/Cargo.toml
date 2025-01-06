@@ -8,7 +8,7 @@ license.workspace = true
 keywords.workspace = true
 
 [dependencies]
-axum = "0.7.7"
+axum = "0.8.1"
 axum-macros = "0.4.2"
 dwn = { version = "0.1.0", path = "../dwn" }
 tracing.workspace = true
