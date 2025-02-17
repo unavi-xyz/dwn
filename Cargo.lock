@@ -1581,7 +1581,7 @@ dependencies = [
 [[package]]
 name = "native_db"
 version = "0.8.1"
-source = "git+https://github.com/vincent-herlemont/native_db#ecc25ff8cb96c989801ad144fe7a1ef05cd6785e"
+source = "git+https://github.com/vincent-herlemont/native_db#6343624ecfb4597b3917fe76b620985a683bcaad"
 dependencies = [
  "native_db_macro",
  "native_model",
@@ -1595,7 +1595,7 @@ dependencies = [
 [[package]]
 name = "native_db_macro"
 version = "0.8.1"
-source = "git+https://github.com/vincent-herlemont/native_db#ecc25ff8cb96c989801ad144fe7a1ef05cd6785e"
+source = "git+https://github.com/vincent-herlemont/native_db#6343624ecfb4597b3917fe76b620985a683bcaad"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2006,9 +2006,9 @@ dependencies = [
 
 [[package]]
 name = "redb"
-version = "2.2.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84b1de48a7cf7ba193e81e078d17ee2b786236eed1d3f7c60f8a09545efc4925"
+checksum = "ea0a72cd7140de9fc3e318823b883abf819c20d478ec89ce880466dc2ef263c6"
 dependencies = [
  "libc",
 ]
