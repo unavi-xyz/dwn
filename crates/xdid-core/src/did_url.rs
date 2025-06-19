@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     did::Did,
-    uri::{is_segment, Segment},
+    uri::{Segment, is_segment},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

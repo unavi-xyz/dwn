@@ -13,12 +13,12 @@ mod record_store;
 pub struct NativeDbStore<'a>(Arc<Database<'a>>);
 
 impl NativeDbStore<'_> {
-    pub fn new(path: impl AsRef<Path>) -> Result<Self, db_type::Error> {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self, Box<db_type::Error>> {
         let db = Builder::new().create(&data::MODELS, path)?;
         Ok(Self(Arc::new(db)))
     }
 
-    pub fn new_in_memory() -> Result<Self, db_type::Error> {
+    pub fn new_in_memory() -> Result<Self, Box<db_type::Error>> {
         let db = Builder::new().create_in_memory(&data::MODELS)?;
         Ok(Self(Arc::new(db)))
     }

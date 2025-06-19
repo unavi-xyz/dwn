@@ -46,7 +46,7 @@ impl Document {
             match method {
                 VerificationMethod::Map(map) => {
                     if map.id == *url {
-                        return Some(map.clone());
+                        return Some(*map.clone());
                     }
                 }
                 VerificationMethod::RelativeUrl(relative_url) => {
@@ -89,7 +89,7 @@ pub enum VerificationRole {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum VerificationMethod {
-    Map(VerificationMethodMap),
+    Map(Box<VerificationMethodMap>),
     RelativeUrl(RelativeDidUrl),
     Url(DidUrl),
 }

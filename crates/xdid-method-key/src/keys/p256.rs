@@ -1,12 +1,12 @@
 use jose_jwk::Jwk;
 use p256::{
-    elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
     SecretKey,
+    elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
 };
 use rand::rngs::OsRng;
 use ring::{
     rand::SystemRandom,
-    signature::{EcdsaKeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
+    signature::{ECDSA_P256_SHA256_ASN1_SIGNING, EcdsaKeyPair},
 };
 
 use super::{DidKeyPair, KeyParser, Multicodec, PublicKey, SignError, Signer, WithMulticodec};
@@ -97,7 +97,7 @@ impl Multicodec for P256Codec {
 
 #[cfg(test)]
 mod tests {
-    use ring::signature::{VerificationAlgorithm, ECDSA_P256_SHA256_ASN1};
+    use ring::signature::{ECDSA_P256_SHA256_ASN1, VerificationAlgorithm};
 
     use crate::parser::DidKeyParser;
 
@@ -135,12 +135,14 @@ mod tests {
         let msg = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
         let signature = pair.sign(&msg).unwrap();
 
-        assert!(ECDSA_P256_SHA256_ASN1
-            .verify(
-                pair.public_bytes().to_vec().as_slice().into(),
-                msg.as_slice().into(),
-                signature.as_slice().into()
-            )
-            .is_ok());
+        assert!(
+            ECDSA_P256_SHA256_ASN1
+                .verify(
+                    pair.public_bytes().to_vec().as_slice().into(),
+                    msg.as_slice().into(),
+                    signature.as_slice().into()
+                )
+                .is_ok()
+        );
     }
 }

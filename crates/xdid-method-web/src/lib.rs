@@ -1,7 +1,7 @@
 //! [xdid](https://github.com/unavi-xyz/xdid) implementation of [did:web](https://w3c-ccg.github.io/did-method-web/).
 
 use reqwest::{Client, ClientBuilder};
-use xdid_core::{did::Did, document::Document, Method, ResolutionError};
+use xdid_core::{Method, ResolutionError, did::Did, document::Document};
 
 pub use reqwest;
 

@@ -1,5 +1,5 @@
 use thiserror::Error;
-use xdid_core::{did::Did, document::Document, Method, ResolutionError};
+use xdid_core::{Method, ResolutionError, did::Did, document::Document};
 
 /// Resolves DIDs using a set of provided methods.
 pub struct DidResolver {
@@ -43,10 +43,10 @@ impl DidResolver {
 mod tests {
     use std::{net::SocketAddr, str::FromStr, sync::Arc};
 
-    use hyper::{server::conn::http1::Builder, service::service_fn, Response};
+    use hyper::{Response, server::conn::http1::Builder, service::service_fn};
     use hyper_util::rt::TokioIo;
     use tokio::net::TcpListener;
-    use xdid_method_key::{p256::P256KeyPair, DidKeyPair, PublicKey};
+    use xdid_method_key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
     use super::*;
 

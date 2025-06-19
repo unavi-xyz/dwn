@@ -2,10 +2,10 @@
 
 use parser::DidKeyParser;
 use xdid_core::{
+    Method, ResolutionError,
     did::Did,
     did_url::DidUrl,
     document::{Document, VerificationMethod, VerificationMethodMap},
-    Method, ResolutionError,
 };
 
 mod keys;
