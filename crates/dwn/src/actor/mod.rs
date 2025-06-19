@@ -1,7 +1,7 @@
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use dwn_core::message::{
-    cid::{compute_cid_cbor, CidGenerationError},
     AuthPayload, Header, Jws, Message, Signature,
+    cid::{CidGenerationError, compute_cid_cbor},
 };
 use thiserror::Error;
 use xdid::{core::did::Did, methods::key::Signer};
@@ -122,7 +122,7 @@ pub enum SignError {
 #[cfg(test)]
 mod tests {
     use dwn_core::message::descriptor::RecordsWriteBuilder;
-    use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
+    use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
     use super::*;
 

@@ -8,7 +8,6 @@ targets = [
 ]
 
 [licenses]
-version = 2
 allow = [
   "Apache-2.0 WITH LLVM-exception",
   "Apache-2.0",
@@ -21,6 +20,7 @@ allow = [
   "Unicode-3.0",
   "Unlicense",
 ]
+version = 2
 
 [[licenses.clarify]]
 crate = "ring"
@@ -39,16 +39,16 @@ allow = ["OpenSSL"]
 crate = "ring"
 
 [advisories]
-version = 2
 ignore = [
   "RUSTSEC-2023-0071", # rsa sidechannel
 ]
+version = 2
 
 [bans]
 deny = [{ name = "tokio", deny-multiple-versions = true }]
 
 [sources]
-unknown-registry = "deny"
-unknown-git = "deny"
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = ["https://github.com/vincent-herlemont/native_db"]
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+unknown-git = "deny"
+unknown-registry = "deny"

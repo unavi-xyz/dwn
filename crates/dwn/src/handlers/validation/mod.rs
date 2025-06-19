@@ -1,6 +1,6 @@
-use dwn_core::message::{cid::CidGenerationError, descriptor::Descriptor, Message};
+use dwn_core::message::{Message, cid::CidGenerationError, descriptor::Descriptor};
 use thiserror::Error;
-use xdid::core::{did::Did, ResolutionError};
+use xdid::core::{ResolutionError, did::Did};
 
 mod attestation;
 mod authorization;

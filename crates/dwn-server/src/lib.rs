@@ -7,13 +7,13 @@
 use std::str::FromStr;
 
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     routing::put,
-    Json, Router,
 };
 use axum_macros::debug_handler;
-use dwn::{core::message::Message, Dwn};
+use dwn::{Dwn, core::message::Message};
 use tracing::debug;
 use xdid::core::did::Did;
 

@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use xdid::core::did::Did;
 
 use crate::message::{
-    descriptor::{RecordFilter, RecordsSync},
     Message,
+    descriptor::{RecordFilter, RecordsSync},
 };
 
 use super::{DataStore, StoreError};

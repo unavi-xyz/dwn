@@ -1,7 +1,7 @@
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use dwn_core::message::Jws;
-use jose_jwk::{jose_jwa::Signing, EcCurves, Key};
-use ring::signature::{VerificationAlgorithm, ECDSA_P256_SHA256_ASN1, ECDSA_P384_SHA384_ASN1};
+use jose_jwk::{EcCurves, Key, jose_jwa::Signing};
+use ring::signature::{ECDSA_P256_SHA256_ASN1, ECDSA_P384_SHA384_ASN1, VerificationAlgorithm};
 use tracing::debug;
 use xdid::{
     core::{did::Did, document::VerificationRole},

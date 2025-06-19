@@ -1,6 +1,6 @@
-use dwn_core::message::{data::Data, Message};
-use native_db::{native_db, ToKey};
-use native_model::{native_model, Model};
+use dwn_core::message::{Message, data::Data};
+use native_db::{ToKey, native_db};
+use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

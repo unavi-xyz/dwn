@@ -5,8 +5,8 @@ use dwn_core::{
 use xdid::core::did::Did;
 
 use crate::{
-    data::{CidData, RefCount},
     NativeDbStore,
+    data::{CidData, RefCount},
 };
 
 impl DataStore for NativeDbStore<'_> {

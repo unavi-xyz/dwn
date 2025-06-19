@@ -1,5 +1,5 @@
 use dwn_core::{
-    message::{descriptor::Descriptor, Message},
+    message::{Message, descriptor::Descriptor},
     reply::RecordsSyncReply,
     store::{DataStore, RecordStore, StoreError},
 };

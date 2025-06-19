@@ -1,6 +1,6 @@
 use std::collections::TryReserveError;
 
-use ipld_core::cid::{multihash::Multihash, Cid};
+use ipld_core::cid::{Cid, multihash::Multihash};
 use serde::Serialize;
 use serde_ipld_dagcbor::EncodeError;
 use sha3::{Digest, Sha3_256};

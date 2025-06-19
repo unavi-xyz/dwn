@@ -1,6 +1,6 @@
 use dwn_core::message::descriptor::RecordsWriteBuilder;
 use tracing_test::traced_test;
-use xdid::methods::key::{p256::P256KeyPair, DidKeyPair};
+use xdid::methods::key::{DidKeyPair, p256::P256KeyPair};
 
 use crate::utils::init_dwn;
 

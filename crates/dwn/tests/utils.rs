@@ -1,11 +1,11 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use dwn::{stores::NativeDbStore, Actor, Dwn};
-use hyper::{server::conn::http1::Builder, service::service_fn, Response};
+use dwn::{Actor, Dwn, stores::NativeDbStore};
+use hyper::{Response, server::conn::http1::Builder, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tracing::info;
-use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
+use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
 pub fn init_dwn() -> (Actor, Dwn) {
     let store = NativeDbStore::new_in_memory().unwrap();

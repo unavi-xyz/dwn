@@ -1,11 +1,11 @@
 [package]
-name = "dwn-server"
 description = "Decentralized Web Node HTTP server."
-version.workspace = true
 edition.workspace = true
-repository.workspace = true
-license.workspace = true
 keywords.workspace = true
+license.workspace = true
+name = "dwn-server"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 axum = "0.7.7"

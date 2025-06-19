@@ -1,8 +1,8 @@
 use std::net::SocketAddr;
 
-use dwn::{core::store::RecordStore, stores::NativeDbStore, Actor, Dwn};
+use dwn::{Actor, Dwn, core::store::RecordStore, stores::NativeDbStore};
 use tokio::net::TcpListener;
-use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
+use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
 pub async fn init_test() -> (Actor, Dwn, impl RecordStore) {
     let remote_store = NativeDbStore::new_in_memory().unwrap();

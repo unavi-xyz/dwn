@@ -1,5 +1,5 @@
 use dwn_core::{message::descriptor::RecordsWriteBuilder, store::RecordStore};
-use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
+use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
 #[test]
 fn test_nativedb_write_read() {

@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use dwn_core::{
-    message::{data::Data, descriptor::Descriptor, mime::APPLICATION_JSON, Message},
+    message::{Message, data::Data, descriptor::Descriptor, mime::APPLICATION_JSON},
     store::{DataStore, RecordStore},
 };
 use reqwest::StatusCode;

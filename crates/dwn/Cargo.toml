@@ -1,11 +1,11 @@
 [package]
-name = "dwn"
 description = "Rust implementation of a Decentralized Web Node."
-version.workspace = true
 edition.workspace = true
-repository.workspace = true
-license.workspace = true
 keywords.workspace = true
+license.workspace = true
+name = "dwn"
+repository.workspace = true
+version.workspace = true
 
 [features]
 default = ["native_db"]
@@ -17,9 +17,9 @@ dwn-core = { version = "0.1.0", path = "../dwn-core" }
 dwn-native-db = { version = "0.1.0", path = "../dwn-native-db", optional = true }
 jose-jwk = "0.1.2"
 jsonschema = { version = "0.24.0", default-features = false, features = [
-  "resolve-http",
   "draft201909",
   "draft202012",
+  "resolve-http",
 ] }
 reqwest = "0.12.8"
 ring = "0.17.8"

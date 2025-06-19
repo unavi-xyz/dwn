@@ -63,7 +63,7 @@
 use std::sync::Arc;
 
 use dwn_core::{
-    message::{cid::CidGenerationError, descriptor::Descriptor, Message},
+    message::{Message, cid::CidGenerationError, descriptor::Descriptor},
     reply::Reply,
     store::{DataStore, RecordStore, StoreError},
 };

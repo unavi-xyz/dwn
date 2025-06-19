@@ -1,5 +1,5 @@
 use dwn::Dwn;
-use dwn_core::message::{descriptor::RecordsWriteBuilder, mime::TEXT_PLAIN, Message};
+use dwn_core::message::{Message, descriptor::RecordsWriteBuilder, mime::TEXT_PLAIN};
 use tracing_test::traced_test;
 use xdid::core::did::Did;
 
@@ -72,9 +72,10 @@ async fn expect_success(target: &Did, dwn: &mut Dwn, msg: Message) {
 async fn expect_fail(target: &Did, dwn: &mut Dwn, msg: Message) {
     let record_id = msg.record_id.clone();
     assert!(dwn.process_message(target, msg.clone()).await.is_err());
-    assert!(dwn
-        .record_store
-        .read(dwn.data_store.as_ref(), target, &record_id)
-        .expect("error reading record")
-        .is_none());
+    assert!(
+        dwn.record_store
+            .read(dwn.data_store.as_ref(), target, &record_id)
+            .expect("error reading record")
+            .is_none()
+    );
 }

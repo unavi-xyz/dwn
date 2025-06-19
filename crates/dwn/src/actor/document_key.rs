@@ -1,7 +1,7 @@
 use jose_jwk::jose_jwa::Signing;
 use xdid::{
     core::did_url::DidUrl,
-    methods::key::{p256::P256KeyPair, p384::P384KeyPair, DidKeyPair, PublicKey, Signer},
+    methods::key::{DidKeyPair, PublicKey, Signer, p256::P256KeyPair, p384::P384KeyPair},
 };
 
 /// A key that is stored in the DID document.

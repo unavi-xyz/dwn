@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
 
 use crate::message::descriptor::{Interface, Method};
 

@@ -1,13 +1,13 @@
 [workspace]
-resolver = "2"
 members = ["crates/*"]
+resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/unavi-xyz/dwn"
-license = "MIT OR Apache-2.0"
 keywords = ["did", "dwn"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/unavi-xyz/dwn"
+version = "0.1.0"
 
 [workspace.metadata.release]
 shared-version = true

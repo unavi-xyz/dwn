@@ -1,7 +1,7 @@
 use dwn_core::{
     message::{
-        descriptor::{DateSort, Descriptor, RecordFilter, RecordId, RecordsSync},
         Message,
+        descriptor::{DateSort, Descriptor, RecordFilter, RecordId, RecordsSync},
     },
     store::{DataStore, Record, RecordStore, StoreError},
 };
@@ -9,8 +9,8 @@ use tracing::{debug, error, warn};
 use xdid::core::did::Did;
 
 use crate::{
-    data::{InitialEntry, LatestEntry},
     NativeDbStore,
+    data::{InitialEntry, LatestEntry},
 };
 
 impl RecordStore for NativeDbStore<'_> {

@@ -3,7 +3,7 @@
 
 use std::{path::Path, sync::Arc};
 
-use native_db::{db_type, Builder, Database};
+use native_db::{Builder, Database, db_type};
 
 mod data;
 mod data_store;

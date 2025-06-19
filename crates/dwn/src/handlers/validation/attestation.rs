@@ -1,8 +1,8 @@
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
-use dwn_core::message::{cid::compute_cid_cbor, Message};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+use dwn_core::message::{Message, cid::compute_cid_cbor};
 use xdid::core::{did::Did, document::VerificationRole};
 
-use super::{jws::validate_jws, ValidationError};
+use super::{ValidationError, jws::validate_jws};
 
 pub async fn validate_attestation(did: &Did, msg: &Message) -> Result<(), ValidationError> {
     // Verify payload.

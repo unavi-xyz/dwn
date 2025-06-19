@@ -1,9 +1,9 @@
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
-use dwn_core::message::{cid::compute_cid_cbor, AuthPayload, Message};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+use dwn_core::message::{AuthPayload, Message, cid::compute_cid_cbor};
 use tracing::debug;
 use xdid::core::{did::Did, document::VerificationRole};
 
-use super::{jws::validate_jws, ValidationError};
+use super::{ValidationError, jws::validate_jws};
 
 pub async fn validate_authorization(did: &Did, msg: &Message) -> Result<(), ValidationError> {
     // Verify payload.

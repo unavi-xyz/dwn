@@ -10,7 +10,7 @@ pub use protocols::*;
 pub use records::*;
 use time::OffsetDateTime;
 
-use super::cid::{compute_cid_cbor, CidGenerationError};
+use super::cid::{CidGenerationError, compute_cid_cbor};
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(untagged)]

@@ -1,11 +1,11 @@
 [package]
-name = "dwn-core"
 description = "Core DWN types."
-version.workspace = true
 edition.workspace = true
-repository.workspace = true
-license.workspace = true
 keywords.workspace = true
+license.workspace = true
+name = "dwn-core"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 base64.workspace = true

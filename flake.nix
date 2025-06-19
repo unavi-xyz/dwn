@@ -9,6 +9,7 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
+    treefmt-nix.url = "github:numtide/treefmt-nix";
   };
 
   outputs =
@@ -18,6 +19,7 @@
       crane,
       flake-utils,
       rust-overlay,
+      treefmt-nix,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -98,8 +100,12 @@
             cargoExtraArgs = "-p dwn-server";
           }
         );
+
+        treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
       in
       {
+        formatter = treefmtEval.config.build.wrapper;
+
         checks = {
           inherit dwn-server cargoClippy cargoDoc;
         };

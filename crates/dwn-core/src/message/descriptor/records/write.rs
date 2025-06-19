@@ -1,13 +1,13 @@
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
 use time::OffsetDateTime;
 
 use crate::message::{
-    cid::CidGenerationError,
-    data::{compute_data_cid, Data},
-    descriptor::{Descriptor, Interface, Method},
     Message,
+    cid::CidGenerationError,
+    data::{Data, compute_data_cid},
+    descriptor::{Descriptor, Interface, Method},
 };
 
 #[serde_as]

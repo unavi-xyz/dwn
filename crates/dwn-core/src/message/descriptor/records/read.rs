@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use crate::message::{
+    Message,
     cid::CidGenerationError,
     descriptor::{Descriptor, Interface, Method},
-    Message,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
