@@ -9,11 +9,8 @@ version.workspace = true
 
 [dependencies]
 dwn-core.workspace = true
-native_db = { version = "0.8.1", git = "https://github.com/vincent-herlemont/native_db", default-features = false }
-native_model = { version = "0.6.2", default-features = false, features = [
-  "rmp_serde_1_3",
-  "serde",
-] }
+native_db = { version = "0.8.1", default-features = false }
+native_model = { version = "0.6.2", features = ["rmp_serde_1_3"] }
 serde.workspace = true
 tracing.workspace = true
 xdid.workspace = true

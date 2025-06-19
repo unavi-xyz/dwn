@@ -51,7 +51,7 @@ impl DataStore for NativeDbStore<'_> {
                 let mut new_data_ref = data_ref.clone();
                 new_data_ref.count += 1;
 
-                tx.update(data_ref, new_data_ref)
+                tx.upsert(new_data_ref)
                     .map_err(|e| StoreError::BackendError(e.to_string()))?;
             }
             None => {
@@ -108,7 +108,7 @@ impl DataStore for NativeDbStore<'_> {
             let mut new_found = found.clone();
             new_found.count -= 1;
 
-            tx.update(found, new_found)
+            tx.upsert(new_found)
                 .map_err(|e| StoreError::BackendError(e.to_string()))?;
         }
 

@@ -1,5 +1,5 @@
 use dwn_core::message::{Message, data::Data};
-use native_db::{ToKey, native_db};
+use native_db::*;
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 

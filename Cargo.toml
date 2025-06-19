@@ -30,3 +30,6 @@ xdid = { version = "0.3.0", path = "crates/xdid" }
 xdid-core = { version = "0.3.0", path = "crates/xdid-core" }
 xdid-method-key = { version = "0.3.0", path = "crates/xdid-method-key" }
 xdid-method-web = { version = "0.3.0", path = "crates/xdid-method-web" }
+
+[patch.crates-io]
+native_db = { git = "https://github.com/vincent-herlemont/native_db", rev = "e770a34" }
