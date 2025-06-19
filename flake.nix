@@ -61,13 +61,13 @@
           checks = self.checks.${localSystem};
           packages = with pkgs; [
             cargo-deny
+            cargo-edit
             cargo-machete
             cargo-rdme
             cargo-release
             cargo-workspaces
             minio
             minio-client
-            nodePackages.prettier
             rust-analyzer
           ];
 

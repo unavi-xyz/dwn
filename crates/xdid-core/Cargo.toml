@@ -10,5 +10,5 @@ version.workspace = true
 [dependencies]
 jose-jwk.workspace = true
 serde = { workspace = true, features = ["derive"] }
-serde_with = "3.11.0"
+serde_with = "3.13.0"
 thiserror.workspace = true

@@ -9,16 +9,15 @@ version.workspace = true
 
 [features]
 default = ["p256", "p384"]
-p256 = ["dep:p256", "dep:rand", "dep:ring", "dep:serde_json"]
-p384 = ["dep:p384", "dep:rand", "dep:ring", "dep:serde_json"]
+p256 = ["dep:p256", "dep:ring", "dep:serde_json"]
+p384 = ["dep:p384", "dep:ring", "dep:serde_json"]
 
 [dependencies]
 jose-jwk.workspace = true
 multibase = "0.9.1"
 p256 = { version = "0.13.2", features = ["jwk"], optional = true }
-p384 = { version = "0.13.0", features = ["jwk"], optional = true }
-rand = { version = "0.8.5", optional = true }
-ring = { version = "0.17.8", optional = true }
+p384 = { version = "0.13.1", features = ["jwk"], optional = true }
+ring = { version = "0.17.14", optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 unsigned-varint = { version = "0.8.0" }

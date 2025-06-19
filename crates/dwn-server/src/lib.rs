@@ -24,7 +24,7 @@ pub fn create_router(dwn: Dwn) -> Router {
     // Is this a problem? We would need some authentication solution, verifying
     // the requester has permission to write messages.
     Router::new()
-        .route("/:target", put(handle_put))
+        .route("/{target}", put(handle_put))
         .with_state(dwn)
 }
 

@@ -1,9 +1,11 @@
 use jose_jwk::Jwk;
 use p256::{
     SecretKey,
-    elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
+    elliptic_curve::{
+        rand_core::OsRng,
+        sec1::{FromEncodedPoint, ToEncodedPoint},
+    },
 };
-use rand::rngs::OsRng;
 use ring::{
     rand::SystemRandom,
     signature::{ECDSA_P256_SHA256_ASN1_SIGNING, EcdsaKeyPair},
