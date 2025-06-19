@@ -13,8 +13,8 @@ native_db = ["dep:dwn-native-db"]
 
 [dependencies]
 base64.workspace = true
-dwn-core = { version = "0.1.0", path = "../dwn-core" }
-dwn-native-db = { version = "0.1.0", path = "../dwn-native-db", optional = true }
+dwn-core.workspace = true
+dwn-native-db = { workspace = true, optional = true }
 jose-jwk = "0.1.2"
 jsonschema = { version = "0.24.0", default-features = false, features = [
   "draft201909",

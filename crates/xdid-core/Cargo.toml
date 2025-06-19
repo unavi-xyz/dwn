@@ -1,0 +1,14 @@
+[package]
+description = "Core types for DID methods to implement."
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "xdid-core"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+jose-jwk.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_with = "3.11.0"
+thiserror.workspace = true

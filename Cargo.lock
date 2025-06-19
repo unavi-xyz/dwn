@@ -574,7 +574,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dwn"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "dwn-core",
@@ -596,7 +596,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-core"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "ipld-core",
@@ -616,7 +616,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-native-db"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "dwn-core",
  "native_db",
@@ -628,7 +628,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-server"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "axum-macros",
@@ -3375,11 +3375,14 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 
 [[package]]
 name = "xdid"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e95402946719c7a4d3532788ff4926c3fb080db054771a7a4c020af6a4d36c6"
+version = "0.3.0"
 dependencies = [
- "thiserror 1.0.69",
+ "hyper",
+ "hyper-util",
+ "port_check",
+ "serde_json",
+ "thiserror 2.0.3",
+ "tokio",
  "xdid-core",
  "xdid-method-key",
  "xdid-method-web",
@@ -3387,21 +3390,17 @@ dependencies = [
 
 [[package]]
 name = "xdid-core"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71cbafbc2996da7bf75ecded949b213538f899378c89f2101524fa606e7533c6"
+version = "0.3.0"
 dependencies = [
  "jose-jwk",
  "serde",
  "serde_with",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
 name = "xdid-method-key"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "290d13a1701c1411a427217f705a0d8f0fa215df511c255a992feff26644d024"
+version = "0.3.0"
 dependencies = [
  "jose-jwk",
  "multibase",
@@ -3410,16 +3409,14 @@ dependencies = [
  "rand",
  "ring",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
  "unsigned-varint",
  "xdid-core",
 ]
 
 [[package]]
 name = "xdid-method-web"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a021f00dc7eafb2f415765d46d08670906032c4c92e26b5049451c8274f8795c"
+version = "0.3.0"
 dependencies = [
  "reqwest",
  "xdid-core",
