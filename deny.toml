@@ -41,6 +41,7 @@ crate = "ring"
 [advisories]
 ignore = [
   "RUSTSEC-2023-0071", # rsa sidechannel
+  "RUSTSEC-2024-0436", # paste unmaintained
 ]
 version = 2
 
