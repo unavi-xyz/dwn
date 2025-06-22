@@ -121,7 +121,7 @@
         };
 
         packages = {
-          dwn-server = dwn-server;
+          inherit dwn-server;
           default = dwn-server;
         };
 

@@ -1,35 +1,35 @@
 [workspace]
-members = ["crates/*"]
+members  = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-edition = "2024"
-keywords = ["did", "dwn"]
-license = "MIT OR Apache-2.0"
+edition    = "2024"
+keywords   = ["did", "dwn"]
+license    = "MIT OR Apache-2.0"
 repository = "https://github.com/unavi-xyz/dwn"
-version = "0.3.0"
+version    = "0.3.0"
 
 [workspace.metadata.release]
 shared-version = true
-tag-name = "v{{version}}"
+tag-name       = "v{{version}}"
 
 [workspace.dependencies]
-base64 = "0.22.1"
-jose-jwk = "0.1.2"
-port_check = "0.2.1"
-serde = "1.0.219"
-serde_json = "1.0.140"
-thiserror = "2.0.12"
-tracing = "0.1.41"
-tracing-test = { version = "0.2.5", features = ["no-env-filter"] }
+base64       = "0.22.1"
+jose-jwk     = "0.1.2"
+port_check   = "0.2.1"
+serde        = "1.0.219"
+serde_json   = "1.0.140"
+thiserror    = "2.0.12"
+tracing      = "0.1.41"
+tracing-test = { features = ["no-env-filter"], version = "0.2.5" }
 
-dwn = { version = "0.3.0", path = "crates/dwn" }
-dwn-core = { version = "0.3.0", path = "crates/dwn-core" }
-dwn-native-db = { version = "0.3.0", path = "crates/dwn-native-db" }
-xdid = { version = "0.3.0", path = "crates/xdid" }
-xdid-core = { version = "0.3.0", path = "crates/xdid-core" }
-xdid-method-key = { version = "0.3.0", path = "crates/xdid-method-key" }
-xdid-method-web = { version = "0.3.0", path = "crates/xdid-method-web" }
+dwn             = { path = "crates/dwn", version = "0.3.0" }
+dwn-core        = { path = "crates/dwn-core", version = "0.3.0" }
+dwn-native-db   = { path = "crates/dwn-native-db", version = "0.3.0" }
+xdid            = { path = "crates/xdid", version = "0.3.0" }
+xdid-core       = { path = "crates/xdid-core", version = "0.3.0" }
+xdid-method-key = { path = "crates/xdid-method-key", version = "0.3.0" }
+xdid-method-web = { path = "crates/xdid-method-web", version = "0.3.0" }
 
 [patch.crates-io]
 native_db = { git = "https://github.com/vincent-herlemont/native_db", rev = "e770a34" }

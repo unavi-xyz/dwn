@@ -1,16 +1,16 @@
 [package]
-description = "DWN backend implementation using native_db"
-edition.workspace = true
-keywords.workspace = true
-license.workspace = true
-name = "dwn-native-db"
+description          = "DWN backend implementation using native_db"
+edition.workspace    = true
+keywords.workspace   = true
+license.workspace    = true
+name                 = "dwn-native-db"
 repository.workspace = true
-version.workspace = true
+version.workspace    = true
 
 [dependencies]
 dwn-core.workspace = true
-native_db = { version = "0.8.1", default-features = false }
-native_model = { version = "0.6.2", features = ["rmp_serde_1_3"] }
-serde.workspace = true
-tracing.workspace = true
-xdid.workspace = true
+native_db          = { default-features = false, version = "0.8.1" }
+native_model       = { features = ["rmp_serde_1_3"], version = "0.6.2" }
+serde.workspace    = true
+tracing.workspace  = true
+xdid.workspace     = true

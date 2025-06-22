@@ -1,24 +1,24 @@
 [package]
-description = "Rust implementation of a Decentralized Web Node."
-edition.workspace = true
-keywords.workspace = true
-license.workspace = true
-name = "dwn"
+description          = "Rust implementation of a Decentralized Web Node."
+edition.workspace    = true
+keywords.workspace   = true
+license.workspace    = true
+name                 = "dwn"
 repository.workspace = true
-version.workspace = true
+version.workspace    = true
 
 [features]
-default = ["native_db"]
+default   = ["native_db"]
 native_db = ["dep:dwn-native-db"]
 
 [dependencies]
 base64.workspace = true
 dwn-core.workspace = true
-dwn-native-db = { workspace = true, optional = true }
+dwn-native-db = { optional = true, workspace = true }
 jose-jwk = "0.1.2"
-jsonschema = { version = "0.30.0", default-features = false, features = [
+jsonschema = { default-features = false, features = [
   "resolve-http",
-] }
+], version = "0.30.0" }
 reqwest = "0.12.20"
 ring = "0.17.14"
 serde_json.workspace = true
@@ -27,8 +27,8 @@ tracing.workspace = true
 xdid.workspace = true
 
 [dev-dependencies]
-hyper = { version = "1.6.0", features = ["http1", "server"] }
-hyper-util = "0.1.14"
-port_check.workspace = true
-tokio = { version = "1.45.1", features = ["macros", "rt", "rt-multi-thread"] }
+hyper                  = { features = ["http1", "server"], version = "1.6.0" }
+hyper-util             = "0.1.14"
+port_check.workspace   = true
+tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.45.1" }
 tracing-test.workspace = true

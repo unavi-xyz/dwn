@@ -1,20 +1,20 @@
 [package]
-description = "Decentralized Web Node HTTP server."
-edition.workspace = true
-keywords.workspace = true
-license.workspace = true
-name = "dwn-server"
+description          = "Decentralized Web Node HTTP server."
+edition.workspace    = true
+keywords.workspace   = true
+license.workspace    = true
+name                 = "dwn-server"
 repository.workspace = true
-version.workspace = true
+version.workspace    = true
 
 [dependencies]
-axum = "0.8.4"
-axum-macros = "0.5.0"
-dwn.workspace = true
+axum              = "0.8.4"
+axum-macros       = "0.5.0"
+dwn.workspace     = true
 tracing.workspace = true
-xdid.workspace = true
+xdid.workspace    = true
 
 [dev-dependencies]
-port_check.workspace = true
-tokio = { version = "1.45.1", features = ["macros", "rt", "rt-multi-thread"] }
+port_check.workspace   = true
+tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.45.1" }
 tracing-test.workspace = true

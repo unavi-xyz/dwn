@@ -31,8 +31,8 @@ crate = "ring"
 # license, for third_party/fiat, which, unlike other third_party directories, is
 # compiled into non-test libraries, is included below."
 # OpenSSL - Obviously
-expression = "ISC AND MIT AND OpenSSL"
-license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+expression    = "ISC AND MIT AND OpenSSL"
+license-files = [{ hash = 0xbd0eed23, path = "LICENSE" }]
 
 [[licenses.exceptions]]
 allow = ["OpenSSL"]
@@ -46,10 +46,10 @@ ignore = [
 version = 2
 
 [bans]
-deny = [{ name = "tokio", deny-multiple-versions = true }]
+deny = [{ deny-multiple-versions = true, name = "tokio" }]
 
 [sources]
-allow-git = ["https://github.com/vincent-herlemont/native_db"]
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-unknown-git = "deny"
+allow-git        = ["https://github.com/vincent-herlemont/native_db"]
+allow-registry   = ["https://github.com/rust-lang/crates.io-index"]
+unknown-git      = "deny"
 unknown-registry = "deny"
