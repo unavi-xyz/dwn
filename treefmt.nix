@@ -1,5 +1,4 @@
-_:
-{
+_: {
   projectRootFile = "flake.nix";
   programs = {
     actionlint.enable = true;
@@ -12,5 +11,6 @@ _:
     };
     statix.enable = true;
     taplo.enable = true;
+    yamlfmt.enable = true;
   };
 }
