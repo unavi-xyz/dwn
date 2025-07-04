@@ -106,9 +106,7 @@
       {
         formatter = treefmtEval.config.build.wrapper;
 
-        checks = {
-          inherit dwn-server cargoClippy cargoDoc;
-        };
+        checks = { inherit dwn-server cargoClippy cargoDoc; };
 
         apps = rec {
           dwn-server = flake-utils.lib.mkApp {
