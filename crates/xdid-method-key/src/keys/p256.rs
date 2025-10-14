@@ -4,7 +4,9 @@ use p256::{
     elliptic_curve::{
         rand_core::OsRng,
         sec1::{FromEncodedPoint, ToEncodedPoint},
+        zeroize::Zeroizing,
     },
+    pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding},
 };
 use ring::{
     rand::SystemRandom,
@@ -26,11 +28,14 @@ impl DidKeyPair for P256KeyPair {
     fn public(&self) -> impl PublicKey {
         P256PublicKey(self.0.public_key())
     }
-    fn public_bytes(&self) -> Box<[u8]> {
-        self.0.public_key().to_sec1_bytes()
+
+    fn to_pkcs8_pem(&self) -> anyhow::Result<Zeroizing<String>> {
+        let pem = self.0.to_pkcs8_pem(LineEnding::LF)?;
+        Ok(pem)
     }
-    fn secret_bytes(&self) -> Box<[u8]> {
-        self.0.to_bytes().to_vec().into()
+    fn from_pkcs8_pem(pem: &str) -> anyhow::Result<Self> {
+        let key = SecretKey::from_pkcs8_pem(pem)?;
+        Ok(Self(key))
     }
 }
 
@@ -57,7 +62,10 @@ impl Signer for P256KeyPair {
 struct P256PublicKey(p256::PublicKey);
 
 impl PublicKey for P256PublicKey {
-    fn as_did_bytes(&self) -> Box<[u8]> {
+    fn to_sec1_bytes(&self) -> Box<[u8]> {
+        self.0.to_sec1_bytes()
+    }
+    fn to_encoded_point_bytes(&self) -> Box<[u8]> {
         self.0.to_encoded_point(true).as_bytes().into()
     }
 
@@ -131,20 +139,18 @@ mod tests {
     }
 
     #[test]
-    fn test_sign() {
+    fn test_sign_verify() {
         let pair = P256KeyPair::generate();
 
         let msg = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
         let signature = pair.sign(&msg).unwrap();
 
-        assert!(
-            ECDSA_P256_SHA256_ASN1
-                .verify(
-                    pair.public_bytes().to_vec().as_slice().into(),
-                    msg.as_slice().into(),
-                    signature.as_slice().into()
-                )
-                .is_ok()
-        );
+        if let Err(e) = ECDSA_P256_SHA256_ASN1.verify(
+            pair.public().to_sec1_bytes().as_ref().into(),
+            msg.as_slice().into(),
+            signature.as_slice().into(),
+        ) {
+            panic!("{e:?}")
+        }
     }
 }

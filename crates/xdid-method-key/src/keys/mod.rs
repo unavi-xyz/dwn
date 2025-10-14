@@ -1,3 +1,4 @@
+use ::p256::elliptic_curve::zeroize::Zeroizing;
 use jose_jwk::Jwk;
 use multibase::Base;
 use thiserror::Error;
@@ -14,16 +15,14 @@ pub trait Signer {
     fn sign(&self, message: &[u8]) -> Result<Vec<u8>, SignError>;
 }
 
-pub trait DidKeyPair: Signer {
+pub trait DidKeyPair: Signer + Sized {
     /// Generate a new pair of keys.
     fn generate() -> Self;
 
     fn public(&self) -> impl PublicKey;
 
-    /// Raw public key bytes.
-    fn public_bytes(&self) -> Box<[u8]>;
-    /// Raw secret key bytes.
-    fn secret_bytes(&self) -> Box<[u8]>;
+    fn to_pkcs8_pem(&self) -> anyhow::Result<Zeroizing<String>>;
+    fn from_pkcs8_pem(pem: &str) -> anyhow::Result<Self>;
 }
 
 #[derive(Error, Debug)]
@@ -33,15 +32,12 @@ pub enum SignError {
 }
 
 pub trait PublicKey: WithMulticodec {
-    /// Read the public key as DID-ready bytes.
-    /// This may be different from the raw public key bytes, as some algorithms
-    /// require compression.
-    /// https://w3c-ccg.github.io/did-method-key/#signature-method-creation-algorithm
-    fn as_did_bytes(&self) -> Box<[u8]>;
+    fn to_sec1_bytes(&self) -> Box<[u8]>;
+    fn to_encoded_point_bytes(&self) -> Box<[u8]>;
     fn to_jwk(&self) -> Jwk;
 
     fn to_did(&self) -> Did {
-        let bytes = self.as_did_bytes();
+        let bytes = self.to_encoded_point_bytes();
         let code = self.codec().code();
 
         let mut inner = Vec::with_capacity(code.len() + bytes.len());

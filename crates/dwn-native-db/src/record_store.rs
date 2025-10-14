@@ -129,16 +129,16 @@ impl RecordStore for NativeDbStore<'_> {
                     // TODO
                 }
 
-                if let Some(schema) = filter.schema.as_deref() {
-                    if desc.schema.as_deref() != Some(schema) {
-                        return false;
-                    }
+                if let Some(schema) = filter.schema.as_deref()
+                    && desc.schema.as_deref() != Some(schema)
+                {
+                    return false;
                 }
 
-                if let Some(record_id) = filter.record_id.as_deref() {
-                    if entry.record_id != record_id {
-                        return false;
-                    }
+                if let Some(record_id) = filter.record_id.as_deref()
+                    && entry.record_id != record_id
+                {
+                    return false;
                 }
 
                 if let Some(protocol) = filter.protocol.as_deref() {
@@ -153,10 +153,10 @@ impl RecordStore for NativeDbStore<'_> {
                     }
                 }
 
-                if let Some(data_format) = &filter.data_format {
-                    if desc.data_format.as_ref() != Some(data_format) {
-                        return false;
-                    }
+                if let Some(data_format) = &filter.data_format
+                    && desc.data_format.as_ref() != Some(data_format)
+                {
+                    return false;
                 }
 
                 if let Some(date_created) = &filter.date_created {
@@ -219,10 +219,10 @@ impl RecordStore for NativeDbStore<'_> {
             return Ok(None);
         };
 
-        if let Descriptor::RecordsWrite(desc) = &latest_entry.descriptor {
-            if let Some(cid) = &desc.data_cid {
-                latest_entry.data = ds.read(target, cid)?;
-            }
+        if let Descriptor::RecordsWrite(desc) = &latest_entry.descriptor
+            && let Some(cid) = &desc.data_cid
+        {
+            latest_entry.data = ds.read(target, cid)?;
         }
 
         Ok(Some(Record {
@@ -282,12 +282,11 @@ impl RecordStore for NativeDbStore<'_> {
             ds.add_ref(target, &cid, data)?;
 
             // Remove previous reference.
-            if let Some(prev) = prev {
-                if let Descriptor::RecordsWrite(desc) = prev.entry.descriptor {
-                    if let Some(prev_cid) = &desc.data_cid {
-                        ds.remove_ref(target, prev_cid)?;
-                    }
-                }
+            if let Some(prev) = prev
+                && let Descriptor::RecordsWrite(desc) = prev.entry.descriptor
+                && let Some(prev_cid) = &desc.data_cid
+            {
+                ds.remove_ref(target, prev_cid)?;
             }
         }
 

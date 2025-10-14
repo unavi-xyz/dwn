@@ -7,15 +7,15 @@ mod authorization;
 mod jws;
 
 pub async fn validate_message(target: &Did, msg: &Message) -> Result<(), ValidationError> {
-    if let Descriptor::RecordsWrite(desc) = &msg.descriptor {
-        if msg.data.is_some() {
-            if desc.data_cid.is_none() {
-                return Err(ValidationError::MissingDataInfo);
-            }
+    if let Descriptor::RecordsWrite(desc) = &msg.descriptor
+        && msg.data.is_some()
+    {
+        if desc.data_cid.is_none() {
+            return Err(ValidationError::MissingDataInfo);
+        }
 
-            if desc.data_format.is_none() {
-                return Err(ValidationError::MissingDataInfo);
-            }
+        if desc.data_format.is_none() {
+            return Err(ValidationError::MissingDataInfo);
         }
     }
 

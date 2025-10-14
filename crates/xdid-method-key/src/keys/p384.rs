@@ -1,8 +1,12 @@
 use jose_jwk::Jwk;
-use p256::elliptic_curve::rand_core::OsRng;
+use p256::{
+    elliptic_curve::{rand_core::OsRng, zeroize::Zeroizing},
+    pkcs8::{DecodePrivateKey, LineEnding},
+};
 use p384::{
     SecretKey,
     elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
+    pkcs8::EncodePrivateKey,
 };
 use ring::{
     rand::SystemRandom,
@@ -24,11 +28,14 @@ impl DidKeyPair for P384KeyPair {
     fn public(&self) -> impl PublicKey {
         P384PublicKey(self.0.public_key())
     }
-    fn public_bytes(&self) -> Box<[u8]> {
-        self.0.public_key().to_sec1_bytes()
+
+    fn to_pkcs8_pem(&self) -> anyhow::Result<Zeroizing<String>> {
+        let pem = self.0.to_pkcs8_pem(LineEnding::LF)?;
+        Ok(pem)
     }
-    fn secret_bytes(&self) -> Box<[u8]> {
-        self.0.to_bytes().to_vec().into()
+    fn from_pkcs8_pem(pem: &str) -> anyhow::Result<Self> {
+        let key = SecretKey::from_pkcs8_pem(pem)?;
+        Ok(Self(key))
     }
 }
 
@@ -38,8 +45,8 @@ impl Signer for P384KeyPair {
 
         let signer = EcdsaKeyPair::from_private_key_and_public_key(
             &ECDSA_P384_SHA384_ASN1_SIGNING,
-            &self.secret_bytes(),
-            &self.public_bytes(),
+            &self.0.to_bytes(),
+            &self.0.public_key().to_sec1_bytes(),
             &rng,
         )
         .unwrap();
@@ -55,7 +62,10 @@ impl Signer for P384KeyPair {
 struct P384PublicKey(p384::PublicKey);
 
 impl PublicKey for P384PublicKey {
-    fn as_did_bytes(&self) -> Box<[u8]> {
+    fn to_sec1_bytes(&self) -> Box<[u8]> {
+        self.0.to_sec1_bytes()
+    }
+    fn to_encoded_point_bytes(&self) -> Box<[u8]> {
         self.0.to_encoded_point(true).as_bytes().into()
     }
 
@@ -138,7 +148,7 @@ mod tests {
         assert!(
             ECDSA_P384_SHA384_ASN1
                 .verify(
-                    pair.public_bytes().to_vec().as_slice().into(),
+                    pair.public().to_sec1_bytes().as_ref().into(),
                     msg.as_slice().into(),
                     signature.as_slice().into()
                 )

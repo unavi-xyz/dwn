@@ -90,15 +90,14 @@
 
               nativeBuildInputs = with pkgs; [ pkg-config ];
 
-              packages = with pkgs;
-                [
-                  cargo-deny
-                  cargo-edit
-                  cargo-machete
-                  cargo-nextest
-                  cargo-release
-                  cargo-workspaces
-                ];
+              packages = with pkgs; [
+                cargo-deny
+                cargo-edit
+                cargo-machete
+                cargo-nextest
+                cargo-release
+                cargo-workspaces
+              ];
 
               LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [ openssl ]);
             };
