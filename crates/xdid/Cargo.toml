@@ -19,8 +19,8 @@ xdid-method-key     = { optional = true, workspace = true }
 xdid-method-web     = { optional = true, workspace = true }
 
 [dev-dependencies]
-hyper                = { features = ["http1", "server"], version = "1.6.0" }
-hyper-util           = "0.1.14"
-port_check           = "0.2.1"
+hyper                = { features = ["http1", "server"], version = "1.7.0" }
+hyper-util           = "0.1.17"
+port_check           = "0.3.0"
 serde_json.workspace = true
-tokio                = { features = ["macros", "rt", "rt-multi-thread"], version = "1.45.1" }
+tokio                = { features = ["macros", "rt", "rt-multi-thread"], version = "1.48.0" }

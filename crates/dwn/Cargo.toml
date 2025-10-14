@@ -18,8 +18,8 @@ dwn-native-db = { optional = true, workspace = true }
 jose-jwk = "0.1.2"
 jsonschema = { default-features = false, features = [
   "resolve-http",
-], version = "0.30.0" }
-reqwest = "0.12.20"
+], version = "0.33.0" }
+reqwest = "0.12.24"
 ring = "0.17.14"
 serde_json.workspace = true
 thiserror.workspace = true
@@ -27,8 +27,8 @@ tracing.workspace = true
 xdid.workspace = true
 
 [dev-dependencies]
-hyper                  = { features = ["http1", "server"], version = "1.6.0" }
-hyper-util             = "0.1.14"
+hyper                  = { features = ["http1", "server"], version = "1.7.0" }
+hyper-util             = "0.1.17"
 port_check.workspace   = true
-tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.45.1" }
+tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.48.0" }
 tracing-test.workspace = true

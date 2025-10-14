@@ -8,5 +8,5 @@ repository.workspace = true
 version.workspace    = true
 
 [dependencies]
-reqwest             = { features = ["json"], version = "0.12.20" }
+reqwest             = { features = ["json"], version = "0.12.24" }
 xdid-core.workspace = true

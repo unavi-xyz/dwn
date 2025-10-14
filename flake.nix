@@ -33,7 +33,6 @@
 
         perSystem =
           {
-            config,
             lib,
             pkgs,
             system,
@@ -84,27 +83,24 @@
             };
 
             devShells.default = pkgs.crane.devShell {
-              packages =
-                (with pkgs; [
+              buildInputs = with pkgs; [
+                openssl
+                pkg-config
+              ];
+
+              nativeBuildInputs = with pkgs; [ pkg-config ];
+
+              packages = with pkgs;
+                [
                   cargo-deny
                   cargo-edit
                   cargo-machete
                   cargo-nextest
                   cargo-release
                   cargo-workspaces
-                ])
-                ++ (
-                  config.packages
-                  |> lib.attrValues
-                  |> lib.flip pkgs.lib.forEach (x: x.buildInputs ++ x.nativeBuildInputs)
-                );
+                ];
 
-              LD_LIBRARY_PATH =
-                config.packages
-                |> lib.attrValues
-                |> lib.flip pkgs.lib.forEach (x: x.runtimeDependencies)
-                |> lib.concatLists
-                |> lib.makeLibraryPath;
+              LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [ openssl ]);
             };
           };
       }

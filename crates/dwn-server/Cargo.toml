@@ -8,7 +8,7 @@ repository.workspace = true
 version.workspace    = true
 
 [dependencies]
-axum              = "0.8.4"
+axum              = "0.8.6"
 axum-macros       = "0.5.0"
 dwn.workspace     = true
 tracing.workspace = true
@@ -16,5 +16,5 @@ xdid.workspace    = true
 
 [dev-dependencies]
 port_check.workspace   = true
-tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.45.1" }
+tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.48.0" }
 tracing-test.workspace = true
