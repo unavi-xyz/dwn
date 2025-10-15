@@ -14,6 +14,7 @@ shared-version = true
 tag-name       = "v{{version}}"
 
 [workspace.dependencies]
+anyhow       = "1.0.100"
 base64       = "0.22.1"
 jose-jwk     = "0.1.2"
 port_check   = "0.3.0"

@@ -29,10 +29,14 @@
       {
         systems = import systems;
 
-        imports = [ inputs.treefmt-nix.flakeModule ];
+        imports = [
+          inputs.treefmt-nix.flakeModule
+          ./crates/dwn-server
+        ];
 
         perSystem =
           {
+            config,
             lib,
             pkgs,
             system,
@@ -83,23 +87,29 @@
             };
 
             devShells.default = pkgs.crane.devShell {
-              buildInputs = with pkgs; [
-                openssl
-                pkg-config
-              ];
+              packages =
+                (with pkgs; [
+                  cargo-deny
+                  cargo-edit
+                  cargo-machete
+                  cargo-nextest
+                  cargo-release
+                  cargo-workspaces
+                ])
 
-              nativeBuildInputs = with pkgs; [ pkg-config ];
+                ++ (
+                  config.packages
+                  |> lib.attrValues
+                  |> lib.flip pkgs.lib.forEach (x: x.buildInputs ++ x.nativeBuildInputs)
+                  |> lib.concatLists
+                );
 
-              packages = with pkgs; [
-                cargo-deny
-                cargo-edit
-                cargo-machete
-                cargo-nextest
-                cargo-release
-                cargo-workspaces
-              ];
-
-              LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [ openssl ]);
+              LD_LIBRARY_PATH =
+                config.packages
+                |> lib.attrValues
+                |> lib.flip pkgs.lib.forEach (x: x.runtimeDependencies)
+                |> lib.concatLists
+                |> lib.makeLibraryPath;
             };
           };
       }

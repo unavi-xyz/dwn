@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::did_url::ParseError;
 
-/// [DID](https://www.w3.org/TR/did-core/#did-syntax).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+/// A [Decentralized Identifier](https://www.w3.org/TR/did-core/#did-syntax).
 pub struct Did {
     pub method_name: MethodName,
     pub method_id: MethodId,

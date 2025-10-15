@@ -8,13 +8,18 @@ repository.workspace = true
 version.workspace    = true
 
 [dependencies]
-axum              = "0.8.6"
-axum-macros       = "0.5.0"
-dwn.workspace     = true
-tracing.workspace = true
-xdid.workspace    = true
+anyhow.workspace        = true
+axum                    = "0.8.6"
+axum-macros             = "0.5.0"
+clap                    = { features = ["derive"], version = "4.5.48" }
+directories             = "6.0.0"
+dwn.workspace           = true
+dwn-native-db.workspace = true
+tokio                   = { features = ["full"], version = "1.48.0" }
+tracing.workspace       = true
+tracing-subscriber      = "0.3.20"
+xdid.workspace          = true
 
 [dev-dependencies]
 port_check.workspace   = true
-tokio                  = { features = ["macros", "rt", "rt-multi-thread"], version = "1.48.0" }
 tracing-test.workspace = true

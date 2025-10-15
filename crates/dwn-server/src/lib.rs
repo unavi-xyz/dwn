@@ -4,7 +4,11 @@
 //! to be compatible with the [dwn](https://github.com/unavi-xyz/dwn/tree/main/crates/dwn)
 //! crate.
 
-use std::str::FromStr;
+use std::{
+    net::SocketAddr,
+    str::FromStr,
+    sync::{Arc, LazyLock},
+};
 
 use axum::{
     Json, Router,
@@ -13,11 +17,40 @@ use axum::{
     routing::put,
 };
 use axum_macros::debug_handler;
+use directories::ProjectDirs;
 use dwn::{Dwn, core::message::Message};
-use tracing::debug;
+use tokio::net::TcpListener;
+use tracing::{debug, info};
 use xdid::core::did::Did;
 
 pub use dwn::core::reply::Reply;
+
+pub static DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
+    let dirs = ProjectDirs::from("", "UNAVI", "dwn-server").expect("project dirs");
+    std::fs::create_dir_all(dirs.data_dir()).expect("data dir");
+    dirs
+});
+
+const DB_FILE: &str = "data.db";
+
+pub async fn run_server(addr: SocketAddr) -> anyhow::Result<()> {
+    let path = {
+        let mut dir = DIRS.data_dir().to_path_buf();
+        dir.push(DB_FILE);
+        dir
+    };
+    let store = Arc::new(dwn_native_db::NativeDbStore::new(path)?);
+    let dwn = Dwn::new(store.clone(), store);
+
+    let listener = TcpListener::bind(addr).await?;
+    let router = create_router(dwn);
+
+    info!("DWN server running on {addr}");
+
+    axum::serve(listener, router).await?;
+
+    Ok(())
+}
 
 pub fn create_router(dwn: Dwn) -> Router {
     // TODO: Anyone can write messages to the DWN, even if they are not `target`.
