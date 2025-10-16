@@ -22,45 +22,36 @@ use xdid::methods::key::{p256::P256KeyPair, DidKeyPair, PublicKey};
 async fn main() {
     // Create a local in-memory DWN.
     let store = NativeDbStore::new_in_memory().unwrap();
-    let mut dwn = Dwn::from(store);
+    let dwn = Dwn::from(store);
    
     // Create a new did:key.
     let key = P256KeyPair::generate();
     let did = key.public().to_did();
    
     // Create an actor to sign messages on behalf of our DID.
-    let mut actor = Actor::new(did.clone());
+    let mut actor = Actor::new(did, dwn);
     actor.auth_key = Some(key.clone().into());
     actor.sign_key = Some(key.into());
    
-    // Prepare to write a new record to the DWN.
-    let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_vec())
+    // Write a new record to the DWN.
+    let data = "Hello, world!".as_bytes().to_vec();
+
+    let record_id = actor.write()
+        .data(TEXT_PLAIN, data.clone())
         .published(true)
-        .build()
+        .process()
+        .await
         .unwrap();
-   
-    let record_id = msg.record_id.clone();
-   
-    // Authorize the message using the actor.
-    actor.authorize(&mut msg).unwrap();
-   
-    // Process the message at our DID's DWN.
-    dwn.process_message(&did, msg.clone()).await.unwrap();
-   
+
     // We can now read the record using its ID.
-    let read = RecordsReadBuilder::new(record_id.clone())
-        .build()
+    let found = actor.read(record_id.clone())
+        .process()
+        .await
+        .unwrap()
         .unwrap();
-   
-    let reply = dwn.process_message(&did, read).await.unwrap();
 
-    let found = match reply {
-        Some(Reply::RecordsRead(r)) => r.entry.unwrap(),
-        _ => panic!("invalid reply"),
-    };
-
-    assert_eq!(found, msg);
+   assert!(found.entry().record_id, record_id);
+   assert!(found.data().unwrap(), data);
 }
 ```
 

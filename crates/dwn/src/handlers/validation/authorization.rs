@@ -27,10 +27,12 @@ pub async fn validate_authorization(did: &Did, msg: &Message) -> Result<(), Vali
 
     if let Some(attestation_cid) = &payload.attestation_cid {
         let Some(found) = msg.attestation.as_ref().map(|j| &j.payload) else {
+            debug!("No attestation found");
             return Err(ValidationError::InvalidPayload);
         };
 
         if attestation_cid != found {
+            debug!("Attestation CID does not match found attestation");
             return Err(ValidationError::InvalidPayload);
         }
     }

@@ -12,6 +12,7 @@ default   = ["native_db"]
 native_db = ["dep:dwn-native-db"]
 
 [dependencies]
+anyhow.workspace = true
 base64.workspace = true
 dwn-core.workspace = true
 dwn-native-db = { optional = true, workspace = true }

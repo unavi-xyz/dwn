@@ -7,7 +7,7 @@ use crate::utils::init_dwn;
 #[tokio::test]
 #[traced_test]
 async fn test_valid_authorization() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();
@@ -18,7 +18,7 @@ async fn test_valid_authorization() {
 #[tokio::test]
 #[traced_test]
 async fn test_invalid_payload() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();
@@ -31,7 +31,7 @@ async fn test_invalid_payload() {
 #[tokio::test]
 #[traced_test]
 async fn test_empty_signatures() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();
@@ -44,7 +44,7 @@ async fn test_empty_signatures() {
 #[tokio::test]
 #[traced_test]
 async fn test_invalid_signature() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();
@@ -57,7 +57,7 @@ async fn test_invalid_signature() {
 #[tokio::test]
 #[traced_test]
 async fn test_multiple_signatures() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();
@@ -71,7 +71,7 @@ async fn test_multiple_signatures() {
 #[tokio::test]
 #[traced_test]
 async fn test_multiple_signatures_invalid() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();
@@ -86,7 +86,7 @@ async fn test_multiple_signatures_invalid() {
 #[tokio::test]
 #[traced_test]
 async fn test_wrong_auth_key() {
-    let (mut actor, mut dwn) = init_dwn();
+    let (mut actor, dwn) = init_dwn();
 
     let key_2 = P256KeyPair::generate();
     actor.auth_key = Some(key_2.into());

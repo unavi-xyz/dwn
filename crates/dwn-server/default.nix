@@ -8,9 +8,9 @@ _: {
         root = ../..;
         fileset = lib.fileset.unions [
           (pkgs.crane.fileset.commonCargoSources root)
-          ./README.md
           ../../LICENSE-APACHE
           ../../LICENSE-MIT
+          ./README.md
         ];
       };
 

@@ -12,7 +12,7 @@ use crate::utils::init_dwn;
 #[tokio::test]
 #[traced_test]
 async fn test_read_published() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let write = RecordsWriteBuilder::default()
         .published(true)
@@ -35,7 +35,7 @@ async fn test_read_published() {
 #[tokio::test]
 #[traced_test]
 async fn test_read_unpublished() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let data = "hello, world!".as_bytes().to_owned();
 
@@ -62,7 +62,7 @@ async fn test_read_unpublished() {
 #[tokio::test]
 #[traced_test]
 async fn test_read_unpublished_requires_auth() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, dwn) = init_dwn();
 
     let data = "hello, world!".as_bytes().to_owned();
 

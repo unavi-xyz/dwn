@@ -22,7 +22,6 @@ pub struct RecordsWrite {
     pub data_format: Option<mime::Mime>,
     #[serde(with = "time::serde::rfc3339")]
     pub message_timestamp: OffsetDateTime,
-    pub parent_id: Option<String>,
     pub protocol: Option<String>,
     pub protocol_version: Option<semver::Version>,
     pub published: Option<bool>,
@@ -37,7 +36,6 @@ pub struct RecordsWriteBuilder {
     schema: Option<String>,
     protocol: Option<String>,
     protocol_version: Option<semver::Version>,
-    parent_id: Option<String>,
     published: Option<bool>,
 }
 
@@ -64,11 +62,6 @@ impl RecordsWriteBuilder {
         self
     }
 
-    pub fn parent_id(mut self, value: String) -> Self {
-        self.parent_id = Some(value);
-        self
-    }
-
     pub fn published(mut self, value: bool) -> Self {
         self.published = Some(value);
         self
@@ -85,7 +78,6 @@ impl RecordsWriteBuilder {
             schema: self.schema,
             protocol: self.protocol,
             protocol_version: self.protocol_version,
-            parent_id: self.parent_id,
             published: self.published,
             message_timestamp: OffsetDateTime::now_utc(),
         }));

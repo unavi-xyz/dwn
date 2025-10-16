@@ -21,7 +21,7 @@ async fn test_schema_success() {
     let schema_url = serve_string(schema.to_string()).await;
 
     let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().as_bytes().to_owned())
+        .data(APPLICATION_JSON, data.to_string().into_bytes())
         .schema(schema_url)
         .build()
         .unwrap();
@@ -42,7 +42,7 @@ async fn test_schema_fail() {
     let schema_url = serve_string(schema.to_string()).await;
 
     let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().as_bytes().to_owned())
+        .data(APPLICATION_JSON, data.to_string().into_bytes())
         .schema(schema_url)
         .build()
         .unwrap();
@@ -62,7 +62,7 @@ async fn test_invalid_schema() {
     let schema_url = serve_string(schema.to_string()).await;
 
     let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().as_bytes().to_owned())
+        .data(APPLICATION_JSON, data.to_string().into_bytes())
         .schema(schema_url)
         .build()
         .unwrap();
@@ -80,7 +80,7 @@ async fn test_invalid_schema_url() {
     let schema_url = "not a url".to_string();
 
     let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().as_bytes().to_owned())
+        .data(APPLICATION_JSON, data.to_string().into_bytes())
         .schema(schema_url)
         .build()
         .unwrap();
@@ -101,7 +101,7 @@ async fn test_schema_requires_data_format_json() {
     let schema_url = serve_string(schema.to_string()).await;
 
     let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data.to_string().as_bytes().to_owned())
+        .data(TEXT_PLAIN, data.to_string().into_bytes())
         .schema(schema_url)
         .build()
         .unwrap();

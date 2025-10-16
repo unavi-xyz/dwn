@@ -93,6 +93,7 @@
                   cargo-edit
                   cargo-machete
                   cargo-nextest
+                  cargo-rdme
                   cargo-release
                   cargo-workspaces
                 ])

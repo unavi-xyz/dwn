@@ -11,25 +11,22 @@ use crate::Dwn;
 use self::document_key::DocumentKey;
 
 pub mod document_key;
+pub mod records;
 
 pub struct Actor {
     pub did: Did,
+    pub dwn: Dwn,
     pub auth_key: Option<DocumentKey>,
     pub sign_key: Option<DocumentKey>,
-    /// Local DWN to interact with.
-    pub dwn: Option<Dwn>,
-    /// URL of remote DWN to interact with.
-    pub remote: Option<String>,
 }
 
 impl Actor {
-    pub fn new(did: Did) -> Self {
+    pub fn new(did: Did, dwn: Dwn) -> Self {
         Self {
             did,
+            dwn,
             auth_key: None,
             sign_key: None,
-            dwn: None,
-            remote: None,
         }
     }
 
@@ -122,6 +119,7 @@ pub enum SignError {
 #[cfg(test)]
 mod tests {
     use dwn_core::message::descriptor::RecordsWriteBuilder;
+    use dwn_native_db::NativeDbStore;
     use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
     use super::*;
@@ -131,7 +129,8 @@ mod tests {
         let key = P256KeyPair::generate();
         let did = key.public().to_did();
 
-        let mut actor = Actor::new(did.clone());
+        let dwn = Dwn::from(NativeDbStore::new_in_memory().unwrap());
+        let mut actor = Actor::new(did, dwn);
         actor.sign_key = Some(key.into());
 
         let mut msg = RecordsWriteBuilder::default().build().unwrap();

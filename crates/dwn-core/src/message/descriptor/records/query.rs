@@ -30,7 +30,6 @@ pub struct RecordFilter {
     pub data_format: Option<mime::Mime>,
     pub date_created: Option<DateFilter>,
     pub date_sort: Option<DateSort>,
-    pub parent_id: Option<String>,
     pub protocol: Option<String>,
     pub protocol_version: Option<semver::Version>,
     pub recipient: Option<Did>,
@@ -77,11 +76,6 @@ impl RecordsQueryBuilder {
 
     pub fn record_id(mut self, value: String) -> Self {
         self.filter.record_id = Some(value);
-        self
-    }
-
-    pub fn parent_id(mut self, value: String) -> Self {
-        self.filter.parent_id = Some(value);
         self
     }
 

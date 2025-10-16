@@ -64,7 +64,7 @@ pub fn create_router(dwn: Dwn) -> Router {
 #[debug_handler]
 async fn handle_put(
     Path(target): Path<String>,
-    State(mut dwn): State<Dwn>,
+    State(dwn): State<Dwn>,
     Json(msg): Json<Message>,
 ) -> Result<Json<Option<Reply>>, StatusCode> {
     let target = Did::from_str(&target).map_err(|e| {

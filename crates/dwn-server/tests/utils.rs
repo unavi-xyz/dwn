@@ -16,7 +16,7 @@ pub async fn init_test() -> (Actor, Dwn, impl RecordStore) {
     let key = P256KeyPair::generate();
     let did = key.public().to_did();
 
-    let mut actor = Actor::new(did.clone());
+    let mut actor = Actor::new(did, dwn.clone());
     actor.auth_key = Some(key.clone().into());
     actor.sign_key = Some(key.into());
 

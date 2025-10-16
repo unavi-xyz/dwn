@@ -138,7 +138,6 @@ mod test {
             .schema("schema".to_string())
             .protocol("protocol".to_string(), Version::new(1, 2, 3))
             .record_id("record id".to_string())
-            .parent_id("parent id".to_string())
             .build()
             .unwrap();
         let ser = serde_json::to_string_pretty(&msg).unwrap();
@@ -163,7 +162,6 @@ mod test {
             .schema("schema".to_string())
             .protocol("protocol".to_string(), Version::new(1, 2, 3))
             .record_id("record id".to_string())
-            .parent_id("parent id".to_string())
             .published(true)
             .build()
             .unwrap();
