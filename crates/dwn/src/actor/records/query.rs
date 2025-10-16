@@ -59,7 +59,7 @@ impl ActorQueryBuilder<'_> {
         self
     }
 
-    pub fn message_timestamp(mut self, value: DateFilter) -> Self {
+    pub fn date_created(mut self, value: DateFilter) -> Self {
         self.msg.filter.date_created = Some(value);
         self
     }

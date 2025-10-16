@@ -28,3 +28,31 @@ async fn test_actor_write_read() {
     let found_data = found.data().unwrap();
     assert_eq!(found_data, data)
 }
+
+#[tokio::test]
+#[traced_test]
+async fn test_actor_query() {
+    let (actor, _) = init_dwn();
+
+    let data_1 = "Hello, world!".as_bytes().to_owned();
+    let data_2 = "Goodbye, world!".as_bytes().to_owned();
+
+    let id_1 = actor
+        .write()
+        .data(TEXT_PLAIN, data_1.clone())
+        .process()
+        .await
+        .expect("write");
+
+    let id_2 = actor
+        .write()
+        .data(TEXT_PLAIN, data_2.clone())
+        .process()
+        .await
+        .expect("write");
+
+    let found = actor.query().process().await.unwrap();
+    assert_eq!(found.len(), 2);
+    assert!(found.iter().any(|x| x.entry().record_id == id_1));
+    assert!(found.iter().any(|x| x.entry().record_id == id_2));
+}

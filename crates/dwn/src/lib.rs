@@ -81,6 +81,8 @@ pub struct Dwn {
     pub record_store: Arc<dyn RecordStore>,
     /// URL of the remote DWN to sync with.
     pub remote: Option<String>,
+    /// Whether to automatically send writes to the remote.
+    pub sync_writes: bool,
     client: Client,
 }
 
@@ -96,6 +98,7 @@ impl Dwn {
             data_store,
             record_store,
             remote: None,
+            sync_writes: true,
             client: Client::new(),
         }
     }
@@ -139,6 +142,19 @@ impl Dwn {
             )
             .map(|v| Some(Reply::RecordsSync(Box::new(v))))?,
             Descriptor::RecordsWrite(_) => {
+                if self.sync_writes
+                    && let Some(remote) = self.remote.clone()
+                {
+                    let client = self.client.clone();
+                    let msg = msg.clone();
+                    let target = target.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = send_remote(&client, &target, &msg, &remote).await {
+                            warn!("Remote write: {e:?}");
+                        };
+                    });
+                }
+
                 handlers::records::write::handle(
                     self.data_store.as_ref(),
                     self.record_store.as_ref(),
@@ -153,23 +169,22 @@ impl Dwn {
         Ok(res)
     }
 
-    /// Sends a message to a remote DWN.
-    pub async fn send(
+    /// Sends a message to the remote DWN.
+    pub async fn send_remote(
         &self,
         target: &Did,
         msg: &Message,
-        url: &str,
-    ) -> Result<Option<Reply>, reqwest::Error> {
-        send_remote(&self.client, target, msg, url).await
+    ) -> Result<Option<Reply>, SyncError> {
+        let Some(remote) = self.remote.as_deref() else {
+            return Err(SyncError::NoRemote);
+        };
+        let reply = send_remote(&self.client, target, msg, remote).await?;
+        Ok(reply)
     }
 
-    /// Syncs with the remote DWN.
+    /// Full sync with the remote DWN.
     /// If an actor is provided, it will be used to authorize the sync.
     pub async fn sync(&mut self, target: &Did, actor: Option<&Actor>) -> Result<(), SyncError> {
-        let Some(remote) = &self.remote.clone() else {
-            return Ok(());
-        };
-
         let descriptor = Descriptor::RecordsSync(Box::new(
             self.record_store.prepare_sync(target, actor.is_some())?,
         ));
@@ -186,7 +201,7 @@ impl Dwn {
             actor.authorize(&mut msg)?;
         }
 
-        let reply = match self.send(target, &msg, remote).await? {
+        let reply = match self.send_remote(target, &msg).await? {
             Some(Reply::RecordsSync(r)) => r,
             r => {
                 debug!("Invalid reply: {r:?}");
@@ -222,11 +237,11 @@ impl Dwn {
                 continue;
             };
 
-            self.send(target, &record.initial_entry, remote).await?;
+            self.send_remote(target, &record.initial_entry).await?;
 
             if record.latest_entry.descriptor.compute_entry_id()? != record.initial_entry.record_id
             {
-                self.send(target, &record.latest_entry, remote).await?;
+                self.send_remote(target, &record.latest_entry).await?;
             }
         }
 
@@ -240,6 +255,8 @@ pub enum SyncError {
     CidGeneration(#[from] CidGenerationError),
     #[error("invalid reply from remote")]
     InvalidReply,
+    #[error("no remote url set")]
+    NoRemote,
     #[error(transparent)]
     RecordStore(#[from] StoreError),
     #[error(transparent)]
