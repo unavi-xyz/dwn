@@ -134,12 +134,17 @@ mod test {
 
     #[test]
     fn test_serialize_records_query() {
-        let msg = RecordsQueryBuilder::default()
-            .schema("schema".to_string())
-            .protocol("protocol".to_string(), Version::new(1, 2, 3))
-            .record_id("record id".to_string())
-            .build()
-            .unwrap();
+        let msg = RecordsQueryBuilder {
+            filter: RecordFilter {
+                schema: Some("schema".to_string()),
+                protocol: Some("protocol".to_string()),
+                protocol_version: Some(Version::new(1, 2, 3)),
+                record_id: Some("record id".to_string()),
+                ..Default::default()
+            },
+        }
+        .build()
+        .unwrap();
         let ser = serde_json::to_string_pretty(&msg).unwrap();
         println!("{}", ser);
         let des = serde_json::from_str::<Message>(&ser).unwrap();
@@ -157,14 +162,17 @@ mod test {
 
     #[test]
     fn test_serialize_records_write() {
-        let msg = RecordsWriteBuilder::default()
-            .data(TEXT_PLAIN, vec![0, 1, 2, 3])
-            .schema("schema".to_string())
-            .protocol("protocol".to_string(), Version::new(1, 2, 3))
-            .record_id("record id".to_string())
-            .published(true)
-            .build()
-            .unwrap();
+        let msg = RecordsWriteBuilder {
+            data_format: Some(TEXT_PLAIN),
+            data: Some(vec![0, 1, 2, 3]),
+            schema: Some("schema".to_string()),
+            protocol: Some("protocol".to_string()),
+            protocol_version: Some(Version::new(1, 2, 3)),
+            record_id: Some("record id".to_string()),
+            published: Some(true),
+        }
+        .build()
+        .unwrap();
         let ser = serde_json::to_string_pretty(&msg).unwrap();
         println!("{}", ser);
         let des = serde_json::from_str::<Message>(&ser).unwrap();

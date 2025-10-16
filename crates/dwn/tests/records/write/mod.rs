@@ -15,10 +15,13 @@ async fn test_write() {
 
     let data = "Hello, world!".as_bytes().to_owned();
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_success(&actor.did, &mut dwn, msg).await;
@@ -31,10 +34,13 @@ async fn test_require_auth() {
 
     let data = "Hello, world!".as_bytes().to_owned();
 
-    let msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
-        .build()
-        .unwrap();
+    let msg = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
 
     expect_fail(&actor.did, &mut dwn, msg).await;
 }
@@ -46,11 +52,14 @@ async fn test_write_invalid_record_id() {
 
     let data = "Hello, world!".as_bytes().to_owned();
 
-    let mut msg = RecordsWriteBuilder::default()
-        .record_id("fake id".to_string())
-        .data(TEXT_PLAIN, data)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        record_id: Some("fake id".to_string()),
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_fail(&actor.did, &mut dwn, msg).await;

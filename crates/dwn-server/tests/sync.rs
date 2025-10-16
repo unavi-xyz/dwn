@@ -12,10 +12,13 @@ mod utils;
 async fn test_sync_local_write() {
     let (actor, mut dwn, remote) = init_test().await;
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_vec())
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some("Hello, world!".as_bytes().to_vec()),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
     let record_id = msg.record_id.clone();
 
@@ -35,21 +38,27 @@ async fn test_sync_local_update() {
     let (actor, mut dwn, remote) = init_test().await;
 
     let data = "Hello, world!".as_bytes().to_vec();
-    let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
     let record_id = msg.record_id.clone();
 
     dwn.process_message(&actor.did, msg).await.unwrap();
 
     let data_2 = "Goodbye, world!".as_bytes().to_vec();
-    let mut msg_2 = RecordsWriteBuilder::default()
-        .record_id(record_id.clone())
-        .data(TEXT_PLAIN, data_2)
-        .build()
-        .unwrap();
+    let mut msg_2 = RecordsWriteBuilder {
+        record_id: Some(record_id.clone()),
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data_2),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg_2).unwrap();
 
     dwn.process_message(&actor.did, msg_2.clone())
@@ -70,10 +79,13 @@ async fn test_sync_local_update() {
 async fn test_sync_remote_write() {
     let (actor, mut dwn, remote) = init_test().await;
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, "Hello, world!".as_bytes().to_vec())
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some("Hello, world!".as_bytes().to_vec()),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
     let record_id = msg.record_id.clone();
 

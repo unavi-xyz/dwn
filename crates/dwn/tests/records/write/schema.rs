@@ -20,11 +20,14 @@ async fn test_schema_success() {
 
     let schema_url = serve_string(schema.to_string()).await;
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().into_bytes())
-        .schema(schema_url)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(APPLICATION_JSON),
+        data: Some(data.to_string().into_bytes()),
+        schema: Some(schema_url),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_success(&actor.did, &mut dwn, msg).await;
@@ -41,11 +44,14 @@ async fn test_schema_fail() {
 
     let schema_url = serve_string(schema.to_string()).await;
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().into_bytes())
-        .schema(schema_url)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(APPLICATION_JSON),
+        data: Some(data.to_string().into_bytes()),
+        schema: Some(schema_url),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_fail(&actor.did, &mut dwn, msg).await;
@@ -61,11 +67,14 @@ async fn test_invalid_schema() {
 
     let schema_url = serve_string(schema.to_string()).await;
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().into_bytes())
-        .schema(schema_url)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(APPLICATION_JSON),
+        data: Some(data.to_string().into_bytes()),
+        schema: Some(schema_url),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_fail(&actor.did, &mut dwn, msg).await;
@@ -79,11 +88,14 @@ async fn test_invalid_schema_url() {
     let data = json!("foo");
     let schema_url = "not a url".to_string();
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(APPLICATION_JSON, data.to_string().into_bytes())
-        .schema(schema_url)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(APPLICATION_JSON),
+        data: Some(data.to_string().into_bytes()),
+        schema: Some(schema_url),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_fail(&actor.did, &mut dwn, msg).await;
@@ -100,11 +112,14 @@ async fn test_schema_requires_data_format_json() {
 
     let schema_url = serve_string(schema.to_string()).await;
 
-    let mut msg = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data.to_string().into_bytes())
-        .schema(schema_url)
-        .build()
-        .unwrap();
+    let mut msg = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data.to_string().into_bytes()),
+        schema: Some(schema_url),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     actor.authorize(&mut msg).unwrap();
 
     expect_fail(&actor.did, &mut dwn, msg).await;

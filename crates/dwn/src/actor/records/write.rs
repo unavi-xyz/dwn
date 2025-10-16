@@ -22,27 +22,29 @@ pub struct ActorWriteBuilder<'a> {
 
 impl ActorWriteBuilder<'_> {
     pub fn record_id(mut self, value: String) -> Self {
-        self.msg = self.msg.record_id(value);
+        self.msg.record_id = Some(value);
         self
     }
 
     pub fn data(mut self, format: Mime, data: Vec<u8>) -> Self {
-        self.msg = self.msg.data(format, data);
+        self.msg.data_format = Some(format);
+        self.msg.data = Some(data);
         self
     }
 
     pub fn schema(mut self, value: String) -> Self {
-        self.msg = self.msg.schema(value);
+        self.msg.schema = Some(value);
         self
     }
 
     pub fn protocol(mut self, protocol: String, version: Version) -> Self {
-        self.msg = self.msg.protocol(protocol, version);
+        self.msg.protocol = Some(protocol);
+        self.msg.protocol_version = Some(version);
         self
     }
 
     pub fn published(mut self, value: bool) -> Self {
-        self.msg = self.msg.published(value);
+        self.msg.published = Some(value);
         self
     }
 

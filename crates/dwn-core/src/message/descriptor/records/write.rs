@@ -30,43 +30,16 @@ pub struct RecordsWrite {
 
 #[derive(Default)]
 pub struct RecordsWriteBuilder {
-    record_id: Option<String>,
-    data: Option<Vec<u8>>,
-    data_format: Option<mime::Mime>,
-    schema: Option<String>,
-    protocol: Option<String>,
-    protocol_version: Option<semver::Version>,
-    published: Option<bool>,
+    pub record_id: Option<String>,
+    pub data: Option<Vec<u8>>,
+    pub data_format: Option<mime::Mime>,
+    pub schema: Option<String>,
+    pub protocol: Option<String>,
+    pub protocol_version: Option<semver::Version>,
+    pub published: Option<bool>,
 }
 
 impl RecordsWriteBuilder {
-    pub fn record_id(mut self, value: String) -> Self {
-        self.record_id = Some(value);
-        self
-    }
-
-    pub fn data(mut self, format: mime::Mime, data: Vec<u8>) -> Self {
-        self.data_format = Some(format);
-        self.data = Some(data);
-        self
-    }
-
-    pub fn schema(mut self, value: String) -> Self {
-        self.schema = Some(value);
-        self
-    }
-
-    pub fn protocol(mut self, protocol: String, version: semver::Version) -> Self {
-        self.protocol = Some(protocol);
-        self.protocol_version = Some(version);
-        self
-    }
-
-    pub fn published(mut self, value: bool) -> Self {
-        self.published = Some(value);
-        self
-    }
-
     pub fn build(self) -> Result<Message, CidGenerationError> {
         let data_cid = self.data.as_ref().and_then(|d| compute_data_cid(d));
 
@@ -118,10 +91,13 @@ mod tests {
     fn test_data() {
         let data = "test data".as_bytes().to_owned();
 
-        let msg = RecordsWriteBuilder::default()
-            .data(TEXT_PLAIN, data.clone())
-            .build()
-            .unwrap();
+        let msg = RecordsWriteBuilder {
+            data: Some(data.clone()),
+            data_format: Some(TEXT_PLAIN),
+            ..Default::default()
+        }
+        .build()
+        .unwrap();
 
         let Descriptor::RecordsWrite(desc) = msg.descriptor else {
             panic!()

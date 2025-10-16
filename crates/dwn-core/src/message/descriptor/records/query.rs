@@ -55,51 +55,10 @@ pub enum DateSort {
 
 #[derive(Default)]
 pub struct RecordsQueryBuilder {
-    filter: RecordFilter,
+    pub filter: RecordFilter,
 }
 
 impl RecordsQueryBuilder {
-    pub fn attester(mut self, value: Did) -> Self {
-        self.filter.attester = Some(value);
-        self
-    }
-
-    pub fn recipient(mut self, value: Did) -> Self {
-        self.filter.recipient = Some(value);
-        self
-    }
-
-    pub fn schema(mut self, value: String) -> Self {
-        self.filter.schema = Some(value);
-        self
-    }
-
-    pub fn record_id(mut self, value: String) -> Self {
-        self.filter.record_id = Some(value);
-        self
-    }
-
-    pub fn protocol(mut self, value: String, version: semver::Version) -> Self {
-        self.filter.protocol = Some(value);
-        self.filter.protocol_version = Some(version);
-        self
-    }
-
-    pub fn data_format(mut self, value: mime::Mime) -> Self {
-        self.filter.data_format = Some(value);
-        self
-    }
-
-    pub fn message_timestamp(mut self, value: DateFilter) -> Self {
-        self.filter.date_created = Some(value);
-        self
-    }
-
-    pub fn date_sort(mut self, value: DateSort) -> Self {
-        self.filter.date_sort = Some(value);
-        self
-    }
-
     pub fn build(self) -> Result<Message, CidGenerationError> {
         let descriptor = Descriptor::RecordsQuery(Box::new(RecordsQuery {
             interface: Interface::Records,

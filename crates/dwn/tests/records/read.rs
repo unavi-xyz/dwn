@@ -14,10 +14,12 @@ use crate::utils::init_dwn;
 async fn test_read_published() {
     let (actor, dwn) = init_dwn();
 
-    let write = RecordsWriteBuilder::default()
-        .published(true)
-        .build()
-        .unwrap();
+    let write = RecordsWriteBuilder {
+        published: Some(true),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     dwn.record_store
         .write(dwn.data_store.as_ref(), &actor.did, write.clone())
         .unwrap();
@@ -39,10 +41,13 @@ async fn test_read_unpublished() {
 
     let data = "hello, world!".as_bytes().to_owned();
 
-    let write = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
-        .build()
-        .unwrap();
+    let write = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     dwn.record_store
         .write(dwn.data_store.as_ref(), &actor.did, write.clone())
         .unwrap();
@@ -66,10 +71,13 @@ async fn test_read_unpublished_requires_auth() {
 
     let data = "hello, world!".as_bytes().to_owned();
 
-    let write = RecordsWriteBuilder::default()
-        .data(TEXT_PLAIN, data)
-        .build()
-        .unwrap();
+    let write = RecordsWriteBuilder {
+        data_format: Some(TEXT_PLAIN),
+        data: Some(data),
+        ..Default::default()
+    }
+    .build()
+    .unwrap();
     dwn.record_store
         .write(dwn.data_store.as_ref(), &actor.did, write.clone())
         .unwrap();
