@@ -28,6 +28,11 @@ impl ActorWriteBuilder<'_> {
         self
     }
 
+    pub fn context_id(mut self, value: String) -> Self {
+        self.msg.context_id = Some(value);
+        self
+    }
+
     pub fn data(mut self, format: Mime, data: Vec<u8>) -> Self {
         self.msg.data_format = Some(format);
         self.msg.data = Some(data);

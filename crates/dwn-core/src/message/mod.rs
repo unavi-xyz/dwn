@@ -16,6 +16,7 @@ pub mod descriptor;
 #[serde(rename_all = "camelCase")]
 pub struct Message {
     pub record_id: String,
+    pub context_id: Option<String>,
     pub data: Option<data::Data>,
     pub descriptor: descriptor::Descriptor,
     pub attestation: Option<Jws>,

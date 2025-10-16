@@ -113,6 +113,15 @@ impl Dwn {
                 // TODO
                 None
             }
+            Descriptor::RecordsDelete(_) => {
+                handlers::records::delete::handle(
+                    self.data_store.as_ref(),
+                    self.record_store.as_ref(),
+                    target,
+                    msg,
+                )?;
+                None
+            }
             Descriptor::RecordsQuery(_) => {
                 handlers::records::query::handle(self.record_store.as_ref(), target, msg)
                     .await

@@ -7,7 +7,7 @@ use dwn_core::{
 };
 use reqwest::StatusCode;
 use serde_json::Value;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use xdid::core::did::Did;
 
 pub async fn handle(
@@ -154,7 +154,7 @@ pub async fn handle(
     }
 
     if let Err(e) = rs.write(ds, target, msg) {
-        debug!("Error during write: {:?}", e);
+        warn!("Error during write: {e:?}");
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     };
 

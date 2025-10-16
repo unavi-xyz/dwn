@@ -15,6 +15,8 @@ pub struct Record {
 }
 
 pub trait RecordStore: Send + Sync {
+    fn delete(&self, ds: &dyn DataStore, target: &Did, message: Message) -> Result<(), StoreError>;
+
     /// Prepares a RecordsSync message to be sent to a remote DWN.
     fn prepare_sync(&self, target: &Did, authorized: bool) -> Result<RecordsSync, StoreError>;
 

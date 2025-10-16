@@ -9,7 +9,7 @@ use crate::message::{
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct RecordsRead {
+pub struct RecordsDelete {
     interface: Interface,
     method: Method,
     #[serde(with = "time::serde::rfc3339")]
@@ -17,19 +17,19 @@ pub struct RecordsRead {
     pub record_id: String,
 }
 
-pub struct RecordsReadBuilder {
+pub struct RecordsDeleteBuilder {
     record_id: String,
 }
 
-impl RecordsReadBuilder {
+impl RecordsDeleteBuilder {
     pub fn new(record_id: String) -> Self {
         Self { record_id }
     }
 
     pub fn build(self) -> Result<Message, CidGenerationError> {
-        let descriptor = Descriptor::RecordsRead(Box::new(RecordsRead {
+        let descriptor = Descriptor::RecordsDelete(Box::new(RecordsDelete {
             interface: Interface::Records,
-            method: Method::Read,
+            method: Method::Delete,
             record_id: self.record_id,
             message_timestamp: OffsetDateTime::now_utc(),
         }));

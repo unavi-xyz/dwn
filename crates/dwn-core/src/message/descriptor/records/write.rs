@@ -31,6 +31,7 @@ pub struct RecordsWrite {
 #[derive(Default)]
 pub struct RecordsWriteBuilder {
     pub record_id: Option<String>,
+    pub context_id: Option<String>,
     pub data: Option<Vec<u8>>,
     pub data_format: Option<mime::Mime>,
     pub schema: Option<String>,
@@ -67,6 +68,7 @@ impl RecordsWriteBuilder {
 
         Ok(Message {
             record_id,
+            context_id: self.context_id,
             data,
             descriptor,
             attestation: None,

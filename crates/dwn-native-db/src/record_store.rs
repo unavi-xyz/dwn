@@ -14,6 +14,60 @@ use crate::{
 };
 
 impl RecordStore for NativeDbStore<'_> {
+    fn delete(&self, ds: &dyn DataStore, target: &Did, message: Message) -> Result<(), StoreError> {
+        let Descriptor::RecordsDelete(desc) = message.descriptor else {
+            panic!("invalid message descriptor: {:?}", message.descriptor)
+        };
+
+        debug!("deleting {target} {}", desc.record_id);
+
+        let tx = self
+            .0
+            .rw_transaction()
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        let mut data_cids = Vec::new();
+
+        if let Some(initial_entry) = tx
+            .get()
+            .primary::<InitialEntry>((target.to_string(), desc.record_id.clone()))
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
+        {
+            if let Descriptor::RecordsWrite(desc) = &initial_entry.entry.descriptor
+                && let Some(cid) = &desc.data_cid
+            {
+                data_cids.push(cid.clone());
+            };
+
+            tx.remove(initial_entry)
+                .map_err(|e| StoreError::BackendError(e.to_string()))?;
+        };
+
+        if let Some(latest_entry) = tx
+            .get()
+            .primary::<LatestEntry>((target.to_string(), desc.record_id))
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
+        {
+            if let Descriptor::RecordsWrite(desc) = &latest_entry.entry.descriptor
+                && let Some(cid) = &desc.data_cid
+            {
+                data_cids.push(cid.clone());
+            };
+
+            tx.remove(latest_entry)
+                .map_err(|e| StoreError::BackendError(e.to_string()))?;
+        };
+
+        tx.commit()
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        for cid in data_cids {
+            ds.remove_ref(target, &cid)?;
+        }
+
+        Ok(())
+    }
+
     fn prepare_sync(&self, target: &Did, authorized: bool) -> Result<RecordsSync, StoreError> {
         debug!("syncing {}", target);
 

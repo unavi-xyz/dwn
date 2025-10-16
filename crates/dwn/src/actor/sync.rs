@@ -27,6 +27,7 @@ impl Actor {
 
         let mut msg = Message {
             record_id: descriptor.compute_entry_id()?,
+            context_id: None,
             data: None,
             descriptor,
             attestation: None,

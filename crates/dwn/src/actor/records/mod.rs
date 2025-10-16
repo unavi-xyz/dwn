@@ -1,6 +1,7 @@
 use base64::{DecodeError, Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use dwn_core::message::{Message, data::Data};
 
+pub mod delete;
 pub mod query;
 pub mod read;
 pub mod write;

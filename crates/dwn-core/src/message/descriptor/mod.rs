@@ -17,6 +17,7 @@ use super::cid::{CidGenerationError, compute_cid_cbor};
 pub enum Descriptor {
     ProtocolsConfigure(Box<ProtocolsConfigure>),
     ProtocolsQuery(Box<ProtocolsQuery>),
+    RecordsDelete(Box<RecordsDelete>),
     RecordsQuery(Box<RecordsQuery>),
     RecordsRead(Box<RecordsRead>),
     RecordsSync(Box<RecordsSync>),
@@ -42,6 +43,7 @@ impl Descriptor {
         match self {
             Descriptor::ProtocolsConfigure(_) => None,
             Descriptor::ProtocolsQuery(_) => None,
+            Descriptor::RecordsDelete(d) => Some(&d.message_timestamp),
             Descriptor::RecordsQuery(d) => Some(&d.message_timestamp),
             Descriptor::RecordsRead(d) => Some(&d.message_timestamp),
             Descriptor::RecordsSync(d) => Some(&d.message_timestamp),
@@ -111,6 +113,7 @@ impl Display for Interface {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Method {
+    Delete,
     Query,
     Read,
     Sync,
@@ -163,13 +166,14 @@ mod test {
     #[test]
     fn test_serialize_records_write() {
         let msg = RecordsWriteBuilder {
-            data_format: Some(TEXT_PLAIN),
+            context_id: None,
             data: Some(vec![0, 1, 2, 3]),
-            schema: Some("schema".to_string()),
+            data_format: Some(TEXT_PLAIN),
             protocol: Some("protocol".to_string()),
             protocol_version: Some(Version::new(1, 2, 3)),
-            record_id: Some("record id".to_string()),
             published: Some(true),
+            record_id: Some("record id".to_string()),
+            schema: Some("schema".to_string()),
         }
         .build()
         .unwrap();
