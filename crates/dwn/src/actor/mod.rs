@@ -3,6 +3,7 @@ use dwn_core::message::{
     AuthPayload, Header, Jws, Message, Signature,
     cid::{CidGenerationError, compute_cid_cbor},
 };
+use reqwest::Url;
 use thiserror::Error;
 use xdid::{core::did::Did, methods::key::Signer};
 
@@ -12,12 +13,18 @@ use self::document_key::DocumentKey;
 
 pub mod document_key;
 pub mod records;
+pub mod sync;
 
 pub struct Actor {
     pub did: Did,
     pub dwn: Dwn,
+
     pub auth_key: Option<DocumentKey>,
     pub sign_key: Option<DocumentKey>,
+
+    /// URL of a remote DWN to sync with.
+    pub remote: Option<Url>,
+    client: reqwest::Client,
 }
 
 impl Actor {
@@ -27,6 +34,8 @@ impl Actor {
             dwn,
             auth_key: None,
             sign_key: None,
+            remote: None,
+            client: reqwest::Client::default(),
         }
     }
 

@@ -2,16 +2,18 @@ use std::net::SocketAddr;
 
 use dwn::{Actor, Dwn, core::store::RecordStore, stores::NativeDbStore};
 use tokio::net::TcpListener;
-use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
+use xdid::methods::{
+    key::{DidKeyPair, PublicKey, p256::P256KeyPair},
+    web::reqwest::Url,
+};
 
-pub async fn init_test() -> (Actor, Dwn, impl RecordStore) {
+pub async fn init_remote_test() -> (Actor, Dwn, impl RecordStore) {
     let remote_store = NativeDbStore::new_in_memory().unwrap();
     let remote_dwn = Dwn::from(remote_store.clone());
     let remote = start_dwn_server(remote_dwn).await;
 
     let store = NativeDbStore::new_in_memory().unwrap();
-    let mut dwn = Dwn::from(store);
-    dwn.remote = Some(remote);
+    let dwn = Dwn::from(store);
 
     let key = P256KeyPair::generate();
     let did = key.public().to_did();
@@ -19,16 +21,16 @@ pub async fn init_test() -> (Actor, Dwn, impl RecordStore) {
     let mut actor = Actor::new(did, dwn.clone());
     actor.auth_key = Some(key.clone().into());
     actor.sign_key = Some(key.into());
+    actor.remote = Some(remote);
 
     (actor, dwn, remote_store)
 }
 
-pub async fn start_dwn_server(dwn: Dwn) -> String {
+pub async fn start_dwn_server(dwn: Dwn) -> Url {
     let router = dwn_server::create_router(dwn);
 
     let port = port_check::free_local_port().unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    let url = addr.to_string();
 
     tokio::spawn(async move {
         let listener = TcpListener::bind(addr).await.unwrap();
@@ -37,5 +39,5 @@ pub async fn start_dwn_server(dwn: Dwn) -> String {
 
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
-    format!("http://{}", url)
+    Url::parse(&format!("http://{}", addr)).unwrap()
 }

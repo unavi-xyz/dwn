@@ -9,6 +9,7 @@ impl Actor {
             msg: RecordsWriteBuilder::default(),
             auth: true,
             sign: false,
+            sync: true,
         }
     }
 }
@@ -18,6 +19,7 @@ pub struct ActorWriteBuilder<'a> {
     msg: RecordsWriteBuilder,
     auth: bool,
     sign: bool,
+    sync: bool,
 }
 
 impl ActorWriteBuilder<'_> {
@@ -62,6 +64,13 @@ impl ActorWriteBuilder<'_> {
         self
     }
 
+    /// Whether to sync the message with the remote.
+    /// Defaults to `true`.
+    pub fn sync(mut self, value: bool) -> Self {
+        self.sync = value;
+        self
+    }
+
     /// Processes the message with the actor's DWN.
     /// Returns the written record ID.
     pub async fn process(self) -> anyhow::Result<String> {
@@ -75,6 +84,10 @@ impl ActorWriteBuilder<'_> {
         }
 
         let id = msg.record_id.clone();
+
+        if self.sync && self.actor.remote.is_some() {
+            self.actor.send_remote(&msg).await?;
+        }
 
         self.actor
             .dwn
