@@ -10,11 +10,42 @@ use xdid::core::did::Did;
 use crate::Actor;
 
 impl Actor {
-    pub(crate) async fn send_remote(&self, msg: &Message) -> anyhow::Result<Option<Reply>> {
+    pub(crate) async fn send(
+        &self,
+        target: &Did,
+        msg: &Message,
+        url: &Url,
+    ) -> anyhow::Result<Option<Reply>> {
+        let mut url = url.clone();
+
+        {
+            let mut path = url
+                .path_segments_mut()
+                .map_err(|_| anyhow::anyhow!("invalid url"))?;
+            path.push(&target.to_string());
+        }
+
+        let req = self
+            .client
+            .put(url)
+            .json(msg)
+            .build()
+            .context("build request")?;
+        let res = self.client.execute(req).await.context("execute request")?;
+        let reply = res.json::<Option<Reply>>().await.context("parse reply")?;
+
+        Ok(reply)
+    }
+
+    pub(crate) async fn send_remote(
+        &self,
+        target: &Did,
+        msg: &Message,
+    ) -> anyhow::Result<Option<Reply>> {
         let Some(url) = &self.remote else {
             bail!("remote url not set")
         };
-        let reply = send_message(&self.client, &self.did, msg, url).await?;
+        let reply = self.send(target, msg, url).await?;
         Ok(reply)
     }
 
@@ -36,7 +67,7 @@ impl Actor {
 
         self.authorize(&mut msg)?;
 
-        let reply = match self.send_remote(&msg).await? {
+        let reply = match self.send_remote(&self.did, &msg).await? {
             Some(Reply::RecordsSync(reply)) => reply,
             other => {
                 bail!("invalid reply: {other:?}");
@@ -80,36 +111,14 @@ impl Actor {
                 continue;
             };
 
-            self.send_remote(&record.initial_entry).await?;
+            self.send_remote(&self.did, &record.initial_entry).await?;
 
             if record.latest_entry.descriptor.compute_entry_id()? != record.initial_entry.record_id
             {
-                self.send_remote(&record.latest_entry).await?;
+                self.send_remote(&self.did, &record.latest_entry).await?;
             }
         }
 
         Ok(())
     }
-}
-
-async fn send_message(
-    client: &reqwest::Client,
-    target: &Did,
-    msg: &Message,
-    url: &Url,
-) -> anyhow::Result<Option<Reply>> {
-    let mut url = url.clone();
-
-    {
-        let mut path = url
-            .path_segments_mut()
-            .map_err(|_| anyhow::anyhow!("invalid url"))?;
-        path.push(&target.to_string());
-    }
-
-    let req = client.put(url).json(msg).build().context("build request")?;
-    let res = client.execute(req).await.context("execute request")?;
-    let reply = res.json::<Option<Reply>>().await.context("parse reply")?;
-
-    Ok(reply)
 }

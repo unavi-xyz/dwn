@@ -8,7 +8,7 @@ use super::expect_success;
 #[tokio::test]
 #[traced_test]
 async fn test_update_data() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, _, mut dwn) = init_dwn();
 
     let data_1 = "hello, world!".as_bytes().to_owned();
     let mut msg_1 = RecordsWriteBuilder {

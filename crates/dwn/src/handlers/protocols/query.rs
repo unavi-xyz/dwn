@@ -1,18 +1,12 @@
-use dwn_core::{
-    message::{Message, descriptor::Descriptor},
-    store::RecordStore,
-};
+use dwn_core::message::{Message, descriptor::Descriptor};
 use reqwest::StatusCode;
-use xdid::core::did::Did;
+
+use crate::ProcessContext;
 
 pub async fn handle(
-    _rs: &dyn RecordStore,
-    _target: &Did,
-    msg: Message,
+    ProcessContext { msg, .. }: ProcessContext<'_>,
 ) -> Result<Vec<Message>, StatusCode> {
     debug_assert!(matches!(msg.descriptor, Descriptor::ProtocolsQuery(_)));
-
-    let _authorized = msg.authorization.is_some();
 
     // TODO
 

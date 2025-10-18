@@ -6,7 +6,7 @@ use crate::utils::init_dwn;
 #[tokio::test]
 #[traced_test]
 async fn test_actor_write_read() {
-    let (actor, _) = init_dwn();
+    let (actor, ..) = init_dwn();
 
     let data = "Hello, world!".as_bytes().to_owned();
 
@@ -32,7 +32,7 @@ async fn test_actor_write_read() {
 #[tokio::test]
 #[traced_test]
 async fn test_actor_query() {
-    let (actor, _) = init_dwn();
+    let (actor, ..) = init_dwn();
 
     let data_1 = "Hello, world!".as_bytes().to_owned();
     let data_2 = "Goodbye, world!".as_bytes().to_owned();

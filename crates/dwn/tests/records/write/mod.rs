@@ -11,7 +11,7 @@ mod update;
 #[tokio::test]
 #[traced_test]
 async fn test_write() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, _, mut dwn) = init_dwn();
 
     let data = "Hello, world!".as_bytes().to_owned();
 
@@ -30,7 +30,7 @@ async fn test_write() {
 #[tokio::test]
 #[traced_test]
 async fn test_require_auth() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, _, mut dwn) = init_dwn();
 
     let data = "Hello, world!".as_bytes().to_owned();
 
@@ -48,7 +48,7 @@ async fn test_require_auth() {
 #[tokio::test]
 #[traced_test]
 async fn test_write_invalid_record_id() {
-    let (actor, mut dwn) = init_dwn();
+    let (actor, _, mut dwn) = init_dwn();
 
     let data = "Hello, world!".as_bytes().to_owned();
 

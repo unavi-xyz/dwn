@@ -1,15 +1,21 @@
-use dwn_core::{
-    message::{Message, descriptor::Descriptor},
-    store::RecordStore,
-};
+use dwn_core::message::descriptor::Descriptor;
 use reqwest::StatusCode;
 use tracing::warn;
-use xdid::core::did::Did;
 
-pub async fn handle(rs: &dyn RecordStore, target: &Did, msg: Message) -> Result<(), StatusCode> {
+use crate::ProcessContext;
+
+pub async fn handle(
+    ProcessContext {
+        rs,
+        validation,
+        target,
+        msg,
+        ..
+    }: ProcessContext<'_>,
+) -> Result<(), StatusCode> {
     debug_assert!(matches!(msg.descriptor, Descriptor::ProtocolsConfigure(_)));
 
-    if msg.authorization.is_none() {
+    if !validation.authenticated.contains(target) {
         return Err(StatusCode::UNAUTHORIZED);
     }
 

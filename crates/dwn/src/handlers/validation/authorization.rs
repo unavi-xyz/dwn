@@ -5,7 +5,7 @@ use xdid::core::{did::Did, document::VerificationRole};
 
 use super::{ValidationError, jws::validate_jws};
 
-pub async fn validate_authorization(did: &Did, msg: &Message) -> Result<(), ValidationError> {
+pub async fn validate_authorization(msg: &Message) -> Result<Vec<Did>, ValidationError> {
     // Verify payload.
     let authorization = msg
         .authorization
@@ -38,7 +38,7 @@ pub async fn validate_authorization(did: &Did, msg: &Message) -> Result<(), Vali
     }
 
     // Validate JWS.
-    validate_jws(did, authorization, VerificationRole::Authentication).await?;
+    let vc_dids = validate_jws(authorization, VerificationRole::Authentication).await?;
 
-    Ok(())
+    Ok(vc_dids)
 }

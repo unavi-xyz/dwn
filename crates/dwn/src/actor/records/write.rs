@@ -1,4 +1,6 @@
-use dwn_core::message::{Version, descriptor::RecordsWriteBuilder, mime::Mime};
+use dwn_core::message::{Message, Version, descriptor::RecordsWriteBuilder, mime::Mime};
+use reqwest::Url;
+use xdid::core::did::Did;
 
 use crate::Actor;
 
@@ -10,6 +12,7 @@ impl Actor {
             auth: true,
             sign: false,
             sync: true,
+            target: None,
         }
     }
 }
@@ -20,9 +23,10 @@ pub struct ActorWriteBuilder<'a> {
     auth: bool,
     sign: bool,
     sync: bool,
+    target: Option<&'a Did>,
 }
 
-impl ActorWriteBuilder<'_> {
+impl<'a> ActorWriteBuilder<'a> {
     pub fn record_id(mut self, value: String) -> Self {
         self.msg.record_id = Some(value);
         self
@@ -70,16 +74,21 @@ impl ActorWriteBuilder<'_> {
         self
     }
 
-    /// Whether to sync the message with the remote.
+    /// Whether to sync the message with the actor's remote DWN after processing.
     /// Defaults to `true`.
     pub fn sync(mut self, value: bool) -> Self {
         self.sync = value;
         self
     }
 
-    /// Processes the message with the actor's DWN.
-    /// Returns the written record ID.
-    pub async fn process(self) -> anyhow::Result<String> {
+    /// Sets the target DID for DWN processing.
+    /// Defaults to the actor's own DID.
+    pub fn target(mut self, value: &'a Did) -> Self {
+        self.target = Some(value);
+        self
+    }
+
+    fn build(self) -> anyhow::Result<Message> {
         let mut msg = self.msg.build()?;
 
         if self.sign {
@@ -89,15 +98,40 @@ impl ActorWriteBuilder<'_> {
             self.actor.authorize(&mut msg)?;
         }
 
+        Ok(msg)
+    }
+
+    /// Sends the message to a remote DWN.
+    /// Returns the written record ID.
+    pub async fn send(self, url: &Url) -> anyhow::Result<String> {
+        let actor = self.actor;
+        let target = self.target.unwrap_or(&actor.did);
+
+        let msg = self.build()?;
         let id = msg.record_id.clone();
 
-        if self.sync && self.actor.remote.is_some() {
-            self.actor.send_remote(&msg).await?;
+        actor.send(target, &msg, url).await?;
+
+        Ok(id)
+    }
+
+    /// Processes the message with the actor's local DWN.
+    /// Returns the written record ID.
+    pub async fn process(self) -> anyhow::Result<String> {
+        let sync = self.sync;
+        let actor = self.actor;
+        let target = self.target.unwrap_or(&actor.did);
+
+        let msg = self.build()?;
+        let id = msg.record_id.clone();
+
+        if sync && actor.remote.is_some() {
+            actor.send_remote(target, &msg).await?;
         }
 
-        self.actor
+        actor
             .dwn
-            .process_message(&self.actor.did, msg)
+            .process_message(target, msg)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to process message: {e}"))?;
 

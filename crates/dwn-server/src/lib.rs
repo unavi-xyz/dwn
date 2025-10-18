@@ -53,9 +53,6 @@ pub async fn run_server(addr: SocketAddr) -> anyhow::Result<()> {
 }
 
 pub fn create_router(dwn: Dwn) -> Router {
-    // TODO: Anyone can write messages to the DWN, even if they are not `target`.
-    // Is this a problem? We would need some authentication solution, verifying
-    // the requester has permission to write messages.
     Router::new()
         .route("/{target}", put(handle_put))
         .with_state(dwn)

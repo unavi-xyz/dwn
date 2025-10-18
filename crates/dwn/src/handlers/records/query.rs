@@ -1,20 +1,19 @@
-use dwn_core::{
-    message::{Message, descriptor::Descriptor},
-    reply::RecordsQueryReply,
-    store::RecordStore,
-};
+use dwn_core::{message::descriptor::Descriptor, reply::RecordsQueryReply};
 use reqwest::StatusCode;
 use tracing::{debug, warn};
-use xdid::core::did::Did;
+
+use crate::ProcessContext;
 
 pub async fn handle(
-    rs: &dyn RecordStore,
-    target: &Did,
-    msg: Message,
+    ProcessContext {
+        rs,
+        validation,
+        target,
+        msg,
+        ..
+    }: ProcessContext<'_>,
 ) -> Result<RecordsQueryReply, StatusCode> {
     debug_assert!(matches!(msg.descriptor, Descriptor::RecordsQuery(_)));
-
-    let authorized = msg.authorization.is_some();
 
     let Descriptor::RecordsQuery(desc) = msg.descriptor else {
         panic!("invalid descriptor: {:?}", msg.descriptor);
@@ -27,6 +26,8 @@ pub async fn handle(
         debug!("No protocol version specified");
         return Err(StatusCode::BAD_REQUEST);
     }
+
+    let authorized = validation.authenticated.contains(target);
 
     rs.query(target, &desc.filter.unwrap_or_default(), authorized)
         .map(|entries| RecordsQueryReply { entries })

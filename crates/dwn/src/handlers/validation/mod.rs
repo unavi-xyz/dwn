@@ -6,7 +6,14 @@ mod attestation;
 mod authorization;
 mod jws;
 
-pub async fn validate_message(target: &Did, msg: &Message) -> Result<(), ValidationError> {
+pub struct ValidationResult {
+    /// DIDs with valid attestation signatures.
+    pub _attested: Vec<Did>,
+    /// DIDs with valid authentication signatures.
+    pub authenticated: Vec<Did>,
+}
+
+pub async fn validate_message(msg: &Message) -> Result<ValidationResult, ValidationError> {
     if let Descriptor::RecordsWrite(desc) = &msg.descriptor
         && msg.data.is_some()
     {
@@ -19,15 +26,22 @@ pub async fn validate_message(target: &Did, msg: &Message) -> Result<(), Validat
         }
     }
 
-    if msg.attestation.is_some() {
-        attestation::validate_attestation(target, msg).await?;
-    }
+    let attested = if msg.attestation.is_some() {
+        attestation::validate_attestation(msg).await?
+    } else {
+        Vec::new()
+    };
 
-    if msg.authorization.is_some() {
-        authorization::validate_authorization(target, msg).await?;
-    }
+    let authenticated = if msg.authorization.is_some() {
+        authorization::validate_authorization(msg).await?
+    } else {
+        Vec::new()
+    };
 
-    Ok(())
+    Ok(ValidationResult {
+        _attested: attested,
+        authenticated,
+    })
 }
 
 #[derive(Error, Debug)]

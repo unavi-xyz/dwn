@@ -1,17 +1,17 @@
-use dwn_core::{
-    message::{Message, descriptor::Descriptor},
-    reply::RecordsSyncReply,
-    store::{DataStore, RecordStore, StoreError},
-};
+use dwn_core::{message::descriptor::Descriptor, reply::RecordsSyncReply, store::StoreError};
 use reqwest::StatusCode;
 use tracing::warn;
-use xdid::core::did::Did;
 
-pub fn handle(
-    ds: &dyn DataStore,
-    rs: &dyn RecordStore,
-    target: &Did,
-    msg: Message,
+use crate::ProcessContext;
+
+pub async fn handle(
+    ProcessContext {
+        rs,
+        ds,
+        validation,
+        target,
+        msg,
+    }: ProcessContext<'_>,
 ) -> Result<RecordsSyncReply, StatusCode> {
     debug_assert!(matches!(msg.descriptor, Descriptor::RecordsSync(_)));
 
@@ -19,7 +19,7 @@ pub fn handle(
         panic!("invalid descriptor: {:?}", msg.descriptor);
     };
 
-    let authorized = msg.authorization.is_some();
+    let authorized = validation.authenticated.contains(target);
 
     let mut reply = RecordsSyncReply {
         conflict: Vec::new(),

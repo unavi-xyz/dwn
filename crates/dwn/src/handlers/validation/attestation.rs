@@ -5,7 +5,7 @@ use xdid::core::{did::Did, document::VerificationRole};
 
 use super::{ValidationError, jws::validate_jws};
 
-pub async fn validate_attestation(did: &Did, msg: &Message) -> Result<(), ValidationError> {
+pub async fn validate_attestation(msg: &Message) -> Result<Vec<Did>, ValidationError> {
     // Verify payload.
     let cid = compute_cid_cbor(&msg.descriptor)?;
 
@@ -20,7 +20,7 @@ pub async fn validate_attestation(did: &Did, msg: &Message) -> Result<(), Valida
     }
 
     // Validate JWS.
-    validate_jws(did, attestation, VerificationRole::Assertion).await?;
+    let vc_dids = validate_jws(attestation, VerificationRole::Assertion).await?;
 
-    Ok(())
+    Ok(vc_dids)
 }

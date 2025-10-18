@@ -7,18 +7,33 @@ use tokio::net::TcpListener;
 use tracing::info;
 use xdid::methods::key::{DidKeyPair, PublicKey, p256::P256KeyPair};
 
-pub fn init_dwn() -> (Actor, Dwn) {
+pub fn init_dwn() -> (Actor, Actor, Dwn) {
     let store = NativeDbStore::new_in_memory().unwrap();
     let dwn = Dwn::from(store);
 
-    let key = P256KeyPair::generate();
-    let did = key.public().to_did();
+    let alice = {
+        let key = P256KeyPair::generate();
+        let did = key.public().to_did();
 
-    let mut actor = Actor::new(did, dwn.clone());
-    actor.auth_key = Some(key.clone().into());
-    actor.sign_key = Some(key.into());
+        let mut alice = Actor::new(did, dwn.clone());
+        alice.auth_key = Some(key.clone().into());
+        alice.sign_key = Some(key.into());
 
-    (actor, dwn)
+        alice
+    };
+
+    let bob = {
+        let key = P256KeyPair::generate();
+        let did = key.public().to_did();
+
+        let mut bob = Actor::new(did, dwn.clone());
+        bob.auth_key = Some(key.clone().into());
+        bob.sign_key = Some(key.into());
+
+        bob
+    };
+
+    (alice, bob, dwn)
 }
 
 /// Hosts data over HTTP at a random port.

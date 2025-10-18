@@ -1,17 +1,17 @@
-use dwn_core::{
-    message::{Message, descriptor::Descriptor},
-    reply::RecordsReadReply,
-    store::{DataStore, RecordStore},
-};
+use dwn_core::{message::descriptor::Descriptor, reply::RecordsReadReply};
 use reqwest::StatusCode;
 use tracing::warn;
-use xdid::core::did::Did;
 
-pub fn handle(
-    ds: &dyn DataStore,
-    rs: &dyn RecordStore,
-    target: &Did,
-    msg: Message,
+use crate::ProcessContext;
+
+pub async fn handle(
+    ProcessContext {
+        rs,
+        ds,
+        validation,
+        target,
+        msg,
+    }: ProcessContext<'_>,
 ) -> Result<RecordsReadReply, StatusCode> {
     debug_assert!(matches!(msg.descriptor, Descriptor::RecordsRead(_)));
 
@@ -24,7 +24,7 @@ pub fn handle(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let authorized = msg.authorization.is_some();
+    let authorized = validation.authenticated.contains(target);
 
     Ok(RecordsReadReply {
         entry: record.map(|r| r.latest_entry).and_then(|m| {

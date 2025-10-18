@@ -6,7 +6,7 @@ use crate::utils::init_dwn;
 #[tokio::test]
 #[traced_test]
 async fn test_delete() {
-    let (actor, dwn) = init_dwn();
+    let (actor, _, dwn) = init_dwn();
 
     let data = "Hello, world!".as_bytes().to_owned();
 
@@ -38,7 +38,7 @@ async fn test_delete() {
 #[tokio::test]
 #[traced_test]
 async fn test_delete_requires_auth() {
-    let (actor, dwn) = init_dwn();
+    let (actor, _, dwn) = init_dwn();
 
     let data = "Hello, world!".as_bytes().to_owned();
 

@@ -51,7 +51,7 @@ impl ActorConfigureProtocolBuilder<'_> {
         }
 
         if self.sync && self.actor.remote.is_some() {
-            self.actor.send_remote(&msg).await?;
+            self.actor.send_remote(&self.actor.did, &msg).await?;
         }
 
         let _ = self

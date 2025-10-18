@@ -74,6 +74,8 @@ mod handlers;
 
 pub use actor::*;
 
+use crate::handlers::validation::ValidationResult;
+
 #[derive(Clone)]
 pub struct Dwn {
     pub data_store: Arc<dyn DataStore>,
@@ -84,6 +86,14 @@ impl<T: DataStore + RecordStore + Clone + 'static> From<T> for Dwn {
     fn from(value: T) -> Self {
         Self::new(Arc::new(value.clone()), Arc::new(value))
     }
+}
+
+struct ProcessContext<'a> {
+    pub rs: &'a dyn RecordStore,
+    pub ds: &'a dyn DataStore,
+    pub validation: ValidationResult,
+    pub target: &'a Did,
+    pub msg: Message,
 }
 
 impl Dwn {
@@ -99,58 +109,45 @@ impl Dwn {
         target: &Did,
         msg: Message,
     ) -> Result<Option<Reply>, StatusCode> {
-        if let Err(e) = handlers::validation::validate_message(target, &msg).await {
-            debug!("Failed to validate message: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
+        let validation = match handlers::validation::validate_message(&msg).await {
+            Ok(a) => a,
+            Err(e) => {
+                debug!("Failed to validate message: {:?}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
         };
 
-        let res = match &msg.descriptor {
+        let ctx = ProcessContext {
+            rs: self.record_store.as_ref(),
+            ds: self.data_store.as_ref(),
+            validation,
+            target,
+            msg,
+        };
+
+        let res = match &ctx.msg.descriptor {
             Descriptor::ProtocolsConfigure(_) => {
-                handlers::protocols::configure::handle(self.record_store.as_ref(), target, msg)
-                    .await?;
+                handlers::protocols::configure::handle(ctx).await?;
                 None
             }
-            Descriptor::ProtocolsQuery(_) => {
-                handlers::protocols::query::handle(self.record_store.as_ref(), target, msg)
-                    .await
-                    .map(|v| Some(Reply::ProtocolsQuery(v)))?
-            }
+            Descriptor::ProtocolsQuery(_) => handlers::protocols::query::handle(ctx)
+                .await
+                .map(|v| Some(Reply::ProtocolsQuery(v)))?,
             Descriptor::RecordsDelete(_) => {
-                handlers::records::delete::handle(
-                    self.data_store.as_ref(),
-                    self.record_store.as_ref(),
-                    target,
-                    msg,
-                )?;
+                handlers::records::delete::handle(ctx).await?;
                 None
             }
-            Descriptor::RecordsQuery(_) => {
-                handlers::records::query::handle(self.record_store.as_ref(), target, msg)
-                    .await
-                    .map(|v| Some(Reply::RecordsQuery(v)))?
-            }
-            Descriptor::RecordsRead(_) => handlers::records::read::handle(
-                self.data_store.as_ref(),
-                self.record_store.as_ref(),
-                target,
-                msg,
-            )
-            .map(|v| Some(Reply::RecordsRead(Box::new(v))))?,
-            Descriptor::RecordsSync(_) => handlers::records::sync::handle(
-                self.data_store.as_ref(),
-                self.record_store.as_ref(),
-                target,
-                msg,
-            )
-            .map(|v| Some(Reply::RecordsSync(Box::new(v))))?,
+            Descriptor::RecordsQuery(_) => handlers::records::query::handle(ctx)
+                .await
+                .map(|v| Some(Reply::RecordsQuery(v)))?,
+            Descriptor::RecordsRead(_) => handlers::records::read::handle(ctx)
+                .await
+                .map(|v| Some(Reply::RecordsRead(Box::new(v))))?,
+            Descriptor::RecordsSync(_) => handlers::records::sync::handle(ctx)
+                .await
+                .map(|v| Some(Reply::RecordsSync(Box::new(v))))?,
             Descriptor::RecordsWrite(_) => {
-                handlers::records::write::handle(
-                    self.data_store.as_ref(),
-                    self.record_store.as_ref(),
-                    target,
-                    msg,
-                )
-                .await?;
+                handlers::records::write::handle(ctx).await?;
                 None
             }
         };

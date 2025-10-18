@@ -1,31 +1,29 @@
 use std::str::FromStr;
 
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
-use dwn_core::{
-    message::{
-        Message,
-        data::Data,
-        descriptor::{Can, Descriptor, ProtocolStructure, Who},
-        mime::APPLICATION_JSON,
-    },
-    store::{DataStore, RecordStore},
+use dwn_core::message::{
+    data::Data,
+    descriptor::{Can, Descriptor, ProtocolStructure, RecordFilter, Who},
+    mime::APPLICATION_JSON,
 };
 use reqwest::StatusCode;
 use serde_json::Value;
 use tracing::{debug, error, warn};
-use xdid::core::did::Did;
+
+use crate::ProcessContext;
 
 pub async fn handle(
-    ds: &dyn DataStore,
-    rs: &dyn RecordStore,
-    target: &Did,
-    msg: Message,
+    ProcessContext {
+        rs,
+        ds,
+        validation,
+        target,
+        msg,
+    }: ProcessContext<'_>,
 ) -> Result<(), StatusCode> {
     debug_assert!(matches!(msg.descriptor, Descriptor::RecordsWrite(_)));
 
-    if msg.authorization.is_none() {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
+    let mut authenticated = validation.authenticated.contains(target);
 
     let computed_entry_id = msg.descriptor.compute_entry_id().map_err(|e| {
         debug!("Failed to compute entry id: {:?}", e);
@@ -57,6 +55,30 @@ pub async fn handle(
             debug!(
                 "Schema does not match: {:?} != {:?}",
                 desc.schema, initial_desc.schema
+            );
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        if desc.protocol != initial_desc.protocol {
+            debug!(
+                "Protocol does not match: {:?} != {:?}",
+                desc.protocol, initial_desc.protocol
+            );
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        if desc.protocol_path != initial_desc.protocol_path {
+            debug!(
+                "Protocol path does not match: {:?} != {:?}",
+                desc.protocol_path, initial_desc.protocol_path
+            );
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        if desc.protocol_version != initial_desc.protocol_version {
+            debug!(
+                "Protocol version does not match: {:?} != {:?}",
+                desc.protocol_version, initial_desc.protocol_version
             );
             return Err(StatusCode::BAD_REQUEST);
         }
@@ -165,67 +187,82 @@ pub async fn handle(
                 continue;
             }
 
-            let _target_id = if let Some(of) = &action.of {
-                let mut of_i = None;
-
-                for (i, prev) in parts.iter().enumerate().rev() {
-                    if prev == of {
-                        of_i = Some(i);
-                        break;
-                    }
-                }
-
-                let Some(of_i) = of_i else {
-                    continue;
-                };
-
-                let Some(context_id) = &msg.context_id else {
-                    continue;
-                };
-
-                let Some(target_id) = context_id.split("/").nth(of_i) else {
-                    debug!("Invalid context id");
-                    return Err(StatusCode::BAD_REQUEST);
-                };
-
-                //     let target = match rs.query(
-                //         target,
-                //         &RecordFilter {
-                //             record_id: Some(context_id.clone()),
-                //             ..Default::default()
-                //         },
-                //         true,
-                //     ) {
-                //         Ok(res) => match res.into_iter().next() {
-                //             Some(m) => m,
-                //             None => {
-                //                 debug!("Target record {target_id} not found");
-                //                 return Err(StatusCode::NOT_FOUND);
-                //             }
-                //         },
-                //         Err(e) => {
-                //             debug!("Could not find target record: {e}");
-                //             return Err(StatusCode::BAD_REQUEST);
-                //         }
-                //     };
-
-                Some(target_id)
-            } else {
-                None
-            };
-
             match action.who {
                 Who::Anyone => {
                     can_write = true;
                     break;
                 }
                 Who::Author => {
-                    // TODO: get author from record
-                    todo!()
+                    let of_sigs = if let Some(of) = &action.of {
+                        let mut of_i = None;
+
+                        for (i, prev) in parts.iter().enumerate().rev() {
+                            if prev == of {
+                                of_i = Some(i);
+                                break;
+                            }
+                        }
+
+                        let Some(of_i) = of_i else {
+                            continue;
+                        };
+
+                        let Some(context_id) = &msg.context_id else {
+                            continue;
+                        };
+
+                        let Some(of_id) = context_id.split("/").nth(of_i) else {
+                            debug!("Invalid context id");
+                            return Err(StatusCode::BAD_REQUEST);
+                        };
+
+                        let target = match rs.query(
+                            target,
+                            &RecordFilter {
+                                record_id: Some(of_id.to_string()),
+                                ..Default::default()
+                            },
+                            true,
+                        ) {
+                            Ok(res) => match res.into_iter().next() {
+                                Some(m) => m,
+                                None => {
+                                    debug!("Target record {of_id} not found");
+                                    return Err(StatusCode::NOT_FOUND);
+                                }
+                            },
+                            Err(e) => {
+                                debug!("Could not find target record: {e}");
+                                return Err(StatusCode::BAD_REQUEST);
+                            }
+                        };
+
+                        target
+                            .authorization
+                            .map(|a| a.signatures)
+                            .unwrap_or_default()
+                    } else if let Some(entry) = &latest_entry {
+                        [&entry.initial_entry, &entry.latest_entry]
+                            .into_iter()
+                            .flat_map(|m| m.authorization.as_ref().map(|a| a.signatures.clone()))
+                            .flatten()
+                            .collect::<Vec<_>>()
+                    } else {
+                        continue;
+                    };
+
+                    for sig in of_sigs {
+                        if validation.authenticated.contains(&sig.header.kid.did) {
+                            can_write = true;
+                            break;
+                        }
+                    }
                 }
                 Who::Recipient => {
-                    // TODO: get recipient from record
-                    todo!()
+                    if validation.authenticated.contains(target) {
+                        can_write = true;
+                        break;
+                    }
                 }
             }
         }
@@ -234,6 +271,8 @@ pub async fn handle(
             debug!("Cannot write according to protocol rules");
             return Err(StatusCode::BAD_REQUEST);
         }
+
+        authenticated = true;
     }
 
     // Validate data conforms to schema.
@@ -297,6 +336,10 @@ pub async fn handle(
             debug!("Data does not fulfill schema.");
             return Err(StatusCode::BAD_REQUEST);
         };
+    }
+
+    if !authenticated {
+        return Err(StatusCode::UNAUTHORIZED);
     }
 
     if let Err(e) = rs.write(ds, target, msg) {

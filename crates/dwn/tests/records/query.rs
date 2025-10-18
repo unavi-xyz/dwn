@@ -11,7 +11,7 @@ use crate::utils::init_dwn;
 #[tokio::test]
 #[traced_test]
 async fn test_query_no_filter() {
-    let (actor, dwn) = init_dwn();
+    let (actor, _, dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder {
         published: Some(true),
@@ -45,7 +45,7 @@ async fn test_query_no_filter() {
 #[tokio::test]
 #[traced_test]
 async fn test_query_record_id() {
-    let (actor, dwn) = init_dwn();
+    let (actor, _, dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder {
         published: Some(true),
@@ -87,7 +87,7 @@ async fn test_query_record_id() {
 #[tokio::test]
 #[traced_test]
 async fn test_query_date_filter() {
-    let (actor, dwn) = init_dwn();
+    let (actor, _, dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder {
         published: Some(true),
@@ -153,7 +153,7 @@ async fn test_query_date_filter() {
 #[tokio::test]
 #[traced_test]
 async fn test_query_date_sort() {
-    let (actor, dwn) = init_dwn();
+    let (actor, _, dwn) = init_dwn();
 
     let msg_1 = RecordsWriteBuilder {
         published: Some(true),

@@ -10,17 +10,14 @@ use xdid::{
 
 use super::ValidationError;
 
-pub async fn validate_jws(
-    did: &Did,
-    jws: &Jws,
-    role: VerificationRole,
-) -> Result<(), ValidationError> {
+pub async fn validate_jws(jws: &Jws, role: VerificationRole) -> Result<Vec<Did>, ValidationError> {
     // Verify signatures.
     if jws.signatures.is_empty() {
         return Err(ValidationError::MissingSignature);
     }
 
     let resolver = DidResolver::new()?;
+    let mut vc_dids = Vec::new();
 
     for signature in jws.signatures.iter() {
         match &signature.header.alg {
@@ -38,14 +35,6 @@ pub async fn validate_jws(
             );
             return Err(ValidationError::InvalidKid);
         };
-
-        if vc.id.did != *did {
-            debug!(
-                "Verification method id ({}) does not match DID ({})",
-                vc.id.did, did
-            );
-            return Err(ValidationError::InvalidKid);
-        }
 
         // Validate signature.
         let header_str = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_string(&signature.header)?);
@@ -89,11 +78,13 @@ pub async fn validate_jws(
                 }
                 _ => return Err(ValidationError::UnsupportedKey),
             }
+
+            vc_dids.push(vc.id.did)
         } else {
             // TODO: support publicKeyMultibase
             return Err(ValidationError::UnsupportedKey);
         }
     }
 
-    Ok(())
+    Ok(vc_dids)
 }
