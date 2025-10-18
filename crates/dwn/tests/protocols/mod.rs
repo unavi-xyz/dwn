@@ -24,7 +24,7 @@ async fn test_protocol_anyone_create() {
             "my-value": {
                 "$actions": [{
                     "who": "anyone",
-                    "can": "create",
+                    "can": ["create"],
                 }]
             },
             "non-value": {}
@@ -89,11 +89,11 @@ async fn test_protocol_author_update() {
                 "$actions": [
                     {
                         "who": "anyone",
-                        "can": "create",
+                        "can": ["create"],
                     },
                     {
                         "who": "author",
-                        "can": "update",
+                        "can": ["update"],
                     },
                 ]
             }

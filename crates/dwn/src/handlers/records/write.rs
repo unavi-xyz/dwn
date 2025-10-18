@@ -183,7 +183,7 @@ pub async fn handle(
         let mut can_write = false;
 
         for action in actions {
-            if action.can != can {
+            if !action.can.contains(&can) {
                 continue;
             }
 

@@ -48,7 +48,7 @@ pub struct ProtocolStructure {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ProtocolRule {
     pub who: Who,
-    pub can: Can,
+    pub can: Vec<Can>,
     pub of: Option<String>,
 }
 
