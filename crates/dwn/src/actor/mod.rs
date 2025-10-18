@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use dwn_core::message::{
     AuthPayload, Header, Jws, Message, Signature,
@@ -16,12 +18,13 @@ pub mod protocols;
 pub mod records;
 pub mod sync;
 
+#[derive(Clone)]
 pub struct Actor {
     pub did: Did,
     pub dwn: Dwn,
 
-    pub auth_key: Option<DocumentKey>,
-    pub sign_key: Option<DocumentKey>,
+    pub auth_key: Option<Arc<DocumentKey>>,
+    pub sign_key: Option<Arc<DocumentKey>>,
 
     /// URL of a remote DWN to sync with.
     pub remote: Option<Url>,
@@ -141,7 +144,7 @@ mod tests {
 
         let dwn = Dwn::from(NativeDbStore::new_in_memory().unwrap());
         let mut actor = Actor::new(did, dwn);
-        actor.sign_key = Some(key.into());
+        actor.sign_key = Some(Arc::new(key.into()));
 
         let mut msg = RecordsWriteBuilder::default().build().unwrap();
         actor.sign(&mut msg).unwrap();

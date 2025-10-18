@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use dwn::{Actor, Dwn, stores::NativeDbStore};
+use dwn::{Actor, Dwn, document_key::DocumentKey, stores::NativeDbStore};
 use hyper::{Response, server::conn::http1::Builder, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
@@ -16,8 +16,10 @@ pub fn init_dwn() -> (Actor, Actor, Dwn) {
         let did = key.public().to_did();
 
         let mut alice = Actor::new(did, dwn.clone());
-        alice.auth_key = Some(key.clone().into());
-        alice.sign_key = Some(key.into());
+
+        let key = Arc::<DocumentKey>::new(key.into());
+        alice.auth_key = Some(key.clone());
+        alice.sign_key = Some(key);
 
         alice
     };
@@ -27,8 +29,10 @@ pub fn init_dwn() -> (Actor, Actor, Dwn) {
         let did = key.public().to_did();
 
         let mut bob = Actor::new(did, dwn.clone());
-        bob.auth_key = Some(key.clone().into());
-        bob.sign_key = Some(key.into());
+
+        let key = Arc::<DocumentKey>::new(key.into());
+        bob.auth_key = Some(key.clone());
+        bob.sign_key = Some(key);
 
         bob
     };

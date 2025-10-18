@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dwn_core::message::descriptor::RecordsWriteBuilder;
 use tracing_test::traced_test;
 use xdid::methods::key::{DidKeyPair, p256::P256KeyPair};
@@ -89,7 +91,7 @@ async fn test_wrong_auth_key() {
     let (mut actor, _, dwn) = init_dwn();
 
     let key_2 = P256KeyPair::generate();
-    actor.auth_key = Some(key_2.into());
+    actor.auth_key = Some(Arc::new(key_2.into()));
 
     let mut msg = RecordsWriteBuilder::default().build().unwrap();
     actor.authorize(&mut msg).unwrap();

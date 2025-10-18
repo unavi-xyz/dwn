@@ -1,6 +1,6 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use dwn::{Actor, Dwn, core::store::RecordStore, stores::NativeDbStore};
+use dwn::{Actor, Dwn, core::store::RecordStore, document_key::DocumentKey, stores::NativeDbStore};
 use tokio::net::TcpListener;
 use xdid::methods::{
     key::{DidKeyPair, PublicKey, p256::P256KeyPair},
@@ -19,9 +19,11 @@ pub async fn init_remote_test() -> (Actor, Dwn, impl RecordStore) {
     let did = key.public().to_did();
 
     let mut actor = Actor::new(did, dwn.clone());
-    actor.auth_key = Some(key.clone().into());
-    actor.sign_key = Some(key.into());
     actor.remote = Some(remote);
+
+    let key = Arc::<DocumentKey>::new(key.into());
+    actor.auth_key = Some(key.clone());
+    actor.sign_key = Some(key);
 
     (actor, dwn, remote_store)
 }
