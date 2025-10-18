@@ -207,10 +207,6 @@ impl RecordStore for NativeDbStore<'_> {
     ) -> Result<Vec<Message>, StoreError> {
         debug!("querying {}", target);
 
-        if filter.protocol.is_some() {
-            debug_assert!(filter.protocol_version.is_some());
-        }
-
         let tx = self
             .0
             .r_transaction()
@@ -263,16 +259,22 @@ impl RecordStore for NativeDbStore<'_> {
                     return false;
                 }
 
-                if let Some(protocol) = filter.protocol.as_deref() {
-                    let version = filter.protocol_version.as_ref().unwrap();
+                if let Some(protocol) = filter.protocol.as_deref()
+                    && desc.protocol.as_deref() != Some(protocol)
+                {
+                    return false;
+                }
 
-                    if desc.protocol.as_deref() != Some(protocol) {
-                        return false;
-                    }
+                if let Some(path) = filter.protocol_path.as_ref()
+                    && desc.protocol_path.as_ref() == Some(path)
+                {
+                    return false;
+                }
 
-                    if desc.protocol_version.as_ref() == Some(version) {
-                        return false;
-                    }
+                if let Some(version) = filter.protocol_version.as_ref()
+                    && desc.protocol_version.as_ref() == Some(version)
+                {
+                    return false;
                 }
 
                 if let Some(data_format) = &filter.data_format

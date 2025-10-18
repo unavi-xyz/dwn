@@ -48,9 +48,18 @@ impl ActorQueryBuilder<'_> {
         self
     }
 
-    pub fn protocol(mut self, value: String, version: Version) -> Self {
+    pub fn protocol(mut self, value: String) -> Self {
         self.msg.filter.protocol = Some(value);
-        self.msg.filter.protocol_version = Some(version);
+        self
+    }
+
+    pub fn protocol_path(mut self, value: String) -> Self {
+        self.msg.filter.protocol_path = Some(value);
+        self
+    }
+
+    pub fn protocol_version(mut self, value: Version) -> Self {
+        self.msg.filter.protocol_version = Some(value);
         self
     }
 

@@ -31,6 +31,7 @@ pub struct RecordFilter {
     pub date_created: Option<DateFilter>,
     pub date_sort: Option<DateSort>,
     pub protocol: Option<String>,
+    pub protocol_path: Option<String>,
     pub protocol_version: Option<semver::Version>,
     pub recipient: Option<Did>,
     pub record_id: Option<String>,
