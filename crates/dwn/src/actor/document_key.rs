@@ -7,13 +7,13 @@ use xdid::{
 /// A key that is stored in the DID document.
 pub struct DocumentKey {
     pub alg: Signing,
-    pub key: Box<dyn Signer>,
+    pub key: Box<dyn Signer + Send + Sync>,
     /// URL to the key.
     pub url: DidUrl,
 }
 
 impl DocumentKey {
-    pub fn from_did_key(alg: Signing, key: impl DidKeyPair + 'static) -> Self {
+    pub fn from_did_key(alg: Signing, key: impl DidKeyPair + Send + Sync + 'static) -> Self {
         let did = key.public().to_did();
         let fragment = did
             .to_string()
