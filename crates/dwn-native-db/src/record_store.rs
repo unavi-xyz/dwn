@@ -1,7 +1,9 @@
 use dwn_core::{
     message::{
         Message,
-        descriptor::{DateSort, Descriptor, RecordFilter, RecordId, RecordsSync},
+        descriptor::{
+            DateSort, Descriptor, ProtocolDefinition, RecordFilter, RecordId, RecordsSync,
+        },
     },
     store::{DataStore, Record, RecordStore, StoreError},
 };
@@ -10,10 +12,76 @@ use xdid::core::did::Did;
 
 use crate::{
     NativeDbStore,
-    data::{InitialEntry, LatestEntry},
+    data::{InitialEntry, LatestEntry, Protocol, VersionKey},
 };
 
 impl RecordStore for NativeDbStore<'_> {
+    fn configure_protocol(&self, target: &Did, message: Message) -> Result<(), StoreError> {
+        let Descriptor::ProtocolsConfigure(desc) = message.descriptor else {
+            panic!("invalid message descriptor: {:?}", message.descriptor)
+        };
+
+        debug!("configuring protocol {target} {}", desc.definition.protocol);
+
+        let tx = self
+            .0
+            .rw_transaction()
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        tx.upsert(Protocol {
+            key: (target.to_string(), desc.definition.protocol.clone()),
+            version: VersionKey(desc.protocol_version),
+            definition: desc.definition,
+        })
+        .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        tx.commit()
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    fn query_protocol(
+        &self,
+        target: &Did,
+        protocol: String,
+        versions: Vec<dwn_core::message::Version>,
+        authorized: bool,
+    ) -> Result<Vec<(dwn_core::message::Version, ProtocolDefinition)>, StoreError> {
+        let tx = self
+            .0
+            .r_transaction()
+            .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+        let mut found = Vec::new();
+
+        for res in tx
+            .scan()
+            .primary::<Protocol>()
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
+            .start_with((target.to_string(), protocol))
+            .map_err(|e| StoreError::BackendError(e.to_string()))?
+        {
+            let Ok(prot) = res.as_ref() else {
+                warn!("Failed to read protocol during scan");
+                continue;
+            };
+
+            if !authorized && !prot.definition.published {
+                continue;
+            }
+
+            let version = &prot.version.0;
+            if !versions.is_empty() && !versions.contains(version) {
+                continue;
+            }
+
+            found.push((version.clone(), prot.definition.clone()));
+        }
+
+        Ok(found)
+    }
+
     fn delete(&self, ds: &dyn DataStore, target: &Did, message: Message) -> Result<(), StoreError> {
         let Descriptor::RecordsDelete(desc) = message.descriptor else {
             panic!("invalid message descriptor: {:?}", message.descriptor)

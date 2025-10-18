@@ -1,7 +1,9 @@
-use dwn_core::message::{Message, data::Data};
+use dwn_core::message::{Message, data::Data, descriptor::ProtocolDefinition};
 use native_db::*;
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
+
+use crate::data::VersionKey;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[native_db]
@@ -41,6 +43,18 @@ pub struct RefCount {
     #[primary_key]
     pub key: (String, String),
     pub count: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[native_db]
+#[native_model(id = 5, version = 1, with = native_model::rmp_serde_1_3::RmpSerdeNamed)]
+pub struct Protocol {
+    /// (target, protocol)
+    #[primary_key]
+    pub key: (String, String),
+    #[secondary_key]
+    pub version: VersionKey,
+    pub definition: ProtocolDefinition,
 }
 
 #[cfg(test)]

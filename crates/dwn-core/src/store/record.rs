@@ -1,9 +1,10 @@
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use xdid::core::did::Did;
 
 use crate::message::{
     Message,
-    descriptor::{RecordFilter, RecordsSync},
+    descriptor::{ProtocolDefinition, RecordFilter, RecordsSync},
 };
 
 use super::{DataStore, StoreError};
@@ -15,10 +16,19 @@ pub struct Record {
 }
 
 pub trait RecordStore: Send + Sync {
-    fn delete(&self, ds: &dyn DataStore, target: &Did, message: Message) -> Result<(), StoreError>;
+    fn configure_protocol(&self, target: &Did, message: Message) -> Result<(), StoreError>;
 
-    /// Prepares a RecordsSync message to be sent to a remote DWN.
+    fn query_protocol(
+        &self,
+        target: &Did,
+        protocol: String,
+        versions: Vec<Version>,
+        authorized: bool,
+    ) -> Result<Vec<(Version, ProtocolDefinition)>, StoreError>;
+
     fn prepare_sync(&self, target: &Did, authorized: bool) -> Result<RecordsSync, StoreError>;
+
+    fn delete(&self, ds: &dyn DataStore, target: &Did, message: Message) -> Result<(), StoreError>;
 
     fn query(
         &self,

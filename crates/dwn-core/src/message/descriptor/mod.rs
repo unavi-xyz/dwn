@@ -171,6 +171,7 @@ mod test {
             data_format: Some(TEXT_PLAIN),
             protocol: Some("protocol".to_string()),
             protocol_version: Some(Version::new(1, 2, 3)),
+            protocol_path: Some("protocol path".to_string()),
             published: Some(true),
             record_id: Some("record id".to_string()),
             schema: Some("schema".to_string()),

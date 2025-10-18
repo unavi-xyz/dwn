@@ -2,7 +2,12 @@ use std::str::FromStr;
 
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use dwn_core::{
-    message::{Message, data::Data, descriptor::Descriptor, mime::APPLICATION_JSON},
+    message::{
+        Message,
+        data::Data,
+        descriptor::{Can, Descriptor, ProtocolStructure, Who},
+        mime::APPLICATION_JSON,
+    },
     store::{DataStore, RecordStore},
 };
 use reqwest::StatusCode;
@@ -90,6 +95,147 @@ pub async fn handle(
         return Err(StatusCode::BAD_REQUEST);
     }
 
+    // Validate protocol.
+    if let Some(protocol) = &desc.protocol {
+        let Some(version) = &desc.protocol_version else {
+            debug!("Protocol version not supplied");
+            return Err(StatusCode::BAD_REQUEST);
+        };
+
+        let Some(path) = &desc.protocol_path else {
+            debug!("Protocol path not supplied");
+            return Err(StatusCode::BAD_REQUEST);
+        };
+
+        let definition =
+            match rs.query_protocol(target, protocol.clone(), vec![version.clone()], true) {
+                Ok(found) => match found.into_iter().next().map(|x| x.1) {
+                    Some(d) => d,
+                    None => {
+                        debug!("Protocol {protocol} not found");
+                        return Err(StatusCode::NOT_FOUND);
+                    }
+                },
+                Err(e) => {
+                    debug!("Could not find protocol: {e}");
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
+        let mut structure: Option<&ProtocolStructure> = None;
+        let parts = path.split("/").collect::<Vec<_>>();
+
+        for part in &parts {
+            let structures = match structure {
+                Some(s) => &s.children,
+                None => &definition.structure,
+            };
+
+            let Some(s) = structures.get(*part) else {
+                debug!("Invalid path: {path}");
+                return Err(StatusCode::BAD_REQUEST);
+            };
+
+            structure = Some(s);
+        }
+
+        let Some(structure) = structure else {
+            debug!("Invalid path: {path}");
+            return Err(StatusCode::BAD_REQUEST);
+        };
+
+        let Some(actions) = &structure.actions else {
+            debug!("No structure actions: {path}");
+            return Err(StatusCode::BAD_REQUEST);
+        };
+
+        // TODO: Validate full context ID path
+        // TODO: Enforce max context depth
+
+        let can = if latest_entry.is_some() {
+            Can::Update
+        } else {
+            Can::Create
+        };
+
+        let mut can_write = false;
+
+        for action in actions {
+            if action.can != can {
+                continue;
+            }
+
+            let _target_id = if let Some(of) = &action.of {
+                let mut of_i = None;
+
+                for (i, prev) in parts.iter().enumerate().rev() {
+                    if prev == of {
+                        of_i = Some(i);
+                        break;
+                    }
+                }
+
+                let Some(of_i) = of_i else {
+                    continue;
+                };
+
+                let Some(context_id) = &msg.context_id else {
+                    continue;
+                };
+
+                let Some(target_id) = context_id.split("/").nth(of_i) else {
+                    debug!("Invalid context id");
+                    return Err(StatusCode::BAD_REQUEST);
+                };
+
+                //     let target = match rs.query(
+                //         target,
+                //         &RecordFilter {
+                //             record_id: Some(context_id.clone()),
+                //             ..Default::default()
+                //         },
+                //         true,
+                //     ) {
+                //         Ok(res) => match res.into_iter().next() {
+                //             Some(m) => m,
+                //             None => {
+                //                 debug!("Target record {target_id} not found");
+                //                 return Err(StatusCode::NOT_FOUND);
+                //             }
+                //         },
+                //         Err(e) => {
+                //             debug!("Could not find target record: {e}");
+                //             return Err(StatusCode::BAD_REQUEST);
+                //         }
+                //     };
+
+                Some(target_id)
+            } else {
+                None
+            };
+
+            match action.who {
+                Who::Anyone => {
+                    can_write = true;
+                    break;
+                }
+                Who::Author => {
+                    // TODO: get author from record
+                    todo!()
+                }
+                Who::Recipient => {
+                    // TODO: get recipient from record
+                    todo!()
+                }
+            }
+        }
+
+        if !can_write {
+            debug!("Cannot write according to protocol rules");
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+
     // Validate data conforms to schema.
     if let Some(schema_url) = &desc.schema {
         if desc.data_format != Some(APPLICATION_JSON) {
@@ -101,40 +247,40 @@ pub async fn handle(
         }
 
         if !schema_url.starts_with("http") {
-            debug!("Schema is not an HTTP URL: {}", schema_url);
+            debug!("Schema is not an HTTP URL: {schema_url}");
             return Err(StatusCode::BAD_REQUEST);
         }
 
         let schema = reqwest::get(schema_url)
             .await
             .map_err(|e| {
-                debug!("Failed to fetch schema {:?}", e);
+                debug!("Failed to fetch schema {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?
             .json::<Value>()
             .await
             .map_err(|e| {
-                debug!("Failed to parse schema {:?}", e);
+                debug!("Failed to parse schema {e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
         let validator = jsonschema::validator_for(&schema).map_err(|e| {
-            debug!("Failed to create schema validator: {:?}", e);
+            debug!("Failed to create schema validator: {e:?}");
             StatusCode::BAD_REQUEST
         })?;
 
         let value = match &msg.data {
             Some(Data::Base64(d)) => {
                 let decoded = BASE64_URL_SAFE_NO_PAD.decode(d).map_err(|e| {
-                    debug!("Failed to base64 decode data: {:?}", e);
+                    debug!("Failed to base64 decode data: {e:?}");
                     StatusCode::BAD_REQUEST
                 })?;
                 let utf8 = String::from_utf8(decoded).map_err(|e| {
-                    debug!("Failed to parse data as utf8: {:?}", e);
+                    debug!("Failed to parse data as utf8: {e:?}");
                     StatusCode::BAD_REQUEST
                 })?;
                 Value::from_str(&utf8).map_err(|e| {
-                    debug!("Failed to parse data as JSON: {:?}", e);
+                    debug!("Failed to parse data as JSON: {e:?}");
                     StatusCode::BAD_REQUEST
                 })?
             }

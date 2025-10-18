@@ -106,12 +106,14 @@ impl Dwn {
 
         let res = match &msg.descriptor {
             Descriptor::ProtocolsConfigure(_) => {
-                // TODO
+                handlers::protocols::configure::handle(self.record_store.as_ref(), target, msg)
+                    .await?;
                 None
             }
             Descriptor::ProtocolsQuery(_) => {
-                // TODO
-                None
+                handlers::protocols::query::handle(self.record_store.as_ref(), target, msg)
+                    .await
+                    .map(|v| Some(Reply::ProtocolsQuery(v)))?
             }
             Descriptor::RecordsDelete(_) => {
                 handlers::records::delete::handle(

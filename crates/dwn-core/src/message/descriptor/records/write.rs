@@ -24,6 +24,7 @@ pub struct RecordsWrite {
     pub message_timestamp: OffsetDateTime,
     pub protocol: Option<String>,
     pub protocol_version: Option<semver::Version>,
+    pub protocol_path: Option<String>,
     pub published: Option<bool>,
     pub schema: Option<String>,
 }
@@ -37,6 +38,7 @@ pub struct RecordsWriteBuilder {
     pub schema: Option<String>,
     pub protocol: Option<String>,
     pub protocol_version: Option<semver::Version>,
+    pub protocol_path: Option<String>,
     pub published: Option<bool>,
 }
 
@@ -52,6 +54,7 @@ impl RecordsWriteBuilder {
             schema: self.schema,
             protocol: self.protocol,
             protocol_version: self.protocol_version,
+            protocol_path: self.protocol_path,
             published: self.published,
             message_timestamp: OffsetDateTime::now_utc(),
         }));

@@ -12,6 +12,7 @@ use crate::Dwn;
 use self::document_key::DocumentKey;
 
 pub mod document_key;
+pub mod protocols;
 pub mod records;
 pub mod sync;
 

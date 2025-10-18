@@ -44,9 +44,10 @@ impl ActorWriteBuilder<'_> {
         self
     }
 
-    pub fn protocol(mut self, protocol: String, version: Version) -> Self {
+    pub fn protocol(mut self, protocol: String, version: Version, path: String) -> Self {
         self.msg.protocol = Some(protocol);
         self.msg.protocol_version = Some(version);
+        self.msg.protocol_path = Some(path);
         self
     }
 

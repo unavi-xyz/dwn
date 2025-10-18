@@ -5,6 +5,7 @@ use crate::{message::Message, store::Record};
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Reply {
+    ProtocolsQuery(Vec<Message>),
     RecordsSync(Box<RecordsSyncReply>),
     RecordsQuery(RecordsQueryReply),
     RecordsRead(Box<RecordsReadReply>),
