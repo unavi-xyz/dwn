@@ -7,6 +7,7 @@ use dwn_core::{
     },
     store::{DataStore, Record, RecordStore, StoreError},
 };
+use semver::VersionReq;
 use tracing::{debug, error, warn};
 use xdid::core::did::Did;
 
@@ -266,15 +267,21 @@ impl RecordStore for NativeDbStore<'_> {
                 }
 
                 if let Some(path) = filter.protocol_path.as_ref()
-                    && desc.protocol_path.as_ref() == Some(path)
+                    && desc.protocol_path.as_ref() != Some(path)
                 {
                     return false;
                 }
 
-                if let Some(version) = filter.protocol_version.as_ref()
-                    && desc.protocol_version.as_ref() == Some(version)
-                {
-                    return false;
+                if let Some(version) = filter.protocol_version.as_ref() {
+                    let Some(desc_version) = &desc.protocol_version else {
+                        return false;
+                    };
+
+                    let req = VersionReq::parse(&format!("^{version}")).expect("parse version req");
+
+                    if !req.matches(desc_version) {
+                        return false;
+                    }
                 }
 
                 if let Some(data_format) = &filter.data_format

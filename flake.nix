@@ -95,6 +95,7 @@
                   cargo-nextest
                   cargo-rdme
                   cargo-release
+                  cargo-watch
                   cargo-workspaces
                 ])
 

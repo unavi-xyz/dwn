@@ -705,6 +705,7 @@ dependencies = [
  "dwn-core",
  "native_db",
  "native_model",
+ "semver",
  "serde",
  "tracing",
  "xdid",

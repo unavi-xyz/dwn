@@ -11,6 +11,7 @@ version.workspace    = true
 dwn-core.workspace = true
 native_db          = { default-features = false, git = "https://github.com/vincent-herlemont/native_db", version = "0.8.1" }
 native_model       = { features = ["rmp_serde_1_3"], version = "0.6.2" }
+semver.workspace   = true
 serde.workspace    = true
 tracing.workspace  = true
 xdid.workspace     = true
