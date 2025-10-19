@@ -14,6 +14,7 @@ allow = [
   "BSD-2-Clause",
   "BSD-3-Clause",
   "BSL-1.0",
+  "CDLA-Permissive-2.0",
   "ISC",
   "MIT",
   "MIT-0",
@@ -22,22 +23,6 @@ allow = [
   "Unlicense",
 ]
 version = 2
-
-[[licenses.clarify]]
-crate = "ring"
-# SPDX considers OpenSSL to encompass both the OpenSSL and SSLeay licenses
-# https://spdx.org/licenses/OpenSSL.html
-# ISC - Both BoringSSL and ring use this for their new files
-# MIT - "Files in third_party/ have their own licenses, as described therein. The MIT
-# license, for third_party/fiat, which, unlike other third_party directories, is
-# compiled into non-test libraries, is included below."
-# OpenSSL - Obviously
-expression    = "ISC AND MIT AND OpenSSL"
-license-files = [{ hash = 0xbd0eed23, path = "LICENSE" }]
-
-[[licenses.exceptions]]
-allow = ["OpenSSL"]
-crate = "ring"
 
 [advisories]
 ignore = [
