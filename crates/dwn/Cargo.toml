@@ -20,7 +20,7 @@ jose-jwk = "0.1.2"
 jsonschema = { default-features = false, features = [
   "resolve-http",
 ], version = "0.33.0" }
-reqwest = "0.12.24"
+reqwest.workspace = true
 ring = "0.17.14"
 serde_json.workspace = true
 thiserror.workspace = true

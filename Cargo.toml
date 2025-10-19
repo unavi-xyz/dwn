@@ -14,16 +14,22 @@ shared-version = true
 tag-name       = "v{{version}}"
 
 [workspace.dependencies]
-anyhow       = "1.0.100"
-base64       = "0.22.1"
-jose-jwk     = "0.1.2"
-port_check   = "0.3.0"
-semver       = "1.0.27"
-serde        = "1.0.228"
-serde_json   = "1.0.145"
-thiserror    = "2.0.17"
-tokio        = "1.48.0"
-tracing      = "0.1.41"
+anyhow = "1.0.100"
+base64 = "0.22.1"
+jose-jwk = "0.1.2"
+port_check = "0.3.0"
+reqwest = { default-features = false, features = [
+  "charset",
+  "http2",
+  "rustls-tls",
+  "system-proxy",
+], version = "0.12.24" }
+semver = "1.0.27"
+serde = "1.0.228"
+serde_json = "1.0.145"
+thiserror = "2.0.17"
+tokio = "1.48.0"
+tracing = "0.1.41"
 tracing-test = { features = ["no-env-filter"], version = "0.2.5" }
 
 dwn             = { path = "crates/dwn", version = "0.3.0" }

@@ -21,7 +21,7 @@ _: {
         cargoExtraArgs = "-p ${pname}";
         strictDeps = true;
 
-        runtimeDependencies = with pkgs; [ openssl ];
+        runtimeDependencies = [ ];
 
         nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [ pkg-config ]);
 
