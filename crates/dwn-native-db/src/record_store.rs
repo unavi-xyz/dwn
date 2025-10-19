@@ -13,7 +13,7 @@ use xdid::core::did::Did;
 
 use crate::{
     NativeDbStore,
-    data::{InitialEntry, LatestEntry, Protocol, VersionKey},
+    data::{InitialEntry, LatestEntry, Protocol},
 };
 
 impl RecordStore for NativeDbStore<'_> {
@@ -31,8 +31,9 @@ impl RecordStore for NativeDbStore<'_> {
 
         tx.upsert(Protocol {
             key: (target.to_string(), desc.definition.protocol.clone()),
-            version: VersionKey(desc.protocol_version),
-            definition: desc.definition,
+            version: desc.protocol_version,
+            definition: serde_json::to_vec(&desc.definition)
+                .map_err(|e| StoreError::BackendError(e.to_string()))?,
         })
         .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
@@ -68,16 +69,19 @@ impl RecordStore for NativeDbStore<'_> {
                 continue;
             };
 
-            if !authorized && !prot.definition.published {
+            let def = serde_json::from_slice::<ProtocolDefinition>(&prot.definition)
+                .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+            if !authorized && !def.published {
                 continue;
             }
 
-            let version = &prot.version.0;
+            let version = &prot.version;
             if !versions.is_empty() && !versions.contains(version) {
                 continue;
             }
 
-            found.push((version.clone(), prot.definition.clone()));
+            found.push((version.clone(), def));
         }
 
         Ok(found)

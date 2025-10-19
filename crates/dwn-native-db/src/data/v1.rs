@@ -1,9 +1,8 @@
-use dwn_core::message::{Message, data::Data, descriptor::ProtocolDefinition};
+use dwn_core::message::{Message, data::Data};
 use native_db::*;
 use native_model::{Model, native_model};
+use semver::Version;
 use serde::{Deserialize, Serialize};
-
-use crate::data::VersionKey;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[native_db]
@@ -52,9 +51,10 @@ pub struct Protocol {
     /// (target, protocol)
     #[primary_key]
     pub key: (String, String),
-    #[secondary_key]
-    pub version: VersionKey,
-    pub definition: ProtocolDefinition,
+    pub version: Version,
+    /// Serialized [ProtocolDefinition].
+    /// Cannot be stored directly because of non-deteministic maps.
+    pub definition: Vec<u8>,
 }
 
 #[cfg(test)]

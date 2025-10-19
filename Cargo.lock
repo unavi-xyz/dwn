@@ -707,6 +707,7 @@ dependencies = [
  "native_model",
  "semver",
  "serde",
+ "serde_json",
  "tracing",
  "xdid",
 ]
