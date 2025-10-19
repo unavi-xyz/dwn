@@ -20,7 +20,7 @@ use axum_macros::debug_handler;
 use directories::ProjectDirs;
 use dwn::{Dwn, core::message::Message};
 use tokio::net::TcpListener;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 use xdid::core::did::Did;
 
 pub use dwn::core::reply::Reply;
@@ -63,7 +63,9 @@ async fn handle_put(
     Path(target): Path<String>,
     State(dwn): State<Dwn>,
     Json(msg): Json<Message>,
-) -> Result<Json<Option<Reply>>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    debug!("-> PUT /{target}");
+
     let target = Did::from_str(&target).map_err(|e| {
         debug!("Failed to parse DID: {:?}", e);
         StatusCode::BAD_REQUEST
@@ -71,5 +73,11 @@ async fn handle_put(
 
     let reply = dwn.process_message(&target, msg).await?;
 
-    Ok(Json(reply))
+    let res = serde_json::to_value(reply).map_err(|e| {
+        error!("Error serializing response: {e:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    debug!("<- {res}");
+
+    Ok(Json(res))
 }

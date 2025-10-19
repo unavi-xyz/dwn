@@ -22,7 +22,7 @@ impl RecordStore for NativeDbStore<'_> {
             panic!("invalid message descriptor: {:?}", message.descriptor)
         };
 
-        debug!("configuring protocol {target} {}", desc.definition.protocol);
+        debug!("configuring protocol {}", desc.definition.protocol);
 
         let tx = self
             .0
@@ -88,7 +88,7 @@ impl RecordStore for NativeDbStore<'_> {
             panic!("invalid message descriptor: {:?}", message.descriptor)
         };
 
-        debug!("deleting {target} {}", desc.record_id);
+        debug!("deleting {}", desc.record_id);
 
         let tx = self
             .0
@@ -324,7 +324,7 @@ impl RecordStore for NativeDbStore<'_> {
         target: &Did,
         record_id: &str,
     ) -> Result<Option<Record>, StoreError> {
-        debug!("reading {} {}", target, record_id);
+        debug!("reading {}", record_id);
 
         let tx = self
             .0
@@ -368,7 +368,7 @@ impl RecordStore for NativeDbStore<'_> {
         target: &Did,
         mut message: Message,
     ) -> Result<(), StoreError> {
-        debug!("writing {} {}", target, message.record_id);
+        debug!("writing {}", message.record_id);
 
         let tx = self
             .0

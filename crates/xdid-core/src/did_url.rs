@@ -1,12 +1,14 @@
 use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::{
     did::Did,
     uri::{Segment, is_segment},
 };
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct DidUrl {
     pub did: Did,
@@ -21,6 +23,7 @@ pub struct DidUrl {
     pub fragment: Option<String>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RelativeDidUrl {
     pub path: RelativeDidUrlPath,

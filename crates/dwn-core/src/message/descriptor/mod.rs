@@ -72,6 +72,16 @@ impl<'de> Deserialize<'de> for Descriptor {
             .map_err(|_| serde::de::Error::custom("unsupported method"))?;
 
         match (interface, method) {
+            (Interface::Protocols, Method::Configure) => {
+                let desc: ProtocolsConfigure =
+                    serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
+                Ok(Descriptor::ProtocolsConfigure(Box::new(desc)))
+            }
+            (Interface::Protocols, Method::Query) => {
+                let desc: ProtocolsQuery =
+                    serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
+                Ok(Descriptor::ProtocolsQuery(Box::new(desc)))
+            }
             (Interface::Records, Method::Query) => {
                 let desc: RecordsQuery =
                     serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
@@ -113,6 +123,7 @@ impl Display for Interface {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Method {
+    Configure,
     Delete,
     Query,
     Read,

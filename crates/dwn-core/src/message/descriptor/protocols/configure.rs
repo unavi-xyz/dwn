@@ -37,6 +37,7 @@ pub struct ProtocolType {
     pub schema: Option<String>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ProtocolStructure {
     #[serde(rename = "$actions")]
@@ -45,6 +46,7 @@ pub struct ProtocolStructure {
     pub children: HashMap<String, ProtocolStructure>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ProtocolRule {
     pub who: Who,
@@ -86,8 +88,8 @@ impl ProtocolsConfigureBuilder {
 
     pub fn build(self) -> Result<Message, CidGenerationError> {
         let descriptor = Descriptor::ProtocolsConfigure(Box::new(ProtocolsConfigure {
-            interface: Interface::Records,
-            method: Method::Delete,
+            interface: Interface::Protocols,
+            method: Method::Configure,
             protocol_version: self.version,
             definition: self.definition,
         }));

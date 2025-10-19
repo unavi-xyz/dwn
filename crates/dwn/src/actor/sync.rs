@@ -25,13 +25,20 @@ impl Actor {
             path.push(&target.to_string());
         }
 
+        // tracing::info!("-> {}", serde_json::to_string_pretty(msg)?);
         let req = self
             .client
             .put(url)
             .json(msg)
             .build()
             .context("build request")?;
-        let res = self.client.execute(req).await.context("execute request")?;
+        let res = self
+            .client
+            .execute(req)
+            .await
+            .context("execute request")?
+            .error_for_status()?;
+        // tracing::info!("<- {res:?}");
         let reply = res.json::<Option<Reply>>().await.context("parse reply")?;
 
         Ok(reply)

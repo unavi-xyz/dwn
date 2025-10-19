@@ -7,10 +7,10 @@ use crate::{
     did_url::{DidUrl, RelativeDidUrl},
 };
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 #[serde_as]
-#[skip_serializing_none]
 pub struct Document {
     pub id: Did,
     pub also_known_as: Option<Vec<String>>,
@@ -94,8 +94,8 @@ pub enum VerificationMethod {
     Url(DidUrl),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
 #[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VerificationMethodMap {
     pub id: DidUrl,
     pub controller: Did,

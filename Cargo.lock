@@ -723,6 +723,7 @@ dependencies = [
  "dwn",
  "dwn-native-db",
  "port_check",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
