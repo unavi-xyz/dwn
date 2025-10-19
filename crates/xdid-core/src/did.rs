@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::did_url::ParseError;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// A [Decentralized Identifier](https://www.w3.org/TR/did-core/#did-syntax).
 pub struct Did {
     pub method_name: MethodName,
@@ -37,6 +37,26 @@ impl FromStr for Did {
             method_name,
             method_id,
         })
+    }
+}
+
+impl Serialize for Did {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let v = self.to_string();
+        serializer.serialize_str(&v)
+    }
+}
+
+impl<'de> Deserialize<'de> for Did {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(|_| serde::de::Error::custom("parse err"))
     }
 }
 

@@ -1,15 +1,13 @@
 use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 
 use crate::{
     did::Did,
     uri::{Segment, is_segment},
 };
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DidUrl {
     pub did: Did,
     /// [DID path](https://www.w3.org/TR/did-core/#path). `path-abempty` component from
@@ -23,8 +21,27 @@ pub struct DidUrl {
     pub fragment: Option<String>,
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+impl Serialize for DidUrl {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let v = self.to_string();
+        serializer.serialize_str(&v)
+    }
+}
+
+impl<'de> Deserialize<'de> for DidUrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(|_| serde::de::Error::custom("parse err"))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RelativeDidUrl {
     pub path: RelativeDidUrlPath,
     /// [DID query](https://www.w3.org/TR/did-core/#query) ([RFC 3986 - 3.4. Query](https://www.rfc-editor.org/rfc/rfc3986#section-3.4))
@@ -33,7 +50,65 @@ pub struct RelativeDidUrl {
     pub fragment: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+impl Display for RelativeDidUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let path = self.path.to_string();
+        let query = match &self.query {
+            Some(q) => format!("?{q}"),
+            None => String::new(),
+        };
+        let fragment = match &self.fragment {
+            Some(f) => format!("#{f}"),
+            None => String::new(),
+        };
+        f.write_fmt(format_args!("{path}{query}{fragment}"))
+    }
+}
+
+impl FromStr for RelativeDidUrl {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (path, query, fragment) = match s.split_once('?') {
+            Some((path, rest)) => match rest.split_once('#') {
+                Some((query, fragment)) => (path, Some(query), Some(fragment)),
+                None => (path, Some(rest), None),
+            },
+            None => match s.split_once('#') {
+                Some((path, fragment)) => (path, None, Some(fragment)),
+                None => (s, None, None),
+            },
+        };
+
+        Ok(Self {
+            path: RelativeDidUrlPath::from_str(path)?,
+            query: query.map(|s| s.to_string()),
+            fragment: fragment.map(|s| s.to_string()),
+        })
+    }
+}
+
+impl Serialize for RelativeDidUrl {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let v = self.to_string();
+        serializer.serialize_str(&v)
+    }
+}
+
+impl<'de> Deserialize<'de> for RelativeDidUrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(|_| serde::de::Error::custom("parse err"))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RelativeDidUrlPath {
     /// Absolute-path reference. `path-absolute` from [RFC 3986](https://tools.ietf.org/html/rfc3986#section-3.3)
     Absolute(String),
@@ -41,6 +116,16 @@ pub enum RelativeDidUrlPath {
     NoScheme(String),
     /// Empty path. `path-empty` from [RFC 3986](https://tools.ietf.org/html/rfc3986#section-3.3)
     Empty,
+}
+
+impl Display for RelativeDidUrlPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = match self {
+            Self::Absolute(s) | Self::NoScheme(s) => s.as_str(),
+            Self::Empty => "",
+        };
+        f.write_str(data)
+    }
 }
 
 impl FromStr for RelativeDidUrlPath {

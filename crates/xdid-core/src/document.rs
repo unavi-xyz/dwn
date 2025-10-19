@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[serde_as]
 pub struct Document {
@@ -87,7 +87,8 @@ pub enum VerificationRole {
     KeyAgreement,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(untagged)]
 pub enum VerificationMethod {
     Map(Box<VerificationMethodMap>),
     RelativeUrl(RelativeDidUrl),
@@ -95,7 +96,7 @@ pub enum VerificationMethod {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct VerificationMethodMap {
     pub id: DidUrl,
     pub controller: Did,
@@ -106,7 +107,7 @@ pub struct VerificationMethodMap {
     pub public_key_multibase: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde_as]
 pub struct ServiceEndpoint {
     pub id: String,

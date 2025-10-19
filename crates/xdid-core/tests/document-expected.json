@@ -1,0 +1,16 @@
+{
+  "id": "did:web:localhost",
+  "verificationMethod": [
+    {
+      "id": "did:web:localhost#owner",
+      "controller": "did:web:localhost",
+      "type": "JsonWebKey2020"
+    }
+  ],
+  "capabilityDelegation": [
+    "did:web:localhost?test-query#owner"
+  ],
+  "assertionMethod": [
+    "#owner"
+  ]
+}
