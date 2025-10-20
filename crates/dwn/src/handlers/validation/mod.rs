@@ -6,6 +6,7 @@ mod attestation;
 mod authorization;
 mod jws;
 
+#[derive(Debug)]
 pub struct ValidationResult {
     /// DIDs with valid attestation signatures.
     pub _attested: Vec<Did>,

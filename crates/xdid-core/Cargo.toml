@@ -8,6 +8,7 @@ repository.workspace = true
 version.workspace    = true
 
 [dependencies]
+anyhow.workspace    = true
 jose-jwk.workspace  = true
 serde               = { features = ["derive"], workspace = true }
 serde_with          = "3.15.0"

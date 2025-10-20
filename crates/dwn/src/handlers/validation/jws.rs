@@ -79,7 +79,7 @@ pub async fn validate_jws(jws: &Jws, role: VerificationRole) -> Result<Vec<Did>,
                 _ => return Err(ValidationError::UnsupportedKey),
             }
 
-            vc_dids.push(vc.id.did)
+            vc_dids.push(vc.id.did);
         } else {
             // TODO: support publicKeyMultibase
             return Err(ValidationError::UnsupportedKey);

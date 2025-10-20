@@ -1,8 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
-
-use crate::did_url::ParseError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A [Decentralized Identifier](https://www.w3.org/TR/did-core/#did-syntax).
@@ -18,20 +17,20 @@ impl Display for Did {
 }
 
 impl FromStr for Did {
-    type Err = ParseError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.splitn(3, ':');
 
         if parts.next() != Some("did") {
-            return Err(ParseError);
+            bail!("does not start with did")
         }
 
-        let method_name = parts.next().ok_or(ParseError)?;
-        let method_specific_id = parts.next().ok_or(ParseError)?;
+        let method_name = parts.next().ok_or(anyhow::anyhow!("no method"))?;
+        let method_specific_id = parts.next().ok_or(anyhow::anyhow!("no method id"))?;
 
-        let method_name = MethodName::from_str(method_name).map_err(|_| ParseError)?;
-        let method_id = MethodId::from_str(method_specific_id).map_err(|_| ParseError)?;
+        let method_name = MethodName::from_str(method_name)?;
+        let method_id = MethodId::from_str(method_specific_id)?;
 
         Ok(Did {
             method_name,
@@ -64,7 +63,7 @@ impl<'de> Deserialize<'de> for Did {
 pub struct MethodName(pub String);
 
 impl FromStr for MethodName {
-    type Err = String;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.chars()
@@ -72,7 +71,7 @@ impl FromStr for MethodName {
         {
             Ok(MethodName(s.to_string()))
         } else {
-            Err("Method name must contain only lowercase letters and digits".into())
+            bail!("method name must contain only lowercase letters and digits")
         }
     }
 }
@@ -81,13 +80,13 @@ impl FromStr for MethodName {
 pub struct MethodId(pub String);
 
 impl FromStr for MethodId {
-    type Err = String;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.split(':').all(is_valid_idchar) {
             Ok(MethodId(s.to_string()))
         } else {
-            Err("Method-specific ID contains invalid characters".into())
+            bail!("method id contains invalid characters")
         }
     }
 }

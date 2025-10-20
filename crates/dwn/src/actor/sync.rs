@@ -16,14 +16,7 @@ impl Actor {
         msg: &Message,
         url: &Url,
     ) -> anyhow::Result<Option<Reply>> {
-        let mut url = url.clone();
-
-        {
-            let mut path = url
-                .path_segments_mut()
-                .map_err(|_| anyhow::anyhow!("invalid url"))?;
-            path.push(&target.to_string());
-        }
+        let url = format!("{url}{target}");
 
         // tracing::info!("-> {}", serde_json::to_string_pretty(msg)?);
         let req = self

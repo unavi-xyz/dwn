@@ -3734,6 +3734,7 @@ dependencies = [
 name = "xdid-core"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
  "jose-jwk",
  "serde",
  "serde_json",

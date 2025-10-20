@@ -60,11 +60,36 @@ pub fn create_router(dwn: Dwn) -> Router {
 
 #[debug_handler]
 async fn handle_put(
-    Path(target): Path<String>,
+    Path(mut target): Path<String>,
     State(dwn): State<Dwn>,
     Json(msg): Json<Message>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    debug!("-> PUT /{target}");
+    if target.starts_with("did:web:") {
+        // Axum automatically decodes percent-encoded paths.
+        // However, for did:web if a port is included the colon must remain percent-encoded.
+        let (_, rest) = target
+            .split_once("did:web:")
+            .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let mut parts = rest.split(':');
+
+        if let Some(first) = parts.next()
+            && let Some(second) = parts.next()
+            && second.len() <= 5
+            && second.chars().all(|c| c.is_numeric())
+        {
+            // Assume second is a port.
+            let parts_vec = parts.collect::<Vec<_>>();
+            let parts_str = if parts_vec.is_empty() {
+                String::new()
+            } else {
+                format!(":{}", parts_vec.join(":"))
+            };
+            target = format!("did:web:{first}%3A{second}{parts_str}");
+        }
+    }
+
+    debug!("-> PUT {target}");
 
     let target = Did::from_str(&target).map_err(|e| {
         debug!("Failed to parse DID: {:?}", e);

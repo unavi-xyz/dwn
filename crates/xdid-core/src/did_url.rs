@@ -1,5 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -66,7 +67,7 @@ impl Display for RelativeDidUrl {
 }
 
 impl FromStr for RelativeDidUrl {
-    type Err = ParseError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (path, query, fragment) = match s.split_once('?') {
@@ -129,7 +130,7 @@ impl Display for RelativeDidUrlPath {
 }
 
 impl FromStr for RelativeDidUrlPath {
-    type Err = ParseError;
+    type Err = anyhow::Error;
 
     fn from_str(path: &str) -> Result<Self, Self::Err> {
         if path.is_empty() {
@@ -138,7 +139,7 @@ impl FromStr for RelativeDidUrlPath {
         if path.starts_with('/') {
             // path-absolute = "/" [ segment-nz *( "/" segment ) ]
             if path.len() >= 2 && path.chars().nth(1) == Some('/') {
-                return Err(ParseError);
+                bail!("double slash at start")
             }
 
             if !path
@@ -146,14 +147,14 @@ impl FromStr for RelativeDidUrlPath {
                 .skip(1)
                 .all(|v| is_segment(v, Segment::Base))
             {
-                return Err(ParseError);
+                bail!("invalid segment")
             }
 
             Ok(Self::Absolute(path.to_string()))
         } else {
             // path-noscheme = segment-nz-nc *( "/" segment )
             if !path.split('/').all(|v| is_segment(v, Segment::NzNc)) {
-                return Err(ParseError);
+                bail!("invalid segment")
             }
 
             Ok(Self::NoScheme(path.to_string()))
@@ -194,7 +195,7 @@ impl Display for DidUrl {
 }
 
 impl FromStr for DidUrl {
-    type Err = ParseError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (did_str, _) = s.split_once('/').unwrap_or_else(|| {
@@ -202,7 +203,7 @@ impl FromStr for DidUrl {
                 .unwrap_or_else(|| s.split_once('#').unwrap_or((s, "")))
         });
 
-        let did = Did::from_str(did_str).map_err(|_| ParseError)?;
+        let did = Did::from_str(did_str)?;
 
         let mut path_abempty = String::new();
         let mut query = None;
@@ -224,14 +225,14 @@ impl FromStr for DidUrl {
         // path-abempty  = *( "/" segment )
         if !path_abempty.is_empty() {
             if !path_abempty.starts_with('/') {
-                return Err(ParseError);
+                bail!("path_abempty does not start with slash")
             }
 
             if !path_abempty
                 .split('/')
                 .all(|v| is_segment(v, Segment::Base))
             {
-                return Err(ParseError);
+                bail!("invalid path_abempty segment")
             }
         }
 
@@ -243,9 +244,6 @@ impl FromStr for DidUrl {
         })
     }
 }
-
-#[derive(Debug)]
-pub struct ParseError;
 
 #[cfg(test)]
 mod tests {
