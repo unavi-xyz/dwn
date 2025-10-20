@@ -106,16 +106,15 @@ impl<'a> ActorQueryBuilder<'a> {
     }
 
     /// Sends the message to a remote DWN.
-    pub async fn send(self, url: &Url) -> anyhow::Result<String> {
+    pub async fn send(self, url: &Url) -> anyhow::Result<Vec<RecordView>> {
         let actor = self.actor;
         let target = self.target.unwrap_or(&actor.did);
 
         let msg = self.build()?;
-        let id = msg.record_id.clone();
 
-        actor.send(target, &msg, url).await?;
+        let reply = actor.send(target, &msg, url).await?;
 
-        Ok(id)
+        parse_reply(reply)
     }
 
     /// Processes the message with the actor's DWN.
@@ -131,18 +130,22 @@ impl<'a> ActorQueryBuilder<'a> {
             .await
             .map_err(|e| anyhow::anyhow!("failed to process message: {e}"))?;
 
-        match reply {
-            Some(Reply::RecordsQuery(query)) => Ok(query
-                .entries
-                .into_iter()
-                .map(RecordView::from_entry)
-                .collect::<Result<Vec<_>, _>>()?),
-            Some(other) => {
-                bail!("got invalid reply from DWN: {other:?}")
-            }
-            None => {
-                bail!("got no reply from DWN")
-            }
+        parse_reply(reply)
+    }
+}
+
+fn parse_reply(reply: Option<Reply>) -> anyhow::Result<Vec<RecordView>> {
+    match reply {
+        Some(Reply::RecordsQuery(query)) => Ok(query
+            .entries
+            .into_iter()
+            .map(RecordView::from_entry)
+            .collect::<Result<Vec<_>, _>>()?),
+        Some(other) => {
+            bail!("got invalid reply from DWN: {other:?}")
+        }
+        None => {
+            bail!("got no reply from DWN")
         }
     }
 }
