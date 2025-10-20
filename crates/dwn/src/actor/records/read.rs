@@ -1,5 +1,6 @@
 use anyhow::bail;
 use dwn_core::{message::descriptor::RecordsReadBuilder, reply::Reply};
+use xdid::core::did::Did;
 
 use crate::{Actor, records::RecordView};
 
@@ -9,6 +10,7 @@ impl Actor {
             actor: self,
             msg: RecordsReadBuilder::new(record_id),
             auth: true,
+            target: None,
         }
     }
 }
@@ -17,13 +19,21 @@ pub struct ActorReadBuilder<'a> {
     actor: &'a Actor,
     msg: RecordsReadBuilder,
     auth: bool,
+    target: Option<&'a Did>,
 }
 
-impl ActorReadBuilder<'_> {
+impl<'a> ActorReadBuilder<'a> {
     /// Whether to authorize the message.
     /// Defaults to `true`.
     pub fn auth(mut self, value: bool) -> Self {
         self.auth = value;
+        self
+    }
+
+    /// Sets the target DID for DWN processing.
+    /// Defaults to the actor's own DID.
+    pub fn target(mut self, value: &'a Did) -> Self {
+        self.target = Some(value);
         self
     }
 
@@ -35,10 +45,12 @@ impl ActorReadBuilder<'_> {
             self.actor.authorize(&mut msg)?;
         }
 
+        let target = self.target.unwrap_or(&self.actor.did);
+
         let reply = self
             .actor
             .dwn
-            .process_message(&self.actor.did, msg)
+            .process_message(target, msg)
             .await
             .map_err(|e| anyhow::anyhow!("failed to process message: {e}"))?;
 
