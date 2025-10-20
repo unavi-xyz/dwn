@@ -9,7 +9,7 @@ use xdid_core::{
 fn test_document_serde() {
     let did = Did {
         method_name: MethodName("web".to_string()),
-        method_id: MethodId("localhost".to_string()),
+        method_id: MethodId("localhost%3A4000".to_string()),
     };
 
     let doc = Document {
