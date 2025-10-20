@@ -1,5 +1,9 @@
 use anyhow::bail;
-use dwn_core::{message::descriptor::RecordsReadBuilder, reply::Reply};
+use dwn_core::{
+    message::{Message, descriptor::RecordsReadBuilder},
+    reply::Reply,
+};
+use reqwest::Url;
 use xdid::core::did::Did;
 
 use crate::{Actor, records::RecordView};
@@ -37,34 +41,53 @@ impl<'a> ActorReadBuilder<'a> {
         self
     }
 
-    /// Processes the message with the actor's DWN.
-    pub async fn process(self) -> anyhow::Result<Option<RecordView>> {
+    fn build(self) -> anyhow::Result<Message> {
         let mut msg = self.msg.build()?;
 
         if self.auth {
             self.actor.authorize(&mut msg)?;
         }
 
-        let target = self.target.unwrap_or(&self.actor.did);
+        Ok(msg)
+    }
 
-        let reply = self
-            .actor
+    /// Sends the message to a remote DWN.
+    pub async fn send(self, url: &Url) -> anyhow::Result<Option<RecordView>> {
+        let actor = self.actor;
+        let target = self.target.unwrap_or(&actor.did);
+
+        let msg = self.build()?;
+
+        let reply = actor.send(target, &msg, url).await?;
+
+        parse_reply(reply)
+    }
+
+    /// Processes the message with the actor's local DWN.
+    pub async fn process(self) -> anyhow::Result<Option<RecordView>> {
+        let actor = self.actor;
+        let target = self.target.unwrap_or(&actor.did);
+
+        let msg = self.build()?;
+
+        let reply = actor
             .dwn
             .process_message(target, msg)
             .await
-            .map_err(|e| anyhow::anyhow!("failed to process message: {e}"))?;
+            .map_err(|e| anyhow::anyhow!("Failed to process message: {e}"))?;
 
-        match reply {
-            Some(Reply::RecordsRead(read)) => match read.entry {
-                Some(entry) => Ok(Some(RecordView::from_entry(entry)?)),
-                None => Ok(None),
-            },
-            Some(other) => {
-                bail!("got invalid reply from DWN: {other:?}")
-            }
-            None => {
-                bail!("got no reply from DWN")
-            }
+        parse_reply(reply)
+    }
+}
+
+fn parse_reply(reply: Option<Reply>) -> anyhow::Result<Option<RecordView>> {
+    match reply {
+        Some(Reply::RecordsRead(read)) => Ok(read.entry.map(RecordView::from_entry).transpose()?),
+        Some(other) => {
+            bail!("got invalid reply from DWN: {other:?}")
+        }
+        None => {
+            bail!("got no reply from DWN")
         }
     }
 }
