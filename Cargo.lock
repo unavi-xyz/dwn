@@ -677,7 +677,7 @@ dependencies = [
 
 [[package]]
 name = "dwn"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -700,7 +700,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64",
  "ipld-core",
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-native-db"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "dwn-core",
  "native_db",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "dwn-server"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -3727,7 +3727,7 @@ checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 
 [[package]]
 name = "xdid"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hyper",
  "hyper-util",
@@ -3742,7 +3742,7 @@ dependencies = [
 
 [[package]]
 name = "xdid-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "jose-jwk",
@@ -3754,7 +3754,7 @@ dependencies = [
 
 [[package]]
 name = "xdid-method-key"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "jose-jwk",
@@ -3770,7 +3770,7 @@ dependencies = [
 
 [[package]]
 name = "xdid-method-web"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "reqwest",
  "xdid-core",
