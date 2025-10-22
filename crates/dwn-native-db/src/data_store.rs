@@ -21,7 +21,7 @@ impl DataStore for NativeDbStore<'_> {
             .primary::<CidData>((target.to_string(), cid.to_string()))
             .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
-        Ok(res.and_then(|d| d.data))
+        Ok(res.and_then(|d| d.data.map(|d| serde_json::from_slice(&d).unwrap())))
     }
 
     fn add_ref(&self, target: &Did, cid: &str, data: Option<Data>) -> Result<(), StoreError> {
@@ -42,7 +42,7 @@ impl DataStore for NativeDbStore<'_> {
                 if let Some(data) = data {
                     tx.upsert(CidData {
                         key: key.clone(),
-                        data: Some(data),
+                        data: Some(serde_json::to_vec(&data).unwrap()),
                     })
                     .map_err(|e| StoreError::BackendError(e.to_string()))?;
                 }
@@ -58,7 +58,7 @@ impl DataStore for NativeDbStore<'_> {
                 // Insert data,
                 tx.insert(CidData {
                     key: key.clone(),
-                    data,
+                    data: data.map(|d| serde_json::to_vec(&d).unwrap()),
                 })
                 .map_err(|e| StoreError::BackendError(e.to_string()))?;
 

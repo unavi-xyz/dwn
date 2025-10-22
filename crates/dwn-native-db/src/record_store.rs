@@ -106,7 +106,10 @@ impl RecordStore for NativeDbStore<'_> {
             .primary::<InitialEntry>((target.to_string(), desc.record_id.clone()))
             .map_err(|e| StoreError::BackendError(e.to_string()))?
         {
-            if let Descriptor::RecordsWrite(desc) = &initial_entry.entry.descriptor
+            let entry: Message = serde_json::from_slice(&initial_entry.entry)
+                .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+            if let Descriptor::RecordsWrite(desc) = entry.descriptor
                 && let Some(cid) = &desc.data_cid
             {
                 data_cids.push(cid.clone());
@@ -121,7 +124,10 @@ impl RecordStore for NativeDbStore<'_> {
             .primary::<LatestEntry>((target.to_string(), desc.record_id))
             .map_err(|e| StoreError::BackendError(e.to_string()))?
         {
-            if let Descriptor::RecordsWrite(desc) = &latest_entry.entry.descriptor
+            let entry: Message = serde_json::from_slice(&latest_entry.entry)
+                .map_err(|e| StoreError::BackendError(e.to_string()))?;
+
+            if let Descriptor::RecordsWrite(desc) = &entry.descriptor
                 && let Some(cid) = &desc.data_cid
             {
                 data_cids.push(cid.clone());
@@ -161,6 +167,10 @@ impl RecordStore for NativeDbStore<'_> {
                     return false;
                 };
 
+                let entry: Message = serde_json::from_slice(entry)
+                    .map_err(|e| StoreError::BackendError(e.to_string()))
+                    .unwrap();
+
                 let Descriptor::RecordsWrite(desc) = &entry.descriptor else {
                     panic!("invalid descriptor: {:?}", entry.descriptor);
                 };
@@ -177,6 +187,10 @@ impl RecordStore for NativeDbStore<'_> {
         let records = initial_entries
             .into_iter()
             .flat_map(|initial_entry| {
+                let initial_entry: Message = serde_json::from_slice(&initial_entry)
+                    .map_err(|e| StoreError::BackendError(e.to_string()))
+                    .unwrap();
+
                 tx.get()
                     .primary::<LatestEntry>((target.to_string(), initial_entry.record_id.clone()))
                     .map(|res| {
@@ -189,6 +203,10 @@ impl RecordStore for NativeDbStore<'_> {
                                 "Missing latest entry".to_string(),
                             ));
                         };
+
+                        let latest_entry: Message = serde_json::from_slice(&latest_entry)
+                            .map_err(|e| StoreError::BackendError(e.to_string()))
+                            .unwrap();
 
                         Ok(RecordId {
                             record_id: initial_entry.record_id,
@@ -228,6 +246,10 @@ impl RecordStore for NativeDbStore<'_> {
                     warn!("Failed to read record during scan {}", target);
                     return false;
                 };
+
+                let entry: Message = serde_json::from_slice(entry)
+                    .map_err(|e| StoreError::BackendError(e.to_string()))
+                    .unwrap();
 
                 let Descriptor::RecordsWrite(desc) = &entry.descriptor else {
                     panic!("invalid descriptor: {:?}", entry.descriptor);
@@ -308,16 +330,35 @@ impl RecordStore for NativeDbStore<'_> {
             .map(|r| r.unwrap().entry)
             .collect::<Vec<_>>();
 
-        found.sort_by(|a, b| match filter.date_sort.unwrap_or_default() {
-            DateSort::Ascending => a
-                .descriptor
-                .message_timestamp()
-                .cmp(&b.descriptor.message_timestamp()),
-            DateSort::Descending => b
-                .descriptor
-                .message_timestamp()
-                .cmp(&a.descriptor.message_timestamp()),
+        found.sort_by(|a, b| {
+            let a: Message = serde_json::from_slice(a)
+                .map_err(|e| StoreError::BackendError(e.to_string()))
+                .unwrap();
+            let b: Message = serde_json::from_slice(b)
+                .map_err(|e| StoreError::BackendError(e.to_string()))
+                .unwrap();
+
+            match filter.date_sort.unwrap_or_default() {
+                DateSort::Ascending => a
+                    .descriptor
+                    .message_timestamp()
+                    .cmp(&b.descriptor.message_timestamp()),
+                DateSort::Descending => b
+                    .descriptor
+                    .message_timestamp()
+                    .cmp(&a.descriptor.message_timestamp()),
+            }
         });
+
+        let found = found
+            .into_iter()
+            .map(|x| {
+                let x: Message = serde_json::from_slice(&x)
+                    .map_err(|e| StoreError::BackendError(e.to_string()))
+                    .unwrap();
+                x
+            })
+            .collect();
 
         Ok(found)
     }
@@ -344,7 +385,11 @@ impl RecordStore for NativeDbStore<'_> {
             return Ok(None);
         };
 
-        let Some(mut latest_entry) = tx
+        let initial_entry: Message = serde_json::from_slice(&initial_entry)
+            .map_err(|e| StoreError::BackendError(e.to_string()))
+            .unwrap();
+
+        let Some(latest_entry) = tx
             .get()
             .primary::<LatestEntry>((target.to_string(), record_id))
             .map_err(|e| StoreError::BackendError(e.to_string()))?
@@ -353,6 +398,10 @@ impl RecordStore for NativeDbStore<'_> {
             error!("Found initial entry with no latest entry.");
             return Ok(None);
         };
+
+        let mut latest_entry: Message = serde_json::from_slice(&latest_entry)
+            .map_err(|e| StoreError::BackendError(e.to_string()))
+            .unwrap();
 
         if let Descriptor::RecordsWrite(desc) = &latest_entry.descriptor
             && let Some(cid) = &desc.data_cid
@@ -390,7 +439,7 @@ impl RecordStore for NativeDbStore<'_> {
         let prev = tx
             .upsert(LatestEntry {
                 key: (target.to_string(), message.record_id.clone()),
-                entry: message.clone(),
+                entry: serde_json::to_vec(&message).unwrap(),
             })
             .map_err(|e| StoreError::BackendError(e.to_string()))?;
 
@@ -402,7 +451,7 @@ impl RecordStore for NativeDbStore<'_> {
 
             tx.insert(InitialEntry {
                 key: (target.to_string(), message.record_id.clone()),
-                entry: message,
+                entry: serde_json::to_vec(&message).unwrap(),
             })
             .map_err(|e| StoreError::BackendError(e.to_string()))?;
         }
@@ -417,11 +466,16 @@ impl RecordStore for NativeDbStore<'_> {
             ds.add_ref(target, &cid, data)?;
 
             // Remove previous reference.
-            if let Some(prev) = prev
-                && let Descriptor::RecordsWrite(desc) = prev.entry.descriptor
-                && let Some(prev_cid) = &desc.data_cid
-            {
-                ds.remove_ref(target, prev_cid)?;
+            if let Some(prev) = prev {
+                let prev: Message = serde_json::from_slice(&prev.entry)
+                    .map_err(|e| StoreError::BackendError(e.to_string()))
+                    .unwrap();
+
+                if let Descriptor::RecordsWrite(desc) = prev.descriptor
+                    && let Some(prev_cid) = &desc.data_cid
+                {
+                    ds.remove_ref(target, prev_cid)?;
+                }
             }
         }
 

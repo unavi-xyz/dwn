@@ -89,7 +89,7 @@ async fn handle_put(
         }
     }
 
-    debug!("-> PUT {target}");
+    // debug!("-> PUT {target}");
 
     let target = Did::from_str(&target).map_err(|e| {
         debug!("Failed to parse DID: {:?}", e);
@@ -102,7 +102,8 @@ async fn handle_put(
         error!("Error serializing response: {e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
-    debug!("<- {res}");
+
+    // debug!("<- {res}");
 
     Ok(Json(res))
 }

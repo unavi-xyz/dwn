@@ -8,11 +8,14 @@ repository.workspace = true
 version.workspace    = true
 
 [dependencies]
-dwn-core.workspace   = true
-native_db            = { default-features = false, git = "https://github.com/vincent-herlemont/native_db", version = "0.8.1" }
-native_model         = { features = ["rmp_serde_1_3"], version = "0.6.2" }
-semver.workspace     = true
-serde.workspace      = true
+dwn-core.workspace = true
+native_db = "0.8.2"
+native_model = { default-features = false, features = [
+  "bincode_2_rc",
+  "serde",
+], version = "0.4.20" }
+semver.workspace = true
+serde.workspace = true
 serde_json.workspace = true
-tracing.workspace    = true
-xdid.workspace       = true
+tracing.workspace = true
+xdid.workspace = true
