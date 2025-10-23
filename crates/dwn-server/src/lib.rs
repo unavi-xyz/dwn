@@ -4,11 +4,7 @@
 //! to be compatible with the [dwn](https://github.com/unavi-xyz/dwn/tree/main/crates/dwn)
 //! crate.
 
-use std::{
-    net::SocketAddr,
-    str::FromStr,
-    sync::{Arc, LazyLock},
-};
+use std::{net::SocketAddr, str::FromStr, sync::LazyLock};
 
 use axum::{
     Json, Router,
@@ -33,19 +29,25 @@ pub static DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 
 const DB_FILE: &str = "data.db";
 
-pub async fn run_server(addr: SocketAddr) -> anyhow::Result<()> {
-    let path = {
-        let mut dir = DIRS.data_dir().to_path_buf();
-        dir.push(DB_FILE);
-        dir
-    };
-    let store = Arc::new(dwn_native_db::NativeDbStore::new(path)?);
-    let dwn = Dwn::new(store.clone(), store);
+pub struct DwnServerOpions {
+    pub addr: SocketAddr,
+    pub in_memory: bool,
+}
 
-    let listener = TcpListener::bind(addr).await?;
+pub async fn run_server(opts: DwnServerOpions) -> anyhow::Result<()> {
+    let store = if opts.in_memory {
+        dwn_native_db::NativeDbStore::new_in_memory()?
+    } else {
+        let mut path = DIRS.data_dir().to_path_buf();
+        path.push(DB_FILE);
+        dwn_native_db::NativeDbStore::new(path)?
+    };
+    let dwn = Dwn::from(store);
+
+    let listener = TcpListener::bind(opts.addr).await?;
     let router = create_router(dwn);
 
-    info!("DWN server running on {addr}");
+    info!("DWN server running on {}", opts.addr);
 
     axum::serve(listener, router).await?;
 
