@@ -51,6 +51,16 @@ impl<'a> ActorReadBuilder<'a> {
         Ok(msg)
     }
 
+    /// Sends the message to the actor's remote DWN.
+    pub async fn send_remote(self) -> anyhow::Result<Option<RecordView>> {
+        let url = self
+            .actor
+            .remote
+            .as_ref()
+            .ok_or(anyhow::anyhow!("no remote"))?;
+        self.send(url).await
+    }
+
     /// Sends the message to a remote DWN.
     pub async fn send(self, url: &Url) -> anyhow::Result<Option<RecordView>> {
         let actor = self.actor;
