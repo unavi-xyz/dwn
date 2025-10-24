@@ -4,7 +4,11 @@
 //! to be compatible with the [dwn](https://github.com/unavi-xyz/dwn/tree/main/crates/dwn)
 //! crate.
 
-use std::{net::SocketAddr, str::FromStr, sync::LazyLock};
+use std::{
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    str::FromStr,
+    sync::LazyLock,
+};
 
 use axum::{
     Json, Router,
@@ -29,12 +33,12 @@ pub static DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 
 const DB_FILE: &str = "data.db";
 
-pub struct DwnServerOpions {
-    pub addr: SocketAddr,
+pub struct DwnServerOptions {
+    pub port: u16,
     pub in_memory: bool,
 }
 
-pub async fn run_server(opts: DwnServerOpions) -> anyhow::Result<()> {
+pub async fn run_server(opts: DwnServerOptions) -> anyhow::Result<()> {
     let store = if opts.in_memory {
         dwn_native_db::NativeDbStore::new_in_memory()?
     } else {
@@ -44,10 +48,11 @@ pub async fn run_server(opts: DwnServerOpions) -> anyhow::Result<()> {
     };
     let dwn = Dwn::from(store);
 
-    let listener = TcpListener::bind(opts.addr).await?;
+    let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opts.port));
+    let listener = TcpListener::bind(addr).await?;
     let router = create_router(dwn);
 
-    info!("DWN server running on {}", opts.addr);
+    info!("DWN server running on port {}", opts.port);
 
     axum::serve(listener, router).await?;
 

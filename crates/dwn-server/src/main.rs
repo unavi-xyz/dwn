@@ -1,7 +1,5 @@
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-
 use clap::Parser;
-use dwn_server::DwnServerOpions;
+use dwn_server::DwnServerOptions;
 use tracing::{Level, error};
 
 #[derive(Parser, Debug)]
@@ -19,10 +17,8 @@ async fn main() {
         .with_max_level(Level::DEBUG)
         .init();
 
-    let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), args.port));
-
-    if let Err(e) = dwn_server::run_server(DwnServerOpions {
-        addr,
+    if let Err(e) = dwn_server::run_server(DwnServerOptions {
+        port: args.port,
         in_memory: false,
     })
     .await
