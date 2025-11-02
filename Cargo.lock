@@ -1685,12 +1685,12 @@ checksum = "7b13e4a851c3b641728712a946c4cf2bf7eb8dbcfd2cbc35f7ba4b19ce59f4ac"
 dependencies = [
  "native_db_macro",
  "native_model",
- "redb 1.5.1",
- "redb 2.6.3",
+ "redb",
  "semver",
  "serde",
  "skeptic",
  "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -2165,15 +2165,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.3",
-]
-
-[[package]]
-name = "redb"
-version = "1.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd7f82ecd6ba647a39dd1a7172b8a1cd9453c0adee6da20cb553d83a9a460fa5"
-dependencies = [
- "libc",
 ]
 
 [[package]]
