@@ -7,7 +7,7 @@ edition    = "2024"
 keywords   = ["did", "dwn"]
 license    = "MIT OR Apache-2.0"
 repository = "https://github.com/unavi-xyz/dwn"
-version    = "0.4.0"
+version    = "0.5.0"
 
 [workspace.metadata.release]
 shared-version = true
@@ -32,10 +32,10 @@ tokio = "1.48.0"
 tracing = "0.1.41"
 tracing-test = { features = ["no-env-filter"], version = "0.2.5" }
 
-dwn             = { path = "crates/dwn", version = "0.4.0" }
-dwn-core        = { path = "crates/dwn-core", version = "0.4.0" }
-dwn-native-db   = { path = "crates/dwn-native-db", version = "0.4.0" }
-xdid            = { path = "crates/xdid", version = "0.4.0" }
-xdid-core       = { path = "crates/xdid-core", version = "0.4.0" }
-xdid-method-key = { path = "crates/xdid-method-key", version = "0.4.0" }
-xdid-method-web = { path = "crates/xdid-method-web", version = "0.4.0" }
+dwn             = { path = "crates/dwn", version = "0.5.0" }
+dwn-core        = { path = "crates/dwn-core", version = "0.5.0" }
+dwn-native-db   = { path = "crates/dwn-native-db", version = "0.5.0" }
+xdid            = { path = "crates/xdid", version = "0.5.0" }
+xdid-core       = { path = "crates/xdid-core", version = "0.5.0" }
+xdid-method-key = { path = "crates/xdid-method-key", version = "0.5.0" }
+xdid-method-web = { path = "crates/xdid-method-web", version = "0.5.0" }
