@@ -24,7 +24,7 @@ impl DocumentKey {
         let url = DidUrl {
             did,
             fragment: Some(fragment),
-            path_abempty: String::new(),
+            path_abempty: None,
             query: None,
         };
 

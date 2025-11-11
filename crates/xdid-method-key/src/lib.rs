@@ -42,9 +42,9 @@ impl Method for MethodDidKey {
 
             let did_url = DidUrl {
                 did: did.clone(),
-                path_abempty: String::new(),
-                query: None,
                 fragment: Some(did.method_id.0.clone()),
+                path_abempty: None,
+                query: None,
             };
 
             Ok(Document {
