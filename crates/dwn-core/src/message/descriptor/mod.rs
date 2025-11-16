@@ -177,9 +177,9 @@ mod test {
     #[test]
     fn test_serialize_records_write() {
         let msg = RecordsWriteBuilder {
-            context_id: None,
             data: Some(vec![0, 1, 2, 3]),
             data_format: Some(TEXT_PLAIN),
+            context_id: None,
             protocol: Some("protocol".to_string()),
             protocol_version: Some(Version::new(1, 2, 3)),
             protocol_path: Some("protocol path".to_string()),

@@ -31,15 +31,15 @@ pub struct RecordsWrite {
 
 #[derive(Default)]
 pub struct RecordsWriteBuilder {
-    pub record_id: Option<String>,
-    pub context_id: Option<String>,
     pub data: Option<Vec<u8>>,
     pub data_format: Option<mime::Mime>,
-    pub schema: Option<String>,
+    pub context_id: Option<String>,
     pub protocol: Option<String>,
-    pub protocol_version: Option<semver::Version>,
     pub protocol_path: Option<String>,
+    pub protocol_version: Option<semver::Version>,
     pub published: Option<bool>,
+    pub record_id: Option<String>,
+    pub schema: Option<String>,
 }
 
 impl RecordsWriteBuilder {
@@ -70,12 +70,12 @@ impl RecordsWriteBuilder {
             .map(|d| Data::Base64(BASE64_URL_SAFE_NO_PAD.encode(d)));
 
         Ok(Message {
-            record_id,
-            context_id: self.context_id,
-            data,
-            descriptor,
             attestation: None,
             authorization: None,
+            data,
+            descriptor,
+            context_id: self.context_id,
+            record_id,
         })
     }
 }

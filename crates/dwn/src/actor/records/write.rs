@@ -101,6 +101,16 @@ impl<'a> ActorWriteBuilder<'a> {
         Ok(msg)
     }
 
+    /// Sends the message to the actor's remote DWN.
+    pub async fn send_remote(self) -> anyhow::Result<String> {
+        let url = self
+            .actor
+            .remote
+            .as_ref()
+            .ok_or(anyhow::anyhow!("no remote"))?;
+        self.send(url).await
+    }
+
     /// Sends the message to a remote DWN.
     /// Returns the written record ID.
     pub async fn send(self, url: &Url) -> anyhow::Result<String> {
