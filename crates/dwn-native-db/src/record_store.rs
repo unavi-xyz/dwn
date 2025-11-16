@@ -286,6 +286,20 @@ impl RecordStore for NativeDbStore<'_> {
                     return false;
                 }
 
+                if let Some(parent_id) = filter.parent_id.as_deref() {
+                    let Some(context_id) = entry.context_id.as_deref() else {
+                        return false;
+                    };
+
+                    let Some(context_parent) = context_id.split("/").last() else {
+                        return false;
+                    };
+
+                    if context_parent != parent_id {
+                        return false;
+                    }
+                }
+
                 if let Some(protocol) = filter.protocol.as_deref()
                     && desc.protocol.as_deref() != Some(protocol)
                 {

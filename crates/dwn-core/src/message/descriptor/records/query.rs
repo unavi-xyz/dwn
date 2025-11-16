@@ -30,6 +30,7 @@ pub struct RecordFilter {
     pub data_format: Option<mime::Mime>,
     pub date_created: Option<DateFilter>,
     pub date_sort: Option<DateSort>,
+    pub parent_id: Option<String>,
     pub protocol: Option<String>,
     pub protocol_path: Option<String>,
     pub protocol_version: Option<semver::Version>,

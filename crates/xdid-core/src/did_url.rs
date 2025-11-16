@@ -166,8 +166,9 @@ impl DidUrl {
     /// Attempts to convert the [DidUrl] into a [RelativeDidUrl].
     pub fn to_relative(&self) -> Option<RelativeDidUrl> {
         Some(RelativeDidUrl {
-            path: match RelativeDidUrlPath::from_str(&self.path_abempty.clone().unwrap_or_default())
-            {
+            path: match RelativeDidUrlPath::from_str(
+                self.path_abempty.as_deref().unwrap_or_default(),
+            ) {
                 Ok(v) => v,
                 Err(_) => return None,
             },

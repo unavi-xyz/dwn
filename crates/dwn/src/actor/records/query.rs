@@ -51,6 +51,11 @@ impl<'a> ActorQueryBuilder<'a> {
         self
     }
 
+    pub fn parent_id(mut self, value: String) -> Self {
+        self.msg.filter.parent_id = Some(value);
+        self
+    }
+
     pub fn protocol(mut self, value: String) -> Self {
         self.msg.filter.protocol = Some(value);
         self
