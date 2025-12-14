@@ -318,6 +318,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eeab4423108c5d7c744f4d234de88d18d636100093ae04caf4825134b9c3a32"
 
 [[package]]
+name = "borsh"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1da5ab77c1437701eeff7c88d968729e7766172279eab0676857b3d63af7a6f"
+dependencies = [
+ "cfg_aliases",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2725,6 +2734,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
+name = "smol_str"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3498b0a27f93ef1402f20eefacfaa1691272ac4eca1cdc8c596cb0a245d6cbf5"
+dependencies = [
+ "borsh",
+ "serde_core",
+]
+
+[[package]]
 name = "socket2"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3718,14 +3737,12 @@ checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 
 [[package]]
 name = "xdid"
-version = "0.5.0"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c504a2a4b5496d0601b6c853de72ae60c9da44405f4b246a0189a786573a572"
 dependencies = [
- "hyper",
- "hyper-util",
- "port_check",
- "serde_json",
+ "smallvec",
  "thiserror 2.0.17",
- "tokio",
  "xdid-core",
  "xdid-method-key",
  "xdid-method-web",
@@ -3733,19 +3750,23 @@ dependencies = [
 
 [[package]]
 name = "xdid-core"
-version = "0.5.0"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf8375a81bde62a7c611f5d35616c195cbd35efaa87fbbbfc8e61ec50365b010"
 dependencies = [
  "anyhow",
  "jose-jwk",
  "serde",
- "serde_json",
  "serde_with",
+ "smol_str",
  "thiserror 2.0.17",
 ]
 
 [[package]]
 name = "xdid-method-key"
-version = "0.5.0"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41a32a505cf168a3011b6f5d8eea84a191ee62ce44c51a7f40dd86d63f2626dc"
 dependencies = [
  "anyhow",
  "jose-jwk",
@@ -3754,14 +3775,18 @@ dependencies = [
  "p384",
  "ring",
  "serde_json",
+ "smallvec",
  "thiserror 2.0.17",
  "unsigned-varint",
  "xdid-core",
+ "zeroize",
 ]
 
 [[package]]
 name = "xdid-method-web"
-version = "0.5.0"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8b7c53a94e690b225a793eed5239f064bd2396b4d1c8fb7b699f1853ab4fa08"
 dependencies = [
  "reqwest",
  "xdid-core",

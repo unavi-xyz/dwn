@@ -28,7 +28,7 @@ pub async fn validate_jws(jws: &Jws, role: VerificationRole) -> Result<Vec<Did>,
         // Resolve key URL.
         let document = resolver.resolve(&signature.header.kid.did).await?;
 
-        let Some(vc) = document.resolve_verification_method(&signature.header.kid, role) else {
+        let Some(vc) = document.resolve_verification_method_url(&signature.header.kid, role) else {
             debug!(
                 "Failed to resolve verification method for kid: {}",
                 signature.header.kid

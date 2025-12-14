@@ -115,7 +115,7 @@ fn sign_jws(key: &dyn Signer, header: &Header, payload: &str) -> Result<Vec<u8>,
     let header_str = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_string(&header).unwrap());
     let payload = BASE64_URL_SAFE_NO_PAD.encode(payload);
     let input = header_str + "." + &payload;
-    let signature = key.sign(input.as_bytes())?;
+    let signature = key.sign(input.as_bytes()).map_err(SignError::Sign)?;
     Ok(signature)
 }
 
@@ -126,7 +126,7 @@ pub enum SignError {
     #[error("missing signing key")]
     MissingKey,
     #[error("failed to sign message")]
-    Sign(#[from] xdid::methods::key::SignError),
+    Sign(anyhow::Error),
 }
 
 #[cfg(test)]

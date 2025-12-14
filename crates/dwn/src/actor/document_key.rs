@@ -15,11 +15,7 @@ pub struct DocumentKey {
 impl DocumentKey {
     pub fn from_did_key(alg: Signing, key: impl DidKeyPair + Send + Sync + 'static) -> Self {
         let did = key.public().to_did();
-        let fragment = did
-            .to_string()
-            .strip_prefix("did:key:")
-            .unwrap()
-            .to_string();
+        let fragment = did.to_string().strip_prefix("did:key:").unwrap().into();
 
         let url = DidUrl {
             did,

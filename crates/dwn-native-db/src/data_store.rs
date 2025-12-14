@@ -130,7 +130,7 @@ mod tests {
         let ds = NativeDbStore::new_in_memory().unwrap();
 
         let target = Did {
-            method_name: MethodName("test".to_string()),
+            method_name: MethodName("test".into()),
             method_id: MethodId("test".to_string()),
         };
         let cid = &"test cid";
