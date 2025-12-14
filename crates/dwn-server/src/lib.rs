@@ -1,7 +1,7 @@
 //! DWN HTTP server, using [axum](https://github.com/tokio-rs/axum).
 //!
 //! The DWN spec does not define a standard HTTP API, so this server is simply built
-//! to be compatible with the [dwn](https://github.com/unavi-xyz/dwn/tree/main/crates/dwn)
+//! to be compatible with the [dwn](https://github.com/kayhhh/dwn/tree/main/crates/dwn)
 //! crate.
 
 use std::{
@@ -26,7 +26,7 @@ use xdid::core::did::Did;
 pub use dwn::core::reply::Reply;
 
 pub static DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
-    let dirs = ProjectDirs::from("", "UNAVI", "dwn-server").expect("project dirs");
+    let dirs = ProjectDirs::from("", "dwn-server", "dwn-server").expect("project dirs");
     std::fs::create_dir_all(dirs.data_dir()).expect("data dir");
     dirs
 });
